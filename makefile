@@ -1,8 +1,8 @@
-all: ./src/bootloader/main.asm
-	nasm -fbin ./src/bootloader/main.asm -o ./bin/boot.bin
+all: ./src/bootloader/bootloader.asm
+	nasm -fbin ./src/bootloader/bootloader.asm -o ./bin/bootloader.bin
 
 qemu:
-	qemu-system-x86_64 ./bin/boot.bin 
+	qemu-system-x86_64 ./bin/bootloader.bin 
 
 clear:
-	rm ./bin/boot.bin
+	rm ./bin/bootloader.bin
