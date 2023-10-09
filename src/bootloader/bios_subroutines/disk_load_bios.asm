@@ -22,13 +22,14 @@ disk_load_bios:
   ret
 
 _disk_error_bios:
-mov bx, _disk_error_msg_bios
-call print_str_bios
+  mov bx, _disk_error_msg_bios
+  call print_str_bios
+  call print_nl
 
-mov dh, al ;ah = error code, dl = disk drive that dropped the error
-call print_hex_bios
+  mov dh, al ;ah = error code, dl = disk drive that dropped the error
+  call print_hex_bios
 
-jmp _disk_error_loop_bios
+  jmp _disk_error_loop_bios
 
 _read_error_bios:
   mov bx, _disk_error_msg_bios
