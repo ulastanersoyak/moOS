@@ -1,7 +1,7 @@
 cross_compiler := ~/opt/cross/bin/i686-elf-gcc
 linker := ~/opt/cross/bin/i686-elf-ld 
 
-all: qemu
+all: ./bin/os_image.bin debug
 
 ./bin/kernel.bin: ./build/kernel_entry.o ./build/kernel.o
 	$(linker) -o $@ -Ttext 0x1000 $^ --oformat binary
@@ -12,9 +12,6 @@ all: qemu
 ./build/kernel.o: ./src/kernel/kernel.c
 	$(cross_compiler) -ffreestanding -c $< -o $@
 
-./debug/kernel.dis: ./bin/kernel.bin
-	ndisasm -b 32 $< > ./debug/kernel.dis
-
 ./bin/bootloader.bin: ./src/bootloader/bootloader.asm
 	nasm $< -f bin -o $@
 
@@ -23,6 +20,9 @@ all: qemu
 
 qemu: ./bin/os_image.bin
 	qemu-system-x86_64 -fda $<
+
+debug: ./bin/kernel.bin
+	ndisasm -b 32 $< > ./debug/kernel.dis
 
 clear:
 	rm ./bin/*.bin ./debug/*.dis ./build/*.o

@@ -39,13 +39,14 @@ load_kernel:
 BEGIN_PM: ;where program arrives after switch_to_pm subroutine call
  mov ebx, _msg_protected_mode 
  call print_str_pm
+
  call kernel_offset ;give control to kernel
  jmp $ ;ideally would never return from kernel call. but loops forever if kernel ever returns (hope it doesnt :< )
 
 boot_drive db 0
 _msg_real_mode: db "started in 16 bit real mode ", 0
 _msg_load_kernel: db "loading kernel into memory", 0
-_msg_protected_mode: db "landed in 32 bit pm ", 0
+_msg_protected_mode: db "  landed in 32 bit pm ", 0
 
 times 510 - ($-$$) db 0
 dw 0XAA55
