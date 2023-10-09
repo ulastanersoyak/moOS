@@ -1,5 +1,7 @@
 
 _gdt_start:
+
+_gdt_null:
   dd 0x0 ;mandatory null descriptor of 8 byte
   dd 0x0 ;dd means double word which is 4 byte. by adding 2 of them null descriptor is complete
 
