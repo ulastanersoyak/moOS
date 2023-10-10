@@ -1,57 +1,34 @@
-# Compiler and linker settings
 CC := ~/opt/cross/bin/i686-elf-gcc
 LD := ~/opt/cross/bin/i686-elf-ld
-NASM := nasm
 
-# Directories
-SRC_DIR := src
-BUILD_DIR := build
-BIN_DIR := bin
-DEBUG_DIR := debug
 
-# Source files
-BOOTLOADER_SRC := $(wildcard $(SRC_DIR)/bootloader/*.asm)
-KERNEL_SRC := $(wildcard $(SRC_DIR)/kernel/*.c)
-KERNEL_ENTRY_SRC := $(SRC_DIR)/bootloader/kernel_entry.asm
+C_SOURCES = $(wildcard ./src/kernel/*.c ./src/drivers/*.c)
+HEADERS = $(wildcard ./src/kernel/*.h .src/drivers/*.h)
+# Nice syntax for file extension replacement
+OBJ = ${C_SOURCES:.c=.o}
 
-# Output files
-BOOTLOADER_BIN := $(BIN_DIR)/bootloader.bin
-KERNEL_BIN := $(BIN_DIR)/kernel.bin
-OS_IMAGE_BIN := $(BIN_DIR)/os_image.bin
-KERNEL_ENTRY_OBJ := $(BUILD_DIR)/kernel_entry.o
-KERNEL_OBJ := $(BUILD_DIR)/kernel.o
-KERNEL_DIS := $(DEBUG_DIR)/kernel.dis
+# First rule is run by default
+os-image.bin: ./src/bootloader/bootloader.bin kernel.bin
+	cat $^ > os-image.bin
 
-# Flags
-CFLAGS := -ffreestanding
-LDFLAGS := -Ttext 0x1000 --oformat binary
+kernel.bin: ./src/bootloader/kernel_entry.o ${OBJ}
+	${LD} -o $@ -Ttext 0x1000 $^ --oformat binary
 
-# Targets
-all: $(OS_IMAGE_BIN) debug
+kernel.elf: ./src/bootloader/kernel_entry.o ${OBJ}
+	${LD} -o $@ -Ttext 0x1000 $^ 
 
-$(KERNEL_BIN): $(KERNEL_ENTRY_OBJ) $(KERNEL_OBJ)
-	$(LD) -o $@ $(LDFLAGS) $^
+run: os-image.bin
+	qemu-system-x86_64 -fda os-image.bin
 
-$(KERNEL_ENTRY_OBJ): $(KERNEL_ENTRY_SRC)
-	$(NASM) $< -f elf -o $@
+%.o: %.c ${HEADERS}
+	${CC}  -ffreestanding -c $< -o $@
 
-$(KERNEL_OBJ): $(KERNEL_SRC)
-	$(CC) $(CFLAGS) -c $< -o $@
+%.o: %.asm
+	nasm $< -f elf -o $@
 
-$(BOOTLOADER_BIN): $(BOOTLOADER_SRC)
-	$(NASM) $< -f bin -o $@
+%.bin: %.asm
+	nasm $< -f bin -o $@
 
-$(OS_IMAGE_BIN): $(BOOTLOADER_BIN) $(KERNEL_BIN)
-	cat $^ > $@
-
-qemu: $(OS_IMAGE_BIN)
-	qemu-system-x86_64 -fda $<
-
-debug: $(KERNEL_BIN)
-	ndisasm -b 32 $< > $(KERNEL_DIS)
-
-clear:
-	rm -f $(BIN_DIR)/*.bin $(DEBUG_DIR)/*.dis $(BUILD_DIR)/*.o
-
-.PHONY: all qemu debug clear
-
+clean:
+	rm -rf ./bin/*.bin *.o *.bin *.elf
+	rm -rf ./src/kernel/*.o ./src/bootloader/*.bin ./src/drivers/*.o ./src/bootloader/*.o
