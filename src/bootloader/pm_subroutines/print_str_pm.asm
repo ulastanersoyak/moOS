@@ -2,11 +2,13 @@
 
 video_memory equ 0xb8000
 monochrome equ 0x0f
-
 print_str_pm:
   ;print a string in protected mode. uses edx as parameter
   pusha
-  mov edx, video_memory
+  mov eax, 160
+  mul ecx ;cx will contain row number
+  add eax, video_memory
+  mov edx, eax
 
 _str_pm_loop:
   mov al, [ebx] ;[ebx] is the address of the char
