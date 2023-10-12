@@ -29,4 +29,4 @@ run: os-image.bin
 
 clean:
 	rm -rf ./bin/*.bin *.o *.bin *.elf
-	rm -rf ./src/kernel/*.o ./src/bootloader/*.bin ./src/drivers/*.o ./src/bootloader/*.o
+	rm -rf ./src/kernel/*.o ./src/bootloader/*.bin ./src/drivers/*.o ./src/bootloader/*.o ./src/libc/string/*.o
