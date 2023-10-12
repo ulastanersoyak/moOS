@@ -1,6 +1,6 @@
-[bits 32]
+[bits 32] ;using 32bit protected mode
 
-video_memory equ 0xb800
+video_memory equ 0xb8000
 monochrome equ 0x0f
 
 print_str_pm:
