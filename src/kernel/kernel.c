@@ -1,8 +1,6 @@
-#include "../drivers/screen.h"
+#include "../drivers/terminal.h"
 
 void kernel_start() {
-  char *vm = (char *)0xb8000;
-  vm[0] = 'a';
-  vm[2] = 'b';
-  // kprint("\ns");
+  terminal_initialize();
+  terminal_writestring("hope it works");
 }
