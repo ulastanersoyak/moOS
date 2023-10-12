@@ -1,5 +1,6 @@
 #ifndef STRING_H
 #define STRING_H
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -8,7 +9,7 @@
 void *memchr(const void *str, uint32_t c, size_t n);
 
 // compares first n bytes of pointed strings
-int memcmp(const void *str1, const void *str2, size_t n);
+int32_t memcmp(const void *str1, const void *str2, size_t n);
 
 // copies n chars from src to dest
 void *memcpy(void *dest, const void *src, size_t n);
@@ -29,14 +30,14 @@ char *strncat(char *dest, const char *src, uint32_t n);
 char *strchr(const char *str, uint32_t n);
 
 // compares str1 to str2
-int strcmp(const char *str1, const char *str2);
+int32_t strcmp(const char *str1, const char *str2);
 
 // compares str1 to str2 up to n byte
-int strncmp(const char *str1, const char *str2, uint32_t n);
+int32_t strncmp(const char *str1, const char *str2, uint32_t n);
 
 // compares str1 to str2. result depends on the LC_COLLATE setting of the
 // location
-int strcoll(const char *str1, const char *str2);
+int32_t strcoll(const char *str1, const char *str2);
 
 // copies src to dest
 char *strcpy(char *dest, const char *src);
