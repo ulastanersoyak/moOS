@@ -2,8 +2,8 @@ CC := ~/opt/cross/bin/i686-elf-gcc
 LD := ~/opt/cross/bin/i686-elf-ld
 
 
-C_SOURCES = $(wildcard ./src/kernel/*.c ./src/drivers/*.c ./src/libc/string/*c)
-HEADERS = $(wildcard ./src/kernel/*.h .src/drivers/*.h ./src/libc/string/*h)
+C_SOURCES = $(wildcard ./src/kernel/*.c ./src/drivers/*.c ./src/libc/string/*c ./src/idt/idt.c)
+HEADERS = $(wildcard ./src/kernel/*.h .src/drivers/*.h ./src/libc/string/*h ./src/idt/idt.h )
 OBJ = ${C_SOURCES:.c=.o}
 
 os-image.bin: ./src/bootloader/bootloader.bin kernel.bin
@@ -29,4 +29,5 @@ run: os-image.bin
 
 clean:
 	rm -rf ./bin/*.bin *.o *.bin *.elf
-	rm -rf ./src/kernel/*.o ./src/bootloader/*.bin ./src/drivers/*.o ./src/bootloader/*.o ./src/libc/string/*.o
+	rm -rf ./src/kernel/*.o ./src/bootloader/*.bin ./src/drivers/*.o ./src/bootloader/*.o ./src/libc/string/*.o ./src/idt/*.o
+
