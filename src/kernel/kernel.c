@@ -1,10 +1,7 @@
 #include "../drivers/terminal.h"
 #include "../drivers/vga.h"
+
 void kernel_start() {
   terminal_initialize();
-  terminal_writestring("hello");
-  terminal_writestring("\nhello2");
-  terminal_clean();
-  terminal_writestring("hello");
-  terminal_writestring("\nhello2");
+  cowsay("hello");
 }

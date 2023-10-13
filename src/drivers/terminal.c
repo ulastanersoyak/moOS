@@ -29,8 +29,6 @@ void terminal_clean(void) {
 
 // initializes terminal attribiutes and clens the screen
 void terminal_initialize(void) {
-  terminal_row = 0;
-  terminal_column = 0;
   terminal_colour = vga_entry_colour(light_grey, black);
   terminal_buffer = VGA_MEMORY;
   terminal_clean();
@@ -52,7 +50,7 @@ void terminal_putchar(char c) {
     terminal_row += 1;
     return;
   }
-  terminal_putentryat(c, terminal_colour, terminal_column, terminal_row);
+  terminal_putentryat(uc, terminal_colour, terminal_column, terminal_row);
   if (++terminal_column == VGA_WIDTH) {
     terminal_column = 0;
     if (++terminal_row == VGA_HEIGHT) {
@@ -71,4 +69,14 @@ void terminal_write(const char *data, size_t size) {
 // wrapper of terminal_write function.
 void terminal_writestring(const char *data) {
   terminal_write(data, strlen(data));
+}
+void cowsay(const char *str) {
+  terminal_writestring(" <");
+  terminal_writestring(str);
+  terminal_writestring(">\n\n");
+  terminal_writestring("    ^__^\n");
+  terminal_writestring("    (oo)\_______\n");
+  terminal_writestring("    (__)\       )--/ \n");
+  terminal_writestring("       ||----w |\n");
+  terminal_writestring("       ||     ||\n");
 }

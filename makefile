@@ -19,7 +19,7 @@ run: os-image.bin
 	qemu-system-x86_64 -fda os-image.bin
 
 %.o: %.c ${HEADERS}
-	${CC}  -ffreestanding -c $< -o $@
+	${CC} -ffreestanding -c $< -o $@
 
 %.o: %.asm
 	nasm $< -f elf -o $@
