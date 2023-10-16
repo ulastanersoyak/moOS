@@ -1,8 +1,8 @@
 #ifndef VGA_H
 #define VGA_H
 
+#include <stddef.h>
 #include <stdint.h>
-
 enum vga_colour {
   black,
   blue,
@@ -20,6 +20,10 @@ enum vga_colour {
   light_brown,
   white,
 };
+
+static uint16_t *const VGA_MEMORY = (uint16_t *)0xb8000;
+static const size_t VGA_WIDTH = 80;
+static const size_t VGA_HEIGHT = 25;
 
 // set vga colour bit with background and foreground colours
 static inline uint8_t vga_entry_colour(enum vga_colour fg, enum vga_colour bg) {

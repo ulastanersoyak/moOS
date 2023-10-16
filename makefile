@@ -1,33 +1,27 @@
-CC := ~/opt/cross/bin/i686-elf-gcc
-LD := ~/opt/cross/bin/i686-elf-ld
+FILES = ./build/kernel.asm.o ./build/kernel.o
+FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-labels -falign-loops -fstrength-reduce -fomit-frame-pointer -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
 
+all: ./bin/bootloader.bin ./bin/kernel.bin
+	rm -rf ./bin/os.bin
+	dd if=./bin/bootloader.bin >> ./bin/os.bin
+	dd if=./bin/kernel.bin >> ./bin/os.bin
+	dd if=/dev/zero bs=512 count=100 >> ./bin/os.bin
 
-C_SOURCES = $(wildcard ./src/kernel/*.c ./src/drivers/*.c ./src/libc/string/*c ./src/idt/idt.c)
-HEADERS = $(wildcard ./src/kernel/*.h .src/drivers/*.h ./src/libc/string/*h ./src/idt/idt.h )
-OBJ = ${C_SOURCES:.c=.o}
+./bin/kernel.bin: $(FILES)
+	i686-elf-ld -g -relocatable $(FILES) -o ./build/kernelfull.o
+	i686-elf-gcc $(FLAGS) -T ./linker.ld -o ./bin/kernel.bin -ffreestanding -O0 -nostdlib ./build/kernelfull.o 
 
-os-image.bin: ./src/bootloader/bootloader.bin kernel.bin
-	cat $^ > os-image.bin
+./bin/bootloader.bin: ./src/bootloader/bootloader.asm
+	nasm -f bin ./src/bootloader/bootloader.asm -o ./bin/bootloader.bin
 
-kernel.bin: ./src/bootloader/kernel_entry.o ${OBJ}
-	${LD} -o $@ -Ttext 0x1000 $^ --oformat binary
+./build/kernel.asm.o: ./src/bootloader/kernel.asm
+	nasm -f elf -g ./src/bootloader/kernel.asm -o ./build/kernel.asm.o
 
-kernel.elf: ./src/bootloader/kernel_entry.o ${OBJ}
-	${LD} -o $@ -Ttext 0x1000 $^ 
-
-run: os-image.bin
-	qemu-system-x86_64 -fda os-image.bin
-
-%.o: %.c ${HEADERS}
-	${CC} -ffreestanding -c $< -o $@
-
-%.o: %.asm
-	nasm $< -f elf -o $@
-
-%.bin: %.asm
-	nasm $< -f bin -o $@
+./build/kernel.o: ./src/kernel/kernel.c
+	i686-elf-gcc -I./src/kernel $(FLAGS) -std=gnu99 -c ./src/kernel/kernel.c -o ./build/kernel.o
 
 clean:
-	rm -rf ./bin/*.bin *.o *.bin *.elf
-	rm -rf ./src/kernel/*.o ./src/bootloader/*.bin ./src/drivers/*.o ./src/bootloader/*.o ./src/libc/string/*.o ./src/idt/*.o
+	rm -rf ./build/* ./bin/*
 
+run: ./bin/os.bin 
+	qemu-system-x86_64 -hda ./bin/os.bin
