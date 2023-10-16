@@ -1,9 +1,10 @@
 CC := i686-elf-gcc
 LD := i686-elf-ld
+
 FILES = ./build/kernel.asm.o ./build/kernel.o ./build/terminal.o ./build/libc.o
 FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-labels -falign-loops -fstrength-reduce -fomit-frame-pointer -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
 
-.PHONY: ./build/libc.o build_dirs
+.PHONY: build_dirs
 
 all: build_dirs ./bin/bootloader.bin ./bin/kernel.bin 
 	rm -rf ./bin/os.bin
@@ -31,7 +32,8 @@ all: build_dirs ./bin/bootloader.bin ./bin/kernel.bin
 	$(CC) -I./src/libc/string $(FLAGS) -std=gnu99 -c ./src/libc/string/string.c -o ./build/libc.o
 
 build_dirs:
-	mkdir bin build
+	if [ ! -d "bin" ]; then mkdir bin; fi
+	if [ ! -d "build" ]; then mkdir build; fi
 
 clean:
 	rm -rf ./build/* ./bin/*

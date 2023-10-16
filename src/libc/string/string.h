@@ -8,10 +8,13 @@
 // string pointed to.
 void *memchr(const void *str, uint32_t c, size_t n);
 
-// compares first n bytes of pointed strings
+// compares first n bytes of pointed area. if return value < 0 str1 is less than
+// str2. if return value > 0 str1 is greater than str2. if return value = 0 str1
+// is equal to str2
 int32_t memcmp(const void *str1, const void *str2, size_t n);
 
-// copies n chars from src to dest
+// copies n chars from src to dest. returns a pointer to the position which is
+// dest
 void *memcpy(void *dest, const void *src, size_t n);
 
 // another function to copy n chars from str2 to str1
