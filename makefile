@@ -1,7 +1,7 @@
 CC := ~/opt/cross/bin/i686-elf-gcc
 LD := ~/opt/cross/bin/i686-elf-ld
 
-FILES = ./build/kernel.asm.o ./build/kernel.o ./build/terminal.o ./build/libc.o ./build/idt.asm.o ./build/idt.o
+FILES = ./build/kernel.asm.o ./build/kernel.o ./build/terminal.o ./build/libc.o ./build/idt.asm.o ./build/idt.o ./build/io.asm.o
 FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-labels -falign-loops -fstrength-reduce -fomit-frame-pointer -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
 
 .PHONY: build_dirs
@@ -36,6 +36,10 @@ all: build_dirs ./bin/bootloader.bin ./bin/kernel.bin
 
 ./build/idt.o: ./src/kernel/idt/idt.c
 	$(CC) -I./src/kernel/idt/ $(FLAGS) -std=gnu99 -c ./src/kernel/idt/idt.c -o ./build/idt.o
+
+./build/io.asm.o : ./src/kernel/io/io.asm
+	nasm -f elf -g ./src/kernel/io/io.asm -o ./build/io.asm.o
+
 
 build_dirs:
 	if [ ! -d "bin" ]; then mkdir bin; fi
