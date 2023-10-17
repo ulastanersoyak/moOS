@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 // #include "../libc/string/string.h"
-#include "../libc/string/string.h"
+#include "../../libc/string/string.h"
 #include "terminal.h"
 #include "vga.h"
 
@@ -75,7 +75,7 @@ void cowsay(const char *str) {
   terminal_writestring("----------\n");
   terminal_writestring("    ^__^\n");
   terminal_writestring("    (oo)_______\n");
-  terminal_writestring("    (__)       )--/ \n");
+  terminal_writestring("    (__)       )-/\n");
   terminal_writestring("       ||----w |\n");
   terminal_writestring("       ||     ||\n");
 }

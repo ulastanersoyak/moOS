@@ -1,0 +1,8 @@
+full libc (cppreference c headers url)
+
+test libc with c or a scripting language
+
+full interrupt implementation
+
+print int hex
+
