@@ -25,8 +25,8 @@ all: build_dirs ./bin/bootloader.bin ./bin/kernel.bin
 ./build/kernel.o: ./src/kernel/kernel.c
 	$(CC) -I./src/kernel $(FLAGS) -std=gnu99 -c ./src/kernel/kernel.c -o ./build/kernel.o
 
-./build/terminal.o : ./src/drivers/terminal.c
-	$(CC) -I./src/drivers/ $(FLAGS) -std=gnu99 -c ./src/drivers/terminal.c -o ./build/terminal.o
+./build/terminal.o : ./src/drivers/screen/terminal.c
+	$(CC) -I./src/drivers/ $(FLAGS) -std=gnu99 -c ./src/drivers/screen/terminal.c -o ./build/terminal.o
 
 ./build/libc.o: ./src/libc/string/string.c
 	$(CC) -I./src/libc/string/ $(FLAGS) -std=gnu99 -c ./src/libc/string/string.c -o ./build/libc.o
