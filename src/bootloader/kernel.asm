@@ -19,6 +19,19 @@ _start:
   or al, 2 
   out 0x92, al
 
+  ;remap the master programmable interrupt controller
+  mov al, 00010001b
+  out 0x20, al
+
+  mov al,0x20 ; isr master 
+  out 0x21, al
+
+  mov al, 00000001b
+  out 0x21, al
+  ;remap paster pic
+
+  sti
+
   call kernel_main
 
   jmp $
