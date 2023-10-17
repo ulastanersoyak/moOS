@@ -1,7 +1,7 @@
-CC := i686-elf-gcc
-LD := i686-elf-ld
+CC := ~/opt/cross/bin/i686-elf-gcc
+LD := ~/opt/cross/bin/i686-elf-ld
 
-FILES = ./build/kernel.asm.o ./build/kernel.o ./build/terminal.o ./build/libc.o
+FILES = ./build/kernel.asm.o ./build/kernel.o ./build/terminal.o ./build/libc.o ./build/idt.asm.o ./build/idt.o
 FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-labels -falign-loops -fstrength-reduce -fomit-frame-pointer -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
 
 .PHONY: build_dirs
@@ -29,7 +29,13 @@ all: build_dirs ./bin/bootloader.bin ./bin/kernel.bin
 	$(CC) -I./src/drivers/ $(FLAGS) -std=gnu99 -c ./src/drivers/terminal.c -o ./build/terminal.o
 
 ./build/libc.o: ./src/libc/string/string.c
-	$(CC) -I./src/libc/string $(FLAGS) -std=gnu99 -c ./src/libc/string/string.c -o ./build/libc.o
+	$(CC) -I./src/libc/string/ $(FLAGS) -std=gnu99 -c ./src/libc/string/string.c -o ./build/libc.o
+
+./build/idt.asm.o: ./src/kernel/idt/idt.asm
+	nasm -f elf -g ./src/kernel/idt/idt.asm -o ./build/idt.asm.o
+
+./build/idt.o: ./src/kernel/idt/idt.c
+	$(CC) -I./src/kernel/idt/ $(FLAGS) -std=gnu99 -c ./src/kernel/idt/idt.c -o ./build/idt.o
 
 build_dirs:
 	if [ ! -d "bin" ]; then mkdir bin; fi
@@ -38,5 +44,6 @@ build_dirs:
 clean:
 	rm -rf ./build/* ./bin/*
 
-run: ./bin/os.bin 
+run: all 
 	qemu-system-x86_64 -hda ./bin/os.bin
+
