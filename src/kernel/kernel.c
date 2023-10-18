@@ -1,12 +1,14 @@
 #include "kernel.h"
 #include "../drivers/screen/terminal.h"
 #include "../libc/string/string.h"
+#include "./ascii/ascii.h"
 #include "idt/idt.h"
 #include "io/io.h"
+#include "kmem/kheap.h"
 
 void kernel_main(void) {
   terminal_initialize();
+  kernel_heap_init();
   idt_init();
-  terminal_writestring("linked correctly\n");
-  cowsay("hi");
+  shrigma();
 }

@@ -26,9 +26,13 @@ void terminal_clean(void) {
 
 // initializes terminal attribiutes and clens the screen
 void terminal_initialize(void) {
-  terminal_colour = vga_entry_colour(light_grey, black);
+  terminal_colour = vga_entry_colour(white, black);
   terminal_buffer = VGA_MEMORY;
   terminal_clean();
+  terminal_writestring("terminal initializing");
+  terminal_setcolour(green);
+  terminal_writestring(" [OK]\n");
+  terminal_setcolour(white);
 }
 void terminal_setcolour(uint8_t colour) { terminal_colour = colour; }
 
@@ -66,16 +70,4 @@ void terminal_write(const char *data, size_t size) {
 // wrapper of terminal_write function.
 void terminal_writestring(const char *data) {
   terminal_write(data, strlen(data));
-}
-void cowsay(const char *str) {
-  terminal_writestring("----------\n");
-  terminal_writestring(" <");
-  terminal_writestring(str);
-  terminal_writestring(">\n");
-  terminal_writestring("----------\n");
-  terminal_writestring("    ^__^\n");
-  terminal_writestring("    (oo)_______\n");
-  terminal_writestring("    (__)       )-/\n");
-  terminal_writestring("       ||----w |\n");
-  terminal_writestring("       ||     ||\n");
 }

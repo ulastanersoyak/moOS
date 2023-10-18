@@ -9,6 +9,7 @@ enum vga_colour {
   green,
   cyan,
   red,
+  magenta,
   brown,
   light_grey,
   dark_grey,
