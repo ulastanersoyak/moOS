@@ -1,6 +1,5 @@
 #include "idt.h"
 #include "../../drivers/screen/terminal.h"
-#include "../../drivers/screen/vga.h"
 #include "../../libc/string/string.h"
 #include "../config.h"
 #include "../io/io.h"
@@ -32,9 +31,7 @@ void idt_init(void) {
   idt_set(0, idt_zero);
   idt_set(0x21, int21h);
   idt_load(&idtr_descriptor);
-  terminal_setcolour(green);
-  terminal_writestring(" [OK]\n");
-  terminal_setcolour(white);
+  init_OK();
 }
 
 void idt_set(uint32_t interrupt_num, void *addr) {

@@ -1,8 +1,8 @@
 #include "kheap.h"
 #include "../../drivers/screen/terminal.h"
-#include "../../drivers/screen/vga.h"
 #include "../../memory/heap/heap.h"
 #include "../config.h"
+
 struct heap_desc kernel_heap;
 struct heap_table kernel_heap_table;
 
@@ -16,15 +16,12 @@ void kernel_heap_init(void) {
   int32_t res = heap_desc_init(&kernel_heap, (void *)(HEAP_ADDRESS), end_addr,
                                &kernel_heap_table);
   if (res < 0) {
-    terminal_setcolour(red);
-    terminal_writestring(" [FAILED]\n");
-    terminal_setcolour(white);
+    init_ER();
   } else {
-
-    terminal_setcolour(green);
-    terminal_writestring(" [OK]\n");
-    terminal_setcolour(white);
+    init_OK();
   }
 }
 
 void *kmalloc(size_t size) { return heap_malloc(&kernel_heap, size); }
+
+void kfree(void *addr) { heap_free(&kernel_heap, addr); }
