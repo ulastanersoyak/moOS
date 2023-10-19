@@ -2,7 +2,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// #include "../libc/string/string.h"
 #include "../../libc/string/string.h"
 #include "terminal.h"
 #include "vga.h"
@@ -25,7 +24,7 @@ void terminal_clean(void) {
 }
 
 // initializes terminal attribiutes and clens the screen
-void terminal_initialize(void) {
+void terminal_init(void) {
   terminal_colour = vga_entry_colour(white, black);
   terminal_buffer = VGA_MEMORY;
   terminal_clean();
@@ -70,7 +69,7 @@ void terminal_writestring(const char *data) {
   terminal_write(data, strlen(data));
 }
 
-void terminal_writeint(int num) {
+void terminal_writeint(int32_t num) {
   char map[10] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
   size_t idx = 0;
   uint32_t digits[100];
@@ -85,8 +84,15 @@ void terminal_writeint(int num) {
     num /= 10;
   }
   for (int32_t i = idx - 1; i >= 0; i--) {
+    if ((i - 2) % 3 == 0 && i != idx - 1) {
+      terminal_putchar('_');
+    }
     terminal_putchar(map[digits[i]]);
   }
+}
+void terminal_writeaddr(void *addr) {
+  int32_t address = (int32_t)addr;
+  terminal_writeint(address);
 }
 void init_OK(void) {
   terminal_setcolour(green);

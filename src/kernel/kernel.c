@@ -5,15 +5,13 @@
 #include "idt/idt.h"
 #include "io/io.h"
 #include "kmem/kheap.h"
-void test_maloc(char *ptr) {
-  for (int i = 0; i < 5; i++) {
-    terminal_putchar(ptr[i]);
-  }
-}
+
 void kernel_main(void) {
-  terminal_initialize();
+  terminal_init();
   kernel_heap_init();
   idt_init();
+
+  // TODO FIX BLOCK BUG
   char *ptr = (char *)kmalloc(5000);
   char *ptr2 = (char *)kmalloc(500);
   ptr[0] = 'p';
@@ -28,7 +26,20 @@ void kernel_main(void) {
   ptr2[3] = '2';
   ptr2[4] = '\n';
 
-  test_maloc(ptr);
-  test_maloc(ptr2);
+  char *ptr3 = (char *)kmalloc(5000);
+  ptr3[0] = 'p';
+  ptr3[1] = 't';
+  ptr3[2] = 'r';
+  ptr3[3] = '3';
+  ptr3[4] = '\n';
+
+  terminal_writeaddr(ptr);
+  terminal_writestring("\n");
+
+  terminal_writeaddr(ptr2);
+  terminal_writestring("\n");
+
+  terminal_writeaddr(ptr3);
+  terminal_writestring("\n");
   //  shrigma();
 }
