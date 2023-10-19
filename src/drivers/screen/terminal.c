@@ -69,6 +69,25 @@ void terminal_write(const char *data, size_t size) {
 void terminal_writestring(const char *data) {
   terminal_write(data, strlen(data));
 }
+
+void terminal_writeint(int num) {
+  char map[10] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
+  size_t idx = 0;
+  uint32_t digits[100];
+  if (num == 0) {
+    terminal_putchar(map[num]);
+    return;
+  }
+  while (num > 0) {
+    uint32_t digit = num % 10;
+    digits[idx] = digit;
+    idx++;
+    num /= 10;
+  }
+  for (int32_t i = idx - 1; i >= 0; i--) {
+    terminal_putchar(map[digits[i]]);
+  }
+}
 void init_OK(void) {
   terminal_setcolour(green);
   terminal_writestring(" [OK]\n");
