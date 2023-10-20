@@ -29,8 +29,6 @@ _start:
   out 0x21, al
   ;remap master pic
 
-  sti
-
   call kernel_main
 
   jmp $
