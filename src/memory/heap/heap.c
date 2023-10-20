@@ -104,12 +104,11 @@ void *heap_malloc(struct heap_desc *heap, size_t size) {
   return heap_malloc_blocks(heap, total_blocks);
 }
 
-static void heap_free_blocks(struct heap_desc *heap, void *addr) {
-  uint32_t block_number = ((uint32_t)(addr - heap->addr)) / HEAP_BLOCK_SIZE;
-  struct heap_table *table = heap->table;
-  for (size_t i = block_number; i < table->total_entries; i++) {
-    HEAP_BLOCK_TABLE_ENTRY entry = table->entries[i];
-    table->entries[i] = HEAP_BLOCK_TABLE_ENTRY_FREE;
+static void heap_free_blocks(struct heap_desc *desc, void *addr) {
+  uint32_t block_number = ((uint32_t)(addr - desc->addr)) / HEAP_BLOCK_SIZE;
+  for (size_t i = block_number; i < desc->table->total_entries; i++) {
+    HEAP_BLOCK_TABLE_ENTRY entry = desc->table->entries[i];
+    desc->table->entries[i] = HEAP_BLOCK_TABLE_ENTRY_FREE;
     if (!(entry & HEAP_BLOCK_HAS_NEXT)) {
       break;
     }
