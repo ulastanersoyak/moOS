@@ -3,17 +3,17 @@ section .asm
 global idt_load
 global int21h
 global no_intr
-global enable_interrupts
-global disable_interrupts
+global enable_intr
+global disable_intr
 
 extern int21h_handler
 extern no_intr_handler
 
-enable_interrupts:
+enable_intr:
   sti
   ret
 
-disable_interrupts:
+disable_intr:
   ti
   ret
 

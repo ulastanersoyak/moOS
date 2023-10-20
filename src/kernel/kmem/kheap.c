@@ -1,5 +1,6 @@
 #include "kheap.h"
 #include "../../drivers/screen/terminal.h"
+#include "../../libc/string/string.h"
 #include "../../memory/heap/heap.h"
 #include "../config.h"
 
@@ -18,10 +19,23 @@ void kernel_heap_init(void) {
   if (res < 0) {
     init_ER();
   } else {
+    terminal_writestring(" <");
+    terminal_writeint((kernel_heap_table.total_entries * HEAP_BLOCK_SIZE) /
+                      (1024 * 1024));
+    terminal_writestring(" mb>");
     init_OK();
   }
 }
 
 void *kmalloc(size_t size) { return heap_malloc(&kernel_heap, size); }
+
+void *kcalloc(size_t size) {
+  void *ptr = kmalloc(size);
+  if (!ptr) {
+    return 0;
+  }
+  memset(ptr, 0x00, size);
+  return ptr;
+}
 
 void kfree(void *addr) { heap_free(&kernel_heap, addr); }
