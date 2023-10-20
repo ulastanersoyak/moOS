@@ -1,30 +1,50 @@
-
 [org 0x7c00]
+
+kernel_offset equ 0x1000
+
+mov [boot_drive], dl ;bios sets the boot drive in dl on boot
 
 mov bp, 0x9000 ;set the stack
 mov sp, bp
 
 mov bx, _msg_real_mode
 call print_str_bios
+call print_nl
 
+call load_kernel ;read kernel from disk
 call switch_to_pm ;program should never return from this, if it returns loop forever
 
 jmp $ ;hopefully, this wont get executed
 
-%include "./src/bootloader/bios_subroutines/print_str_bios.asm" ;includes print_str_bios subroutin
-;%include "./src/bootloader/bios_subroutines/print_hex_bios.asm" ;includes print_hex_bios subroutine
-;%include "./src/bootloader/bios_subroutines/disk_load_bios.asm" ;includes disk_load_bios subroutine 
+%include "./src/bootloader/bios_subroutines/print_str_bios.asm" ;includes print_str_bios subroutine
+%include "./src/bootloader/bios_subroutines/print_new_line_bios.asm" ;includes print_nl subroutine
+%include "./src/bootloader/bios_subroutines/print_hex_bios.asm" ;includes print_hex_bios subroutine
+%include "./src/bootloader/bios_subroutines/disk_load_bios.asm" ;includes disk_load_bios subroutine 
 %include "./src/bootloader/pm_subroutines/global_descriptor_table.asm" ;includes gdt and gdt descriptor 
 %include "./src/bootloader/pm_subroutines/print_str_pm.asm" ;includes print_str_pm subroutine for printing in 32bit pm
 %include "./src/bootloader/pm_subroutines/switch_to_pm.asm" ;includes switch_to_pm subroutine for mode switch
+
+[bits 16]
+load_kernel:
+  mov bx,_msg_load_kernel
+  call print_nl
+
+  mov bx, kernel_offset ;read from disk and store in 0x1000
+  mov dh, 2
+  mov dl, [boot_drive]
+  call disk_load_bios
+  ret
 
 [bits 32]
 BEGIN_PM: ;where program arrives after switch_to_pm subroutine call
  mov ebx, _msg_protected_mode 
  call print_str_pm
- jmp $
+ call kernel_offset ;give control to kernel
+ jmp $ ;ideally would never return from kernel call. but loops forever if kernel ever returns (hope it doesnt :< )
 
+boot_drive db 0
 _msg_real_mode: db "started in 16 bit real mode ", 0
+_msg_load_kernel: db "loading kernel into memory", 0
 _msg_protected_mode: db "landed in 32 bit pm ", 0
 
 times 510 - ($-$$) db 0
