@@ -7,8 +7,9 @@ print_str_pm:
   ;print a string in protected mode. uses edx as parameter
   pusha
   mov edx, video_memory
+
 _str_pm_loop:
-  mov al, [ebx] ;video graphic array uses a registers low bits as char
+  mov al, [ebx] ;[ebx] is the address of the char
   mov ah, monochrome ;and high bits as metadata about char like background and foreground colours of char
 
   cmp al, 0 ;check if string is ended
