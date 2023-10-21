@@ -6,7 +6,7 @@ all: ./bin/os_image.bin debug
 ./bin/kernel.bin: ./build/kernel_entry.o ./build/kernel.o
 	$(linker) -o $@ -Ttext 0x1000 $^ --oformat binary
 
-./build/kernel_entry.o: ./src/kernel/kernel_entry.asm
+./build/kernel_entry.o: ./src/bootloader/kernel_entry.asm
 	nasm $< -f elf -o $@
 
 ./build/kernel.o: ./src/kernel/kernel.c
