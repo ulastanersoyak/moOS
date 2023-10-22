@@ -1,28 +1,57 @@
-cross_compiler := ~/opt/cross/bin/i686-elf-gcc
-linker := ~/opt/cross/bin/i686-elf-ld 
+# Compiler and linker settings
+CC := ~/opt/cross/bin/i686-elf-gcc
+LD := ~/opt/cross/bin/i686-elf-ld
+NASM := nasm
 
-all: ./bin/os_image.bin debug
+# Directories
+SRC_DIR := src
+BUILD_DIR := build
+BIN_DIR := bin
+DEBUG_DIR := debug
 
-./bin/kernel.bin: ./build/kernel_entry.o ./build/kernel.o
-	$(linker) -o $@ -Ttext 0x1000 $^ --oformat binary
+# Source files
+BOOTLOADER_SRC := $(wildcard $(SRC_DIR)/bootloader/*.asm)
+KERNEL_SRC := $(wildcard $(SRC_DIR)/kernel/*.c)
+KERNEL_ENTRY_SRC := $(SRC_DIR)/bootloader/kernel_entry.asm
 
-./build/kernel_entry.o: ./src/bootloader/kernel_entry.asm
-	nasm $< -f elf -o $@
+# Output files
+BOOTLOADER_BIN := $(BIN_DIR)/bootloader.bin
+KERNEL_BIN := $(BIN_DIR)/kernel.bin
+OS_IMAGE_BIN := $(BIN_DIR)/os_image.bin
+KERNEL_ENTRY_OBJ := $(BUILD_DIR)/kernel_entry.o
+KERNEL_OBJ := $(BUILD_DIR)/kernel.o
+KERNEL_DIS := $(DEBUG_DIR)/kernel.dis
 
-./build/kernel.o: ./src/kernel/kernel.c
-	$(cross_compiler) -ffreestanding -c $< -o $@
+# Flags
+CFLAGS := -ffreestanding
+LDFLAGS := -Ttext 0x1000 --oformat binary
 
-./bin/bootloader.bin: ./src/bootloader/bootloader.asm
-	nasm $< -f bin -o $@
+# Targets
+all: $(OS_IMAGE_BIN) debug
 
-./bin/os_image.bin: ./bin/bootloader.bin ./bin/kernel.bin
+$(KERNEL_BIN): $(KERNEL_ENTRY_OBJ) $(KERNEL_OBJ)
+	$(LD) -o $@ $(LDFLAGS) $^
+
+$(KERNEL_ENTRY_OBJ): $(KERNEL_ENTRY_SRC)
+	$(NASM) $< -f elf -o $@
+
+$(KERNEL_OBJ): $(KERNEL_SRC)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BOOTLOADER_BIN): $(BOOTLOADER_SRC)
+	$(NASM) $< -f bin -o $@
+
+$(OS_IMAGE_BIN): $(BOOTLOADER_BIN) $(KERNEL_BIN)
 	cat $^ > $@
 
-qemu: ./bin/os_image.bin
+qemu: $(OS_IMAGE_BIN)
 	qemu-system-x86_64 -fda $<
 
-debug: ./bin/kernel.bin
-	ndisasm -b 32 $< > ./debug/kernel.dis
+debug: $(KERNEL_BIN)
+	ndisasm -b 32 $< > $(KERNEL_DIS)
 
 clear:
-	rm ./bin/*.bin ./debug/*.dis ./build/*.o
+	rm -f $(BIN_DIR)/*.bin $(DEBUG_DIR)/*.dis $(BUILD_DIR)/*.o
+
+.PHONY: all qemu debug clear
+

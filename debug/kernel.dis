@@ -1,0 +1,16 @@
+00000000  E808000000        call 0xd
+00000005  EBFE              jmp short 0x5
+00000007  55                push ebp
+00000008  89E5              mov ebp,esp
+0000000A  90                nop
+0000000B  5D                pop ebp
+0000000C  C3                ret
+0000000D  55                push ebp
+0000000E  89E5              mov ebp,esp
+00000010  83EC10            sub esp,byte +0x10
+00000013  C745FC00800B00    mov dword [ebp-0x4],0xb8000
+0000001A  8B45FC            mov eax,[ebp-0x4]
+0000001D  C60078            mov byte [eax],0x78
+00000020  90                nop
+00000021  C9                leave
+00000022  C3                ret
