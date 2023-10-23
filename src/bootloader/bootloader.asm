@@ -28,6 +28,7 @@ jmp $ ;hopefully, this wont get executed
 [bits 16]
 load_kernel:
   mov bx,_msg_load_kernel
+  mov cx, 13
   call print_str_bios
 
   mov bx, kernel_offset ;read from disk and store in 0x1000
@@ -43,7 +44,12 @@ load_kernel:
 [bits 32]
 
 BEGIN_PM: ;where program arrives after switch_to_pm subroutine call
+
   mov ebx, _msg_protected_mode 
+  call print_str_pm
+
+  mov ebx, _msg_giving_kernel
+  mov cx, 14
   call print_str_pm
 
   call kernel_offset ;give control to kernel
@@ -53,7 +59,8 @@ boot_drive db 0
 _ok: db " [OK]", 0
 _msg_real_mode: db "[b] booting started...", 0
 _msg_load_kernel: db "[b] loading kernel into memory", 0
-_msg_protected_mode: db "landed in 32 bit pm ", 0
+_msg_protected_mode: db "[b] switched to protected mode [OK]", 0
+_msg_giving_kernel: db "[b] giving controll to kernel [OK]", 0
 
 times 510 - ($-$$) db 0
 dw 0XAA55

@@ -1,0 +1,74 @@
+00000000  E808000000        call 0xd
+00000005  EBFE              jmp short 0x5
+00000007  55                push ebp
+00000008  89E5              mov ebp,esp
+0000000A  90                nop
+0000000B  5D                pop ebp
+0000000C  C3                ret
+0000000D  55                push ebp
+0000000E  89E5              mov ebp,esp
+00000010  83EC10            sub esp,byte +0x10
+00000013  C745FC00800B00    mov dword [ebp-0x4],0xb8000
+0000001A  C745F860090000    mov dword [ebp-0x8],0x960
+00000021  8B55F8            mov edx,[ebp-0x8]
+00000024  8B45FC            mov eax,[ebp-0x4]
+00000027  01D0              add eax,edx
+00000029  C60068            mov byte [eax],0x68
+0000002C  8B45F8            mov eax,[ebp-0x8]
+0000002F  8D5002            lea edx,[eax+0x2]
+00000032  8B45FC            mov eax,[ebp-0x4]
+00000035  01D0              add eax,edx
+00000037  C60065            mov byte [eax],0x65
+0000003A  8B45F8            mov eax,[ebp-0x8]
+0000003D  8D5004            lea edx,[eax+0x4]
+00000040  8B45FC            mov eax,[ebp-0x4]
+00000043  01D0              add eax,edx
+00000045  C6006C            mov byte [eax],0x6c
+00000048  8B45F8            mov eax,[ebp-0x8]
+0000004B  8D5006            lea edx,[eax+0x6]
+0000004E  8B45FC            mov eax,[ebp-0x4]
+00000051  01D0              add eax,edx
+00000053  C6006C            mov byte [eax],0x6c
+00000056  8B45F8            mov eax,[ebp-0x8]
+00000059  8D5008            lea edx,[eax+0x8]
+0000005C  8B45FC            mov eax,[ebp-0x4]
+0000005F  01D0              add eax,edx
+00000061  C6006F            mov byte [eax],0x6f
+00000064  8B45F8            mov eax,[ebp-0x8]
+00000067  8D500A            lea edx,[eax+0xa]
+0000006A  8B45FC            mov eax,[ebp-0x4]
+0000006D  01D0              add eax,edx
+0000006F  C60020            mov byte [eax],0x20
+00000072  8B45F8            mov eax,[ebp-0x8]
+00000075  8D500C            lea edx,[eax+0xc]
+00000078  8B45FC            mov eax,[ebp-0x4]
+0000007B  01D0              add eax,edx
+0000007D  C6006B            mov byte [eax],0x6b
+00000080  8B45F8            mov eax,[ebp-0x8]
+00000083  8D500E            lea edx,[eax+0xe]
+00000086  8B45FC            mov eax,[ebp-0x4]
+00000089  01D0              add eax,edx
+0000008B  C60065            mov byte [eax],0x65
+0000008E  8B45F8            mov eax,[ebp-0x8]
+00000091  8D5010            lea edx,[eax+0x10]
+00000094  8B45FC            mov eax,[ebp-0x4]
+00000097  01D0              add eax,edx
+00000099  C60072            mov byte [eax],0x72
+0000009C  8B45F8            mov eax,[ebp-0x8]
+0000009F  8D5012            lea edx,[eax+0x12]
+000000A2  8B45FC            mov eax,[ebp-0x4]
+000000A5  01D0              add eax,edx
+000000A7  C6006E            mov byte [eax],0x6e
+000000AA  8B45F8            mov eax,[ebp-0x8]
+000000AD  8D5014            lea edx,[eax+0x14]
+000000B0  8B45FC            mov eax,[ebp-0x4]
+000000B3  01D0              add eax,edx
+000000B5  C60065            mov byte [eax],0x65
+000000B8  8B45F8            mov eax,[ebp-0x8]
+000000BB  8D5016            lea edx,[eax+0x16]
+000000BE  8B45FC            mov eax,[ebp-0x4]
+000000C1  01D0              add eax,edx
+000000C3  C6006C            mov byte [eax],0x6c
+000000C6  90                nop
+000000C7  C9                leave
+000000C8  C3                ret
