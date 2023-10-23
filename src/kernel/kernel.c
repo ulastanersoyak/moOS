@@ -20,9 +20,9 @@ void kernel_main(void) {
   // initialize systems paging directory
   system_page_dir = page_dir_init(IS_WRITABLE | IS_PRESENT | ACCESS_ALL);
   // tell processor where to find entry of system page directory
-  switch_page_dir(system_page_dir);
+  switch_page_dir(system_page_dir->dir_entry);
   // initialize paging for virtual memory and full system memory coverage
-  enable_system_paging();
+  enable_paging();
   // set everything before interrupts so system gets initialized without processor interrupts
   enable_interrupts();
 }

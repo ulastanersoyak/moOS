@@ -4,27 +4,20 @@
 #include "../../libc/string/string.h"
 #include <stdint.h>
 
-int32_t heap_desc_init(struct heap_desc *heap, void *start, void *end,
-                       struct heap_table *table) {
-
+int32_t heap_desc_init(struct heap_desc *heap, void *start, void *end, struct heap_table *table) {
   // check if start and end addresses allign with block size
-  if (!((uint32_t)start % HEAP_BLOCK_SIZE == 0) &&
-      (!((uint32_t)end % HEAP_BLOCK_SIZE == 0))) {
+  if (!((uint32_t)start % HEAP_BLOCK_SIZE == 0) &&(!((uint32_t)end % HEAP_BLOCK_SIZE == 0))) {
     return -INVALID_ARG_ERROR;
   }
-
   // check if table contains same entries as declared
   if ((table->total_entries != ((size_t)(end - start) / HEAP_BLOCK_SIZE))) {
     return -INVALID_ARG_ERROR;
   }
-
   memset(heap, 0, sizeof(struct heap_desc));
   heap->addr = start;
   heap->table = table;
-
   size_t table_size = sizeof(HEAP_BLOCK_TABLE_ENTRY) * table->total_entries;
-  memset(table->entries, HEAP_BLOCK_TABLE_ENTRY_FREE,
-         table_size); // set whole memory as free
+  memset(table->entries, HEAP_BLOCK_TABLE_ENTRY_FREE, table_size); // set whole memory as free
   return OK;
 }
 
@@ -32,23 +25,18 @@ int32_t heap_desc_init(struct heap_desc *heap, void *start, void *end,
 static uint32_t find_free_block(struct heap_desc *desc, uint32_t total_blocks) {
   uint32_t current_block = 0;
   int32_t start_block = -1;
-
   for (size_t i = 0; i < desc->table->total_entries; i++) {
-
     // if entries last bit is 1 it is in use, else its free
     if ((desc->table->entries[i] & 0x0f) != HEAP_BLOCK_TABLE_ENTRY_FREE) {
       current_block = 0;
       start_block = -1;
       continue;
     }
-
     // mark the start of first available block
     if (start_block == -1) {
       start_block = i;
     }
-
     current_block++;
-
     if (current_block == total_blocks) {
       break;
     }
@@ -56,16 +44,13 @@ static uint32_t find_free_block(struct heap_desc *desc, uint32_t total_blocks) {
   if (start_block == -1) {
     return -NO_MEMORY_ERROR;
   }
-
   return start_block;
 }
 
-static void mark_taken_blocks(struct heap_desc *heap, uint32_t start_block,
-                              uint32_t total_blocks) {
+static void mark_taken_blocks(struct heap_desc *heap, uint32_t start_block, uint32_t total_blocks) {
   uint32_t end_block = (start_block + total_blocks) - 1;
   // mark head as taken and first bits
-  HEAP_BLOCK_TABLE_ENTRY entry =
-      HEAP_BLOCK_TABLE_ENTRY_TAKEN | HEAP_BLOCK_IS_FIRST;
+  HEAP_BLOCK_TABLE_ENTRY entry = HEAP_BLOCK_TABLE_ENTRY_TAKEN | HEAP_BLOCK_IS_FIRST;
   // if heap has more than 1 block mark head as has next
   if (total_blocks > 1) {
     entry |= HEAP_BLOCK_HAS_NEXT;
@@ -73,11 +58,10 @@ static void mark_taken_blocks(struct heap_desc *heap, uint32_t start_block,
   for (size_t i = start_block; i <= end_block; i++) {
     // set the first block as the entry initialized as above
     heap->table->entries[i] = entry;
-    entry = HEAP_BLOCK_TABLE_ENTRY_TAKEN; // override the entry as taken so next
-                                          // iterations dont use first bit
-    if (i != end_block - 1) {
-      entry |= HEAP_BLOCK_HAS_NEXT; // as long as next block is not the end
-                                    // block mark has next bit
+    entry = HEAP_BLOCK_TABLE_ENTRY_TAKEN; 
+    //iterations dont use first bit override the entry as taken so next                                     
+    if (i != end_block - 1) { entry |= HEAP_BLOCK_HAS_NEXT; 
+    // as long as next block is not the end block mark has next bit
     }
   }
 }
