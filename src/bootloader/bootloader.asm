@@ -39,19 +39,18 @@ load_kernel:
   mov bx, _ok
   call print_str_bios
   call print_nl
+
+  mov bx, _msg_protected_mode 
+  call print_str_bios
+
+
+  mov bx, _msg_giving_kernel
+  call print_str_pm
   ret
 
 [bits 32]
 
 BEGIN_PM: ;where program arrives after switch_to_pm subroutine call
-
-  mov ebx, _msg_protected_mode 
-  call print_str_pm
-
-  mov ebx, _msg_giving_kernel
-  mov cx, 14
-  call print_str_pm
-
   call kernel_offset ;give control to kernel
   jmp $ ;ideally would never return from kernel call. but loops forever if kernel ever returns (hope it doesnt :< )
 

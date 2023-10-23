@@ -4,10 +4,8 @@ LD := ~/opt/cross/bin/i686-elf-ld
 
 C_SOURCES = $(wildcard ./src/kernel/*.c ./src/drivers/*.c)
 HEADERS = $(wildcard ./src/kernel/*.h .src/drivers/*.h)
-# Nice syntax for file extension replacement
 OBJ = ${C_SOURCES:.c=.o}
 
-# First rule is run by default
 os-image.bin: ./src/bootloader/bootloader.bin kernel.bin
 	cat $^ > os-image.bin
 
@@ -18,10 +16,10 @@ kernel.elf: ./src/bootloader/kernel_entry.o ${OBJ}
 	${LD} -o $@ -Ttext 0x1000 $^ 
 
 run: os-image.bin
-	qemu-system-x86_64 -fda os-image.bin
+	qemu-system-x86_64 -s -S -fda os-image.bin
 
 %.o: %.c ${HEADERS}
-	${CC}  -ffreestanding -c $< -o $@
+	${CC} -g  -ffreestanding -c $< -o $@
 
 %.o: %.asm
 	nasm $< -f elf -o $@
