@@ -14,7 +14,7 @@ enable_intr:
   ret
 
 disable_intr:
-  ti
+  sti
   ret
 
 idt_load:

@@ -9,7 +9,7 @@ int32_t heap_desc_init(struct heap_desc *heap, void *start, void *end,
 
   // check if start and end addresses allign with block size
   if (!((uint32_t)start % HEAP_BLOCK_SIZE == 0) &&
-      !((uint32_t)end % HEAP_BLOCK_SIZE == 0)) {
+      (!((uint32_t)end % HEAP_BLOCK_SIZE == 0))) {
     return -INVALID_ARG_ERROR;
   }
 

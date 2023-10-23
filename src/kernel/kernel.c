@@ -7,30 +7,22 @@
 #include "io/io.h"
 #include "kmem/kheap.h"
 
-// kernels paging directory. contains 1024 page entries which contains 1024
-// page, each page containing 4kib memory. thus resulting in 4gb virtual memory
-static struct page_dir *kernel_paging_directory = 0;
+// system paging directory pointer.
+static struct page_dir *system_page_dir = 0;
 
 void kernel_main(void) {
+  // initialize terminal so ascii chars can be shown
   terminal_init();
+  // initialize idt so if an interrupt happens system wont panic
   idt_init();
-  enable_interrupts();
+  // initialize system heap for further use
   kernel_heap_init();
-  kernel_paging_directory =
-      page_dir_init(IS_WRITABLE | IS_PRESENT | ACCESS_FROM_ALL);
-  switch_page_dir(get_current_dir(kernel_paging_directory));
-  char *ptr = kcalloc(4096);
-  enable_paging();
-  set_page(kernel_paging_directory->dir_entry, (void *)0x1000,
-           (uint32_t)ptr | ACCESS_FROM_ALL | IS_PRESENT | ACCESS_FROM_ALL);
-  char *ptr2 = (char *)0x1000;
-  ptr2[0] = 'a';
-  ptr2[1] = 'b';
-  ptr2[2] = 'c';
-  ptr2[3] = 'd';
-  ptr2[4] = 'e';
-  terminal_writestring(ptr);
-  terminal_writestring("\n");
-  terminal_writestring(ptr2);
-  terminal_writestring("\n");
+  // initialize systems paging directory
+  system_page_dir = page_dir_init(IS_WRITABLE | IS_PRESENT | ACCESS_ALL);
+  // tell processor where to find entry of system page directory
+  switch_page_dir(system_page_dir);
+  // initialize paging for virtual memory and full system memory coverage
+  enable_system_paging();
+  // set everything before interrupts so system gets initialized without processor interrupts
+  enable_interrupts();
 }
