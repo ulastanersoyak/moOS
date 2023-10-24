@@ -21,8 +21,5 @@ struct page_dir *page_dir_init(uint32_t flags);
 // processor where to find entry point of pagind directory
 void switch_page_dir(uint32_t *dir_entry);
 
-// prototype for the function that enables paging using 31th bit of cr0 register
-// DO NOT CALL BEFORE INITALIZING PAGE DIRECTORY!!! CAUSES SYSTEM PANIC
-void enable_paging(void);
-
+void enable_system_paging(void);
 #endif //PAGE_H
