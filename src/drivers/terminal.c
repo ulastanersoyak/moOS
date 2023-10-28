@@ -17,6 +17,8 @@ static const size_t VGA_HEIGHT = 25;
 
 // puts empty char on whole screen
 void terminal_clean(void) {
+  terminal_row = 0;
+  terminal_column = 0;
   for (size_t y = 0; y < VGA_HEIGHT; y++) {
     for (size_t x = 0; x < VGA_WIDTH; x++) {
       const size_t idx = (y * VGA_WIDTH) + x;
