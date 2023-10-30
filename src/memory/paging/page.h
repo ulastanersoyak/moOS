@@ -20,7 +20,7 @@ struct page_location{
 };
 
 // returns a page directory with 4 gb virtual address space
-// with tables that contain given flags
+// with tables and pages that are initialized with given flags
 struct page_dir *page_dir_init(uint32_t flags);
 
 // sets given virtual memory addresses dir and page indexes
