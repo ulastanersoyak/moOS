@@ -1,8 +1,9 @@
+TODO 
 
 
 [x] VGA driver
 
-[x] printf
+[ ] printf
 
 [x] idt
 
@@ -21,3 +22,14 @@
 [ ] disk driver
 
 [ ] shell
+
+[ ] user programs
+
+[ ] multi-thread kernel
+
+[ ] pacman
+
+[ ] pong
+
+[ ] snake
+
