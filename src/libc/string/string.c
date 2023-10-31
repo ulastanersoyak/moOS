@@ -49,6 +49,35 @@ void *memset(void *ptr, int c, size_t n) {
   return ptr;
 }
 
+char *strcat(char *dest,const char *src){
+  size_t size = strlen(dest);
+  size_t i;
+  for(i = 0; src[i] != '\0'; i++){
+    dest[size + i] = src[i];
+  }
+  dest[size + i] = '\0';
+  return dest;
+}
+
+char *strncat(char *dest, const char *src, uint32_t n){
+  size_t size = strlen(dest);
+  size_t i;
+  for(i = 0; i < n; i++){
+    dest[size + i] = src[i];
+  }
+  dest[size + i] = '\0';
+  return dest;
+}
+
+char *strchr(const char *str, uint32_t n){
+  for(size_t i = 0; str[i] != '\0'; i++){
+    if(str[i] == n){
+      return (char*)str + i;
+    }   
+  }
+  return 0;
+}
+
 size_t strlen(const char *str) {
   size_t size = 0;
   while (str[size]) {
