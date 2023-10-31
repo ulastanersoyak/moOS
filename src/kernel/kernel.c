@@ -29,7 +29,7 @@ void kernel_main(void) {
   enable_system_paging();
   // set everything before interrupts so system gets initialized without processor interrupts
   enable_interrupts();
-  char *ptr = "1text234text56";
-  int32_t rs = atoi(ptr);
+  char *str = "31caner 31geyik35";
+  int32_t rs = atoi(str);
   terminal_writeint(rs);
 }

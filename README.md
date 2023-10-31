@@ -15,7 +15,7 @@ TODO
 
 [ ] keyboard driver
 
-[ ] stdlib
+[ ] libc
 
 [ ] filesystem
 
