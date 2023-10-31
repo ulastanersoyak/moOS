@@ -60,6 +60,7 @@ char *strcat(char *dest,const char *src){
 }
 
 char *strncat(char *dest, const char *src, uint32_t n){
+  // TODO: there might be a better way of doing this
   size_t size = strlen(dest);
   size_t i;
   for(i = 0; i < n; i++){
@@ -72,6 +73,7 @@ char *strncat(char *dest, const char *src, uint32_t n){
 char *strchr(const char *str, uint32_t n){
   for(size_t i = 0; str[i] != '\0'; i++){
     if(str[i] == n){
+      // add offset i to base pointer to return the string FROM offset to end.
       return (char*)str + i;
     }   
   }

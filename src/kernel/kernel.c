@@ -9,6 +9,8 @@
 #include "kmem/kheap.h"
 #include "../drivers/disk/disk.h"
 
+//TODO: READ.ME and all TODOs
+
 // system paging directory pointer.
 static struct page_dir* system_page_dir = 0;
 
