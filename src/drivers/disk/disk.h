@@ -18,7 +18,7 @@ struct disk_t{
 int32_t disk_read(int32_t logical_block_addr, uint32_t total_block, void *buffer);
 
 // returns disk handler of given idx. currently only returns
-// main master disk. TODO: ADD REST OF THE DISK TYPES
+// main master disk. 
 struct disk_t* get_disk(uint32_t idx);
 
 // reads the given disk

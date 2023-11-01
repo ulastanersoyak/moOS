@@ -6,6 +6,8 @@
 #include "idt/idt.h"
 #include "kmem/kheap.h"
 
+#include "../file_system/path_parser.h"
+
 //TODO: READ.ME and all TODOs
 
 static struct page_dir* system_page_dir = 0;
@@ -22,4 +24,12 @@ void kernel_main(void) {
   // initialize paging for virtual memory and full system memory coverage
   enable_system_paging();
   enable_interrupts();
+
+  int32_t rs = is_file_path_valid("0:/");
+  int32_t rs1 = is_file_path_valid("invalid path");
+  int32_t rs2 = is_file_path_valid("0:/siksok/");
+
+  terminal_writeint(rs);
+  terminal_writeint(rs1);
+  terminal_writeint(rs2);
 }
