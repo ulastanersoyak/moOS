@@ -1,13 +1,10 @@
 #include "kernel.h"
 #include "../drivers/screen/terminal.h"
-#include "../libc/string/string.h"
 #include "../libc/stdlib/stdlib.h"
 #include "../memory/paging/page.h"
 #include "./ascii/ascii.h"
 #include "idt/idt.h"
-#include "io/io.h"
 #include "kmem/kheap.h"
-#include "../drivers/disk/disk.h"
 
 //TODO: READ.ME and all TODOs
 
@@ -25,8 +22,4 @@ void kernel_main(void) {
   // initialize paging for virtual memory and full system memory coverage
   enable_system_paging();
   enable_interrupts();
-  char *str1 = kcalloc(50);
-  str1 = "this is base string.";
-  char *rs = strchr(str1,'a');
-  terminal_writestring(rs);
 }

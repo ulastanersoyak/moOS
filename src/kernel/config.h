@@ -35,4 +35,9 @@
 
 #define INVALID_ARG_ERROR 3
 
+#define INVALID_PATH_ERROR 4
+// filesystem constants
+
+#define MAX_PATH_LEN 100
+
 #endif // !CONFIG_H
