@@ -14,6 +14,7 @@ boot_start2:
   jmp 0:step2
 
 step2:
+  ; set segments to zero to fil them up later
   xor ax, ax
   cli
   mov ds, ax
@@ -90,6 +91,7 @@ ata_lba_read:
   out dx, al ; send 8 bits to lba
   
   ;send total sectors to read
+  ; written in c in disk.c
   mov eax, ecx 
   mov dx, 0x1f2
   out dx, al

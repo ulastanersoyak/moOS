@@ -21,11 +21,13 @@ void idt_init(void);
 
 // add a new interrupt to given index.
 void idt_set(uint32_t interrupt_num, void *adr);
+
+// asm wrapper functions
 void enable_interrupts(void);
 void disble_interrupts(void);
 
+// asm functions
 extern void idt_load(struct idtr_desc *ptr);
-
 void enable_intr();
 void disable_intr();
 

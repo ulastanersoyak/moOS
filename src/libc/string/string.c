@@ -18,7 +18,6 @@ void *memchr(const void *str, uint32_t c, size_t n) {
 }
 
 int32_t memcmp(const void *str1, const void *str2, size_t n) {
-  // check if both point to the same memory location
   if (str1 == str2) {
     return 0;
   }

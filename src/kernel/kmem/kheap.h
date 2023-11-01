@@ -5,9 +5,11 @@
 
 void kernel_heap_init(void);
 
-// marks given address as used and returns the pointer to the start of heap
+// allocates heap memory alligned to upper block limit
 void *kmalloc(size_t size);
 
+
+// allocates heap memory alligned to upper block limit and sets all to 0
 void *kcalloc(size_t);
 
 // marks given address as free
