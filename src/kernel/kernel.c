@@ -24,6 +24,12 @@ void kernel_main(void) {
   // initialize paging for virtual memory and full system memory coverage
   enable_system_paging();
   enable_interrupts();
-  struct path_root *root =  get_path("0:/path/to/folder");
-  if(root){}
+  struct path_root *root = get_path("0:/path/to/folder");
+  // terminal_writestring(root->body->body_str);
+  // terminal_writestring("\n");
+  // terminal_writestring(root->body->next->body_str);
+  // terminal_writestring("\n");
+  // terminal_writestring(root->body->next->next->body_str);
+  // terminal_writestring("\n");
+  write_path(root);
 }
