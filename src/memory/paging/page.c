@@ -1,5 +1,6 @@
 #include "./page.h"
 #include "../../libc/string/string.h"
+#include "../../libc/stdio/stdio.h"
 #include "../../kernel/kmem/kheap.h"
 #include "../../kernel/config.h"
 #include "../../drivers/screen/terminal.h"
@@ -46,7 +47,7 @@ void switch_page_dir(uint32_t* dir_entry) {
 
 void enable_system_paging(void) {
   enable_paging();
-  terminal_writestring("system paging");
+  printf("system paging");
   init_OK();
 }
 

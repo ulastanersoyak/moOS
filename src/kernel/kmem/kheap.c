@@ -1,6 +1,7 @@
 #include "kheap.h"
 #include "../../drivers/screen/terminal.h"
 #include "../../libc/string/string.h"
+#include "../../libc/stdio/stdio.h"
 #include "../../memory/heap/heap.h"
 #include "../config.h"
 
@@ -14,7 +15,7 @@ void kernel_heap_init(void) {
 
   void* end_addr = (void*)(HEAP_ADDRESS + HEAP_SIZE_BYTE);
   int32_t res = heap_desc_init(&kernel_heap, (void*)(HEAP_ADDRESS), end_addr, &kernel_heap_table);
-  terminal_writestring("heap init");
+  printf("heap init");
   if (res < 0) {
     init_ER();
   }else{

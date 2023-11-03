@@ -2,6 +2,7 @@
 #include "../../kernel/io/io.h"
 #include "../../kernel/config.h"
 #include "../../libc/string/string.h"
+#include "../../libc/stdio/stdio.h"
 #include "../screen/terminal.h"
 
 #include <stddef.h>
@@ -45,7 +46,7 @@ void init_main_master_disk(void){
   memset(&main_master_disk, 0, sizeof(main_master_disk));
   main_master_disk.type = REAL_DISK_TYPE;
   main_master_disk.sector_size = MASTER_MAIN_DISK_SECTOR_SIZE; 
-  terminal_writestring("master disk init");
+  printf("master disk init");
   init_OK();
 }
 

@@ -1,6 +1,7 @@
 #include "idt.h"
 #include "../../drivers/screen/terminal.h"
 #include "../../libc/string/string.h"
+#include "../../libc/stdio/stdio.h"
 #include "../config.h"
 #include "../io/io.h"
 
@@ -32,13 +33,13 @@ void idt_init(void) {
   idt_set(0, divide_by_zero_exc);
   idt_set(0x21, int21h);
   idt_load(&idtr_descriptor);
-  terminal_writestring("idt init");
+  printf("idt init");
   init_OK();
 }
 
 void enable_interrupts(void) {
   enable_intr();
-  terminal_writestring("enable interrupts");
+  printf("enable interrupts");
   init_OK();
 }
 void disble_interrupts(void) {

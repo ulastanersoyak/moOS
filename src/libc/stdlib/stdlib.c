@@ -1,11 +1,17 @@
 #include "stdlib.h"
 #include "../../kernel/config.h"
-#include "../../memory/heap/heap.h"
+#include "../../kernel/kmem/kheap.h"
 #include <stdint.h>
 
-void *malloc(size_t size);
-void *calloc(size_t size);
-void free(void *ptr);
+void *malloc(size_t size){
+ return kmalloc(size); 
+}
+void *calloc(size_t size){
+  return kcalloc(size);
+}
+void free(void *ptr){
+  kfree(ptr);
+}
 
 uint32_t atoi(const char *buffer){
   int32_t rs = 0;

@@ -36,8 +36,12 @@
 #define INVALID_ARG_ERROR 3
 
 #define INVALID_PATH_ERROR 4
+
 // filesystem constants
 
 #define MAX_PATH_LEN 100
+
+// printf max format string char
+#define MAX_STRING_FORMAT_CHAR 100
 
 #endif // !CONFIG_H
