@@ -5,10 +5,33 @@ bits 16
 CODE_SEG equ _gdt_code - _gdt_start
 DATA_SEG equ _gdt_data - _gdt_start
 
-boot_start:
-  jmp short boot_start2
-  nop
-  times 33 db 0
+jmp short boot_start2
+nop
+
+;fat16 header
+OEMIdentifier  db 'SHRIGMA ' ;8 byte oemidentifier
+BytesPerSector dw 0x200 ;512 bytes per sector
+SectorsPerCluster db 0x80
+ReservedSectors dw 200 ;reserved sectors for kernel
+FATCopies db 0x02
+RootDirEntries dw 0x40
+NumSectors dw 0x00
+MediaType db 0xF8
+SectorsPerFAT dw 0x100
+SectorsPerTrack dw 0x20
+NumberOfHeads dw 0x40
+HiddenSectors dd 0x00
+SectorsBig dd 0x773594
+;extended bpb
+DriveNumber db 0x80
+WinNTBit db 0x00
+Signature db 0x29
+VolumeID dd 0xD105
+VolumeIDString db 'SHRIGMABOOT' ;11 byte
+SystemIDString db 'FAT16   ';8 byte
+
+
+
 
 boot_start2:
   jmp 0:step2

@@ -10,7 +10,7 @@ all: build_dirs ./bin/bootloader.bin ./bin/kernel.bin
 	rm -rf ./bin/os.bin
 	dd if=./bin/bootloader.bin >> ./bin/os.bin
 	dd if=./bin/kernel.bin >> ./bin/os.bin
-	dd if=/dev/zero bs=512 count=100 >> ./bin/os.bin
+	dd if=/dev/zero bs=1048576 count=16 >> ./bin/os.bin
 
 ./bin/kernel.bin: $(FILES)
 	$(LD) -g -relocatable $(FILES) -o ./build/kernelfull.o
