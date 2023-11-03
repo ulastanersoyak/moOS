@@ -26,7 +26,6 @@ int32_t disk_read_block(struct disk_t *disk, uint32_t logical_block_addr, uint32
 
 
 // searches and initializes all disks available. currently only main master disk
-// TODO ADD REST DISKS
 void init_main_master_disk(void);
 
 

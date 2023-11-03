@@ -32,10 +32,14 @@ void idt_init(void) {
   idt_set(0, divide_by_zero_exc);
   idt_set(0x21, int21h);
   idt_load(&idtr_descriptor);
+  terminal_writestring("idt init");
+  init_OK();
 }
 
 void enable_interrupts(void) {
   enable_intr();
+  terminal_writestring("enable interrupts");
+  init_OK();
 }
 void disble_interrupts(void) {
   disable_intr();

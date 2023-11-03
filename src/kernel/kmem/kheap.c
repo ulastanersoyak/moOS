@@ -14,7 +14,12 @@ void kernel_heap_init(void) {
 
   void* end_addr = (void*)(HEAP_ADDRESS + HEAP_SIZE_BYTE);
   int32_t res = heap_desc_init(&kernel_heap, (void*)(HEAP_ADDRESS), end_addr, &kernel_heap_table);
-  if (res < 0) { terminal_writestring("error while initializing heap\n"); }
+  terminal_writestring("heap init");
+  if (res < 0) {
+    init_ER();
+  }else{
+    init_OK();
+  }
 }
 
 void* kmalloc(size_t size) { return heap_malloc(&kernel_heap, size); }

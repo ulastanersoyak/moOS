@@ -16,6 +16,8 @@ struct path_body{
 // returns 0 if error
 struct path_root *get_path(const char* path);
 
+void free_path_heap(struct path_root *root);
+
 // no real usage. just for debug. TODO: might implement it in a future printf
 void write_path(const struct path_root *root);
 #endif // !PATH_PARSER_H

@@ -2,12 +2,12 @@
 #include "../../kernel/io/io.h"
 #include "../../kernel/config.h"
 #include "../../libc/string/string.h"
+#include "../screen/terminal.h"
 
 #include <stddef.h>
 
 struct disk_t main_master_disk;
 //TODO: ADD ALL DISK TYPES
-
 int32_t disk_read(int32_t logical_block_addr, uint32_t total_block, void *buffer){
   // works same as bootloader disk read
   outb(0x1F6, (logical_block_addr >> 24) | 0xE0);
@@ -33,8 +33,9 @@ int32_t disk_read(int32_t logical_block_addr, uint32_t total_block, void *buffer
   return OK;
 }
 
+//just works on disk 0 (main mastar disk)
 struct disk_t* get_disk(uint32_t idx){
-  if(idx == 0){
+  if(idx != 0){
     return 0;
   }
   return &main_master_disk;
@@ -44,6 +45,8 @@ void init_main_master_disk(void){
   memset(&main_master_disk, 0, sizeof(main_master_disk));
   main_master_disk.type = REAL_DISK_TYPE;
   main_master_disk.sector_size = MASTER_MAIN_DISK_SECTOR_SIZE; 
+  terminal_writestring("master disk init");
+  init_OK();
 }
 
 int32_t disk_read_block(struct disk_t *disk, uint32_t logical_block_addr, uint32_t total_block, void *buffer){
