@@ -37,4 +37,9 @@ void kernel_main(void) {
   int32_t rs = disk_stream_read(stream, &c, 1);
   terminal_writeint((int)c);
   if(rs){}
+  printf("\nrandom numbers\n");
+  for(size_t i = 0; i <10; i++){
+    uint32_t randrs = rand_range(0,25);
+    printf("%d\n",randrs);
+  }
 }

@@ -61,7 +61,7 @@ all: build_dirs ./bin/bootloader.bin ./bin/kernel.bin
 ./build/disk.o : ./src/drivers/disk/disk.c
 	$(CC) -I./src/drivers/disk/ $(FLAGS) -std=gnu99 -c ./src/drivers/disk/disk.c -o ./build/disk.o
 
-./build/stdlib.o : ./src/libc/stdlib/stdlib.c
+./build/stdlib.o : ./src/libc/stdlib/stdlib.c 
 	$(CC) -I./src/libc/stdlib/ $(FLAGS) -std=gnu99 -c ./src/libc/stdlib/stdlib.c -o ./build/stdlib.o
 
 ./build/ctype.o : ./src/libc/ctype/ctype.c
