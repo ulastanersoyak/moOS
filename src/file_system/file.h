@@ -22,7 +22,7 @@ enum FILE_MODE
 struct disk_t;
 
 // general file system interface that opens a file in given disk and path with given file modes
-typedef void*(*FS_OPEN)(struct disk_t *disk, struct path_root *root, enum FILE_MODE);
+typedef void*(*FS_OPEN)(struct disk_t *disk, struct path_root *root, enum FILE_MODE mode);
 
 // resolves if file system can operate on the given disk
 typedef int32_t(*FS_RESOLVE)(struct disk_t *disk);

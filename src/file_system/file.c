@@ -5,6 +5,7 @@
 #include "../libc/stdlib/stdlib.h"
 #include "../drivers/screen/vga.h"
 #include "../drivers/screen/terminal.h"
+#include "fat/fat16.h"
 
 #include <stddef.h>
 
@@ -33,8 +34,7 @@ void add_file_system(struct file_system *fs){
 }
 
 static void load_present_file_systems(void){
-    //TODO: fat16 init
- // add_file_system(FAT16_init());   
+    add_file_system(fat16_init());   
 }
 
 void file_system_init(uint8_t verbose){
