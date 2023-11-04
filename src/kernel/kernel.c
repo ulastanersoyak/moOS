@@ -24,7 +24,6 @@ void kernel_main(void) {
   idt_init(verbose);
   kernel_heap_init(verbose);
   file_system_init(verbose);
-  // initialize systems page directory with given flags
   system_page_dir = page_dir_init(IS_WRITABLE | IS_PRESENT | ACCESS_ALL);
   // tell processor where to find entry of system page directory
   switch_page_dir(system_page_dir->dir_entry);
