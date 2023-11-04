@@ -37,12 +37,20 @@
 
 #define INVALID_PATH_ERROR 4
 
-// filesystem constants
-
-#define MAX_PATH_LEN 100
+#define FILE_HANDLER_OVERFLOW 5
 
 // printf max format string char
 #define MAX_STRING_FORMAT_CHAR 100
 
-#define RAND_MAX 32767 //2^15 -1
+#define RAND_MAX 32767 // 2^15 -1
+
+// file system consts
+
+#define MAX_PATH_LEN 100
+
+#define MAX_FILE_SYSTEMS 12
+
+// max open files
+#define MAX_FILE_DESCS 512
+
 #endif // !CONFIG_H

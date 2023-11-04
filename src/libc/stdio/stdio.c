@@ -4,6 +4,7 @@
 #include "../../drivers/screen/terminal.h"
 #include "../../drivers/screen/vga.h"
 
+
 #include <stdarg.h>
 
 void printf(const char *str, ...){
@@ -33,4 +34,8 @@ void printf(const char *str, ...){
     terminal_putchar(*str);
     str++;
   }
+}
+
+int32_t fopen(const char* file_name, const char* mode){
+  return -IO_ERROR;  
 }
