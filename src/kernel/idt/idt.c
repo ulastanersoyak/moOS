@@ -22,7 +22,7 @@ void no_intr_handler() { outb(0x20, 0x20); }
 
 void divide_by_zero_exc() { terminal_writestring("divide by zero exception occured\n"); }
 
-void idt_init(void) {
+void idt_init(uint8_t verbose) {
   memset(idt, 0, sizeof(idt));
   idtr_descriptor.limit = ((sizeof(struct idt_entry) * TOTAL_INTERRUPTS) - 1);
   idtr_descriptor.base = (uint32_t)&idt[0];
@@ -33,14 +33,18 @@ void idt_init(void) {
   idt_set(0, divide_by_zero_exc);
   idt_set(0x21, int21h);
   idt_load(&idtr_descriptor);
-  printf("idt init");
-  init_OK();
+  if(verbose){
+    printf("idt init");
+    init_OK();
+  }
 }
 
-void enable_interrupts(void) {
+void enable_interrupts(uint8_t verbose) {
   enable_intr();
-  printf("enable interrupts");
-  init_OK();
+  if(verbose){  
+    printf("enable interrupts");
+    init_OK();
+  }
 }
 void disble_interrupts(void) {
   disable_intr();

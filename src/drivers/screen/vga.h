@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-enum vga_colour {
+enum vga_colour{
   black,
   blue,
   green,
@@ -27,12 +27,12 @@ static const size_t VGA_WIDTH = 80;
 static const size_t VGA_HEIGHT = 25;
 
 // set vga colour bit with background and foreground colours
-static inline uint8_t vga_entry_colour(enum vga_colour fg, enum vga_colour bg) {
+static inline uint8_t vga_entry_colour(enum vga_colour fg, enum vga_colour bg){
   return fg | bg << 4;
 }
 // returns 2 byte. first byte contains char data while second byte contains
 // colour data. written in reverse because of little endian architecture
-static inline uint16_t vga_entry(unsigned char uc, uint8_t colour) {
+static inline uint16_t vga_entry(unsigned char uc, uint8_t colour){
   return (uint16_t)colour << 8 | (uint16_t)uc;
 }
 

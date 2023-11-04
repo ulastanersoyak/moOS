@@ -25,12 +25,14 @@ void terminal_clean(void) {
 }
 
 // initializes terminal attribiutes and clens the screen
-void terminal_init(void) {
+void terminal_init(uint8_t verbose) {
   terminal_colour = vga_entry_colour(white, black);
   terminal_buffer = VGA_MEMORY;
   terminal_clean();
-  printf("terminal init");
-  init_OK();
+  if(verbose){
+    printf("terminal init");
+    init_OK();
+  }
 }
 
 void terminal_setcolour(uint8_t colour) { terminal_colour = colour; }

@@ -39,5 +39,5 @@ int32_t virtualize_mem(uint32_t *dir, void* vir_addr, uint32_t phys_addr);
 void switch_page_dir(uint32_t *dir_entry);
 
 // enables cr0 registers 31st bit
-void enable_system_paging(void);
+void enable_system_paging(uint8_t verbose);
 #endif //PAGE_H

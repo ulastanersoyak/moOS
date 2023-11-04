@@ -45,10 +45,12 @@ void switch_page_dir(uint32_t* dir_entry) {
   current_dir_entry = dir_entry;
 }
 
-void enable_system_paging(void) {
+void enable_system_paging(uint8_t verbose) {
   enable_paging();
-  printf("system paging");
-  init_OK();
+  if(verbose){
+    printf("system paging");
+    init_OK();
+  }
 }
 
 static int32_t check_memory_alignment(void* addr) { 
