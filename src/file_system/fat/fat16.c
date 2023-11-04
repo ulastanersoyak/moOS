@@ -1,9 +1,13 @@
 #include "../file.h"
 #include "fat16.h"
 #include "../../libc/string/string.h"
+#include "../../libc/stdio/stdio.h"
+#include "../../libc/stdlib/stdlib.h"
 #include "../../kernel/config.h"
 #include "../../drivers/disk/disk_stream.h"
 
+//all code written here is based of Microsoft Extensible Firmware Initiative FAT32 File System Specification
+// and NOT A FAT16 MANUAL. TODO: DOUBLE CHECK WITH A FAT16 MANUAL
 #include <stdint.h>
 
 #define FAT16_SIGNATURE  0x29
@@ -23,7 +27,7 @@ typedef uint8_t FAT16_ITEM_TYPE;
 #define FAT16_FILE_SUB_DIR      0X10 
 #define FAT16_FILE_ARCHIVED     0X20 
 #define FAT16_FILE_DEVICE       0X40
-#define FAT16_FILE_RESERVED     0X40
+#define FAT16_FILE_RESERVED     0X80
 
 // TODO: used fat32 as source. might be wrong
 // FAT header re-implemented in c.
@@ -120,9 +124,106 @@ struct file_system *fat16_init(){
   return &fat16_fs;
 }
 
+static void fat16_init_private(struct disk_t *disk, struct FAT_private *private){
+  memset(private, 0, sizeof(struct FAT_private));
+  private->cluster_read_stream = get_disk_stream(disk->id);
+  private->FAT_read_stream= get_disk_stream(disk->id);
+  private->dir_stream = get_disk_stream(disk->id);
+}
+
+// counts total used dir in a directory
+static int32_t fat16_total_items_in_dir(struct disk_t *disk, uint32_t dir_start_sec){
+  struct FAT_dir_item item;
+  struct FAT_dir_item empty_item;
+  memset(&empty_item,0,sizeof(empty_item));
+  struct FAT_private *private = disk->fs_private_data;
+  int32_t dir_start_pos = dir_start_sec * disk->sector_size;
+  struct disk_stream *stream = private->dir_stream;
+  stream_seek(stream, dir_start_pos);
+  size_t item_count = 0;
+  while(1){
+    if(disk_stream_read(stream, &item, sizeof(item)) != OK){
+      return -IO_ERROR;
+    }
+    if(item.filename[0] == 0){
+      // reading is done if items name is null
+      break;
+    }
+    if(item.filename[0] == 0xe5){
+      // continue if item is unused
+      continue;
+    }
+    item_count++;
+  }
+  printf("total->%d\nstart->%d\nend->%d\nfilename->%s\n",private->root_dir.total
+  ,private->root_dir.sector_start_pos,
+  private->root_dir.sector_end_pos,
+  private->root_dir.item->filename);
+  return item_count;
+}
+
+static int32_t fat16_get_root_dir(struct disk_t *disk, struct FAT_private *private, struct FAT_directory *fat_dir){
+  struct FAT_h *primary_header = &private->header.primary_header;
+  int32_t root_dir_pos = (primary_header->FAT_copies * primary_header->sectors_per_FAT) + primary_header->reserved_sectors; 
+  int32_t root_dir_size = private->header.primary_header.root_dir_entries * sizeof(struct FAT_dir_item);
+  int32_t total_sectors = root_dir_size / disk->sector_size;
+  // check if there is any excess sector 
+  total_sectors = (root_dir_size % disk->sector_size) ? total_sectors + 1 : total_sectors;
+  int32_t total_items = fat16_total_items_in_dir(disk, root_dir_pos);  
+  if(total_items < 0){
+    // at this point, total_items holds the error code
+    return total_items;
+  }
+  struct FAT_dir_item *dir = calloc(root_dir_size);
+  if(!dir){
+    return -NO_MEMORY_ERROR;
+  }
+  struct disk_stream *stream = private->dir_stream;
+  // set stream to the absolute address on the disk
+  stream_seek(stream, disk->sector_size * root_dir_pos);
+  if(disk_stream_read(stream, dir, root_dir_size) != OK){
+    return -IO_ERROR;
+  }
+  fat_dir->item = dir;
+  fat_dir->total = total_items;
+  fat_dir->sector_start_pos = root_dir_pos;
+  fat_dir->sector_end_pos = root_dir_pos + (root_dir_size / disk->sector_size);
+  return OK;
+}
+
 int32_t fat16_resolve(struct disk_t *disk){
+  int32_t rs = OK;
+  struct FAT_private *private = calloc(sizeof(struct FAT_private));
+  fat16_init_private(disk, private);
+  disk->fs_private_data = private;
+  disk->file_system = &fat16_fs;
+  struct disk_stream *stream = get_disk_stream(disk->id);
+  if(!stream){
+    rs =  -NO_MEMORY_ERROR;
+    goto end;
+  }
+  if(disk_stream_read(stream, &private->header, sizeof(private->header)) != OK){
+    rs = -IO_ERROR;
+    goto end;
+  }
+  if(private->header.shared.extender_header.signature != 0x29){
+    rs =  -SIGNATURE_ERROR;
+    goto end;
+  }
+  if(fat16_get_root_dir(disk, private, &private->root_dir) != OK){
+    rs = -IO_ERROR;
+    goto end;
+  }
   
-  return 0;
+end:
+  if(rs < 0){
+    free(private);
+    disk->fs_private_data = 0;
+  }
+  if(stream){
+    stream_free(stream);
+  }
+  return rs;
 }
 
 void *fat16_open(struct disk_t *disk, struct path_root *root, enum FILE_MODE mode){

@@ -82,12 +82,12 @@ char *strchr(const char *str, uint32_t n){
 char *strcpy(char *dest, const char *src){
   char *temp = dest;
   while(*src != 0){
-    *temp = *src;
-    temp++;
+    *dest = *src;
+    dest++;
     src++;
   }
-  *temp = 0x00;
-  return dest;
+  *dest = 0x00;
+  return temp;
 }
 
 size_t strlen(const char *str) {
