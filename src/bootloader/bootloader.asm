@@ -30,9 +30,6 @@ VolumeID dd 0xD105
 VolumeIDString db 'SHRIGMABOOT' ;11 byte
 SystemIDString db 'FAT16   ';8 byte
 
-
-
-
 boot_start2:
   jmp 0:step2
 
