@@ -29,9 +29,6 @@ typedef uint8_t FAT16_ITEM_TYPE;
 #define FAT16_FILE_DEVICE       0X40
 #define FAT16_FILE_RESERVED     0X80
 
-// TODO: used fat32 as source. might be wrong
-// FAT header re-implemented in c.
-// base implementation is in bootloader.asm
 struct FAT_header_extended{
   uint8_t drive_number;
   uint8_t win_nt_bit;
@@ -116,10 +113,10 @@ struct FAT_private{
 struct file_system fat16_fs ={
   .resolve_fn = fat16_resolve,
   .open_fn = fat16_open,
-
 };
 
 struct file_system *fat16_init(){
+  memset(fat16_fs.fs_name, 'a', 20);
   strcpy(fat16_fs.fs_name, "FAT16");
   return &fat16_fs;
 }
@@ -155,10 +152,6 @@ static int32_t fat16_total_items_in_dir(struct disk_t *disk, uint32_t dir_start_
     }
     item_count++;
   }
-  printf("total->%d\nstart->%d\nend->%d\nfilename->%s\n",private->root_dir.total
-  ,private->root_dir.sector_start_pos,
-  private->root_dir.sector_end_pos,
-  private->root_dir.item->filename);
   return item_count;
 }
 
@@ -192,6 +185,7 @@ static int32_t fat16_get_root_dir(struct disk_t *disk, struct FAT_private *priva
 }
 
 int32_t fat16_resolve(struct disk_t *disk){
+  // TODO: HERE LAST
   int32_t rs = OK;
   struct FAT_private *private = calloc(sizeof(struct FAT_private));
   fat16_init_private(disk, private);

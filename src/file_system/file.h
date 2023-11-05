@@ -31,7 +31,7 @@ struct file_system{
   // file system should return 0 if disk is usable
   FS_RESOLVE resolve_fn;
   FS_OPEN open_fn;  
-  char fs_name[20];
+  char *fs_name;
 };
 
 struct file_desc{
