@@ -43,8 +43,8 @@ all: build_dirs ./bin/bootloader.bin ./bin/kernel.bin
 ./build/io.asm.o : ./src/kernel/io/io.asm
 	nasm -f elf -g ./src/kernel/io/io.asm -o ./build/io.asm.o
 
-./build/heap.o : ./src/memory/heap/heap.c
-	$(CC) -I./src/memory/heap/ $(FLAGS) -std=gnu99 -c ./src/memory/heap/heap.c -o ./build/heap.o
+./build/heap.o : ./src/kernel/memory/heap/heap.c
+	$(CC) -I./src/memory/heap/ $(FLAGS) -std=gnu99 -c ./src/kernel/memory/heap/heap.c -o ./build/heap.o
 
 ./build/kheap.o : ./src/kernel/kmem/kheap.c
 	$(CC) -I./src/kernel/kmem/ $(FLAGS) -std=gnu99 -c ./src/kernel/kmem/kheap.c -o ./build/kheap.o
@@ -52,11 +52,11 @@ all: build_dirs ./bin/bootloader.bin ./bin/kernel.bin
 ./build/ascii.o : ./src/kernel/ascii/ascii.c
 	$(CC) -I./src/kernel/ascii/ $(FLAGS) -std=gnu99 -c ./src/kernel/ascii/ascii.c -o ./build/ascii.o
 
-./build/page.asm.o : ./src/memory/paging/page.asm
-	nasm -f elf -g ./src/memory/paging/page.asm -o ./build/page.asm.o
+./build/page.asm.o : ./src/kernel/memory/paging/page.asm
+	nasm -f elf -g ./src/kernel/memory/paging/page.asm -o ./build/page.asm.o
 
-./build/page.o : ./src/memory/paging/page.c
-	$(CC) -I./src/memory/paging/ $(FLAGS) -std=gnu99 -c ./src/memory/paging/page.c -o ./build/page.o
+./build/page.o : ./src/kernel/memory/paging/page.c
+	$(CC) -I./src/memory/paging/ $(FLAGS) -std=gnu99 -c ./src/kernel/memory/paging/page.c -o ./build/page.o
 
 ./build/disk.o : ./src/drivers/disk/disk.c
 	$(CC) -I./src/drivers/disk/ $(FLAGS) -std=gnu99 -c ./src/drivers/disk/disk.c -o ./build/disk.o

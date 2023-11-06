@@ -2,7 +2,7 @@
 #include "../../drivers/screen/terminal.h"
 #include "../../libc/string/string.h"
 #include "../../libc/stdio/stdio.h"
-#include "../../memory/heap/heap.h"
+#include "../../kernel/memory/heap/heap.h"
 #include "../config.h"
 
 struct heap_desc kernel_heap;

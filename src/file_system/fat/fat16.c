@@ -185,7 +185,6 @@ static int32_t fat16_get_root_dir(struct disk_t *disk, struct FAT_private *priva
 }
 
 int32_t fat16_resolve(struct disk_t *disk){
-  // TODO: HERE LAST
   int32_t rs = OK;
   struct FAT_private *private = calloc(sizeof(struct FAT_private));
   fat16_init_private(disk, private);

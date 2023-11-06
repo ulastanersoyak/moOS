@@ -3,7 +3,7 @@
 #include "../drivers/screen/vga.h"
 #include "../libc/stdlib/stdlib.h"
 #include "../libc/string/string.h"
-#include "../memory/paging/page.h"
+#include "./memory/paging/page.h"
 #include "ascii/ascii.h"
 #include "idt/idt.h"
 #include "kmem/kheap.h"

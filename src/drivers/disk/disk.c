@@ -53,7 +53,7 @@ void init_main_master_disk(uint8_t verbose){
     if(!main_master_disk.file_system){
       init_ER();
     }else{
-      printf(" <FS: %s> ",main_master_disk.file_system->fs_name);
+      printf(" <FS: %s>",main_master_disk.file_system->fs_name);
       init_OK();
     }
   }
