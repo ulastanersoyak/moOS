@@ -49,7 +49,7 @@ void init_main_master_disk(uint8_t verbose){
   main_master_disk.id = 0;
   main_master_disk.file_system = fs_resolve(&main_master_disk);
   if(verbose){
-    printf("master disk init");
+    printf("master disk driver init");
     if(!main_master_disk.file_system){
       init_ER();
     }else{
