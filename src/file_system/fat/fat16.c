@@ -8,7 +8,6 @@
 
 //all code written here is based of Microsoft Extensible Firmware Initiative FAT32 File System Specification
 // and NOT A FAT16 MANUAL. TODO: DOUBLE CHECK WITH A FAT16 MANUAL
-#include <ctype.h>
 #include <stdint.h>
 
 #define FAT16_SIGNATURE  0x29
@@ -219,16 +218,6 @@ end:
   }
   return rs;
 }
-
-static int32_t strcmp_without_case_sens(const char* str1, const char* str2){
-  while(*str1 != 0 && *str2 !=0){
-    if(tolower(*str1) == tolower(*str2)){
-      return 0;
-    }
-  }
-  return *str1 == 0 && *str2 ==0;
-}
-
 
 void *fat16_open(struct disk_t *disk, struct path_root *root, enum FILE_MODE mode){
   return 0;

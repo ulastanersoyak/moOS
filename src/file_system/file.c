@@ -47,7 +47,7 @@ void file_system_init(uint8_t verbose){
     }
 }
 
-static int32_t file_desc_init(struct file_desc **desc_out){
+int32_t file_desc_init(struct file_desc **desc_out){
     int32_t rs = -FILE_HANDLER_OVERFLOW;
     // iterate through file descriptors(open file) array and return first free one
     for(size_t i = 0; i< MAX_FILE_DESCS; i++){
