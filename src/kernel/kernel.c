@@ -33,4 +33,6 @@ void kernel_main(void) {
   init_main_master_disk(verbose);
   enable_interrupts(verbose);
   moose("VERSION 0.06 everything looks OK",light_magenta);
+  int fd = fopen("0:/hello.txt","r");
+  printf("%d",fd);
 }

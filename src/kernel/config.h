@@ -54,11 +54,12 @@
 
 // file system consts
 
-#define MAX_PATH_LEN 100
+#define MAX_PATH_LEN 108
 
 #define MAX_FILE_SYSTEMS 12
 
 // max open files
 #define MAX_FILE_DESCS 512
+
 
 #endif // !CONFIG_H
