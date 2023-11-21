@@ -1,7 +1,8 @@
-#include "../drivers/terminal.h"
-#include "../drivers/vga.h"
+#include "kernel.h"
+#include "../drivers/terminal.c"
 
-void kernel_start() {
+void kernel_main(void) {
   terminal_initialize();
-  cowsay("hello");
+  terminal_setcolour(white);
+  shrigs();
 }

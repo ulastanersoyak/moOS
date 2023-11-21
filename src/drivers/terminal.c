@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "../libc/string/string.h"
+// #include "../libc/string/string.h"
 #include "terminal.h"
 #include "vga.h"
 
@@ -11,9 +11,13 @@ static size_t terminal_column;
 static uint8_t terminal_colour;
 static uint16_t *terminal_buffer;
 
-static uint16_t *const VGA_MEMORY = (uint16_t *)0xb8000;
-static const size_t VGA_WIDTH = 80;
-static const size_t VGA_HEIGHT = 25;
+size_t strlen(const char *str) {
+  size_t size = 0;
+  while (str[size]) {
+    size++;
+  }
+  return size;
+}
 
 // puts empty char on whole screen
 void terminal_clean(void) {
@@ -71,12 +75,51 @@ void terminal_writestring(const char *data) {
   terminal_write(data, strlen(data));
 }
 void cowsay(const char *str) {
+  terminal_writestring("----------\n");
   terminal_writestring(" <");
   terminal_writestring(str);
-  terminal_writestring(">\n\n");
+  terminal_writestring(">\n");
+  terminal_writestring("----------\n");
   terminal_writestring("    ^__^\n");
-  terminal_writestring("    (oo)\_______\n");
-  terminal_writestring("    (__)\       )--/ \n");
+  terminal_writestring("    (oo)_______\n");
+  terminal_writestring("    (__)       )--/ \n");
   terminal_writestring("       ||----w |\n");
   terminal_writestring("       ||     ||\n");
+}
+
+void shrigs(void) {
+  terminal_writestring("                            ::::-.\n");
+  terminal_writestring("                           -:  -:: \n");
+  terminal_writestring("                         ::   .     =\n");
+  terminal_writestring("                        :    *:.     :\n");
+  terminal_writestring("                        -        ::.  =\n");
+  terminal_writestring("                       :.  ....  .::-. :.\n");
+  terminal_writestring("                     ::    =  =         .:.\n");
+  terminal_writestring("                   ::...... :..           .:.\n");
+  terminal_writestring(
+      "              :. .-  -       ..    ..   :.   .::              \n");
+  terminal_writestring("           :--....   .::....:-     .:   :=.    .. -\n");
+  terminal_writestring(
+      "         .:     ..:.::::::....:....::::::::..       #:\n");
+  terminal_writestring(
+      "        :+    ....:.::.-:::.  .-....=    .:.   :.  -  *\n");
+  terminal_writestring(
+      "        -+   ::::::...:::=-:-:     .::--:  ::::    :. *\n");
+  terminal_writestring("        .=-            .:.             :-:.        :. "
+                       "= S H R I G M A O S   \n");
+  terminal_writestring(
+      "          :-::.  .::::.-      .         .=:.:...   - -\n");
+  terminal_writestring(
+      "           .:::-::.:::.-            .... -.    .:::.-.\n");
+  terminal_writestring("                ......-  =%@*::   ::=**.  =----::::\n");
+  terminal_writestring("                      *   -=-:     :%@%: .:\n");
+  terminal_writestring("                     .:          .       =\n");
+  terminal_writestring("                     -           -      -\n");
+  terminal_writestring("                     :      -.   .*     -\n");
+  terminal_writestring("                    =                   -\n");
+  terminal_writestring("                    =    .........:::.   =\n");
+  terminal_writestring("                    +                     :.\n");
+  terminal_writestring("                   .-                      .:\n");
+  terminal_writestring(
+      "                .-                                 ::\n");
 }

@@ -1,65 +1,134 @@
-[org 0x7c00]
+org 0x7c00
 
-kernel_offset equ 0x1000
+bits 16
 
-mov [boot_drive], dl ;bios sets the boot drive in dl on boot
+CODE_SEG equ _gdt_code - _gdt_start
+DATA_SEG equ _gdt_data - _gdt_start
 
-mov bp, 0x9000 ;set the stack
-mov sp, bp
+boot_start:
+  jmp short boot_start2
+  nop
+  times 33 db 0
 
-;start boot process
-mov bx, _msg_real_mode
-call print_str_bios
-call print_nl
+boot_start2:
+  jmp 0:step2
 
-call load_kernel ;read kernel from disk
-call switch_to_pm ;program should never return from this, if it returns loop forever
+step2:
+  xor ax, ax
+  cli
+  mov ds, ax
+  mov es, ax
+  mov ss, ax
+  mov sp, 0x7c00
+  sti
 
-jmp $ ;hopefully, this wont get executed
+switch_to_pm: ;switch to protected mode
 
-%include "./src/bootloader/print_str_bios.asm" ;includes print_str_bios subroutine
-%include "./src/bootloader/print_new_line_bios.asm" ;includes print_nl subroutine
-%include "./src/bootloader/print_hex_bios.asm" ;includes print_hex_bios subroutine
-%include "./src/bootloader/disk_load_bios.asm" ;includes disk_load_bios subroutine 
-%include "./src/bootloader/global_descriptor_table.asm" ;includes gdt and gdt descriptor 
-%include "./src/bootloader/print_str_pm.asm" ;includes print_str_pm subroutine for printing in 32bit pm
-%include "./src/bootloader/switch_to_pm.asm" ;includes switch_to_pm subroutine for mode switch
+  cli ;clear interrupt. cpu will ignore any future interrupts that may interrupt mode switching.interrupt handling is different from real mode on 
+  ;protected mode. current interrupt vector table set by bios which will run 16 bit code, which cant handle 32 bit segments defined in gdt
+  lgdt [gdt_descriptor] ;load gdt instruction. which will take address of descriptor
+  ;making actual switch by setting the first bit of a special cpu control register called cr0.
+  mov eax, cr0
+  or eax, 0x1
+  mov cr0, eax ;after this instruction cpu is in 32 bit protected mode
 
-[bits 16]
+  jmp CODE_SEG:load_kernel ;making a long jump to CODE_SEG label. which will force cpu to flush any pre fetched and decoded instructions that may
+                                    ;be in 16 bit to prevent future crashes of system and since current code segment is not valid in protected mode,
+                                    ;this instruction sets code segmenttoo. (os_dev.pdf page 42)
+;set gdt for pm
+_gdt_start:
+
+_gdt_null:
+  dd 0x0 ;mandatory null descriptor of 8 byte
+  dd 0x0 ;dd means double word which is 4 byte. by adding 2 of them null descriptor is complete
+
+_gdt_code: ;code segment descriptor
+  ;os_dev.pdf page 38
+  ;base = 0x0 , limit = 0xffff
+  ;1st flags -> present:1 privilege:00 descriptor_type:1 -> 1001b
+  ;type flags -> code:1 conforming:0 readable:1 accessed:0 -> 1010b
+  ;2nd flags -> granularity:1 32bit_default:1 64bit_segment:0 avl:0 -> 1100b
+  dw 0xffff ;limit (bits 0-15)
+  dw 0x0 ;base (bits 0-15)
+  db 0x0 ;base (bits 16-23)
+  db 10011010b ;1st fags ,type flags
+  db 11001111b ;2nd flags, limit(bits 16-19)
+  db 0x0 ;base (bits 24-31)
+
+_gdt_data: ;data segment descriptor
+  ;os_dev.pdf page 38
+  ;same as code segment except for type flags
+  ;type flags -> code:0 expand_down:0 writable:1 accessed:0 -> 0010b
+  dw 0xffff ;limit (bits 0-15)
+  dw 0x0 ;base (bits 0-15)
+  db 0x0 ;base (bits 16-23)
+  db 10010010b ;1st fags ,type flags
+  db 11001111b ;2nd flags, limit(bits 16-19)
+  db 0x0 ;base (bits 24-31)
+
+_gdt_end:
+
+gdt_descriptor: ;used to point cpu to the global descriptor table. stores gdt's start and length.
+  ;stores gdt size (16 bit) , gdt address (32 bit)
+  dw _gdt_end - _gdt_start - 1 ;size of gdt. always 1 less than true size (word, which is 2 byte(16bit))
+  dd _gdt_start ;start address of gdt (double word, which is 4 byte(32bit))
+
+bits 32
 load_kernel:
-  mov bx,_msg_load_kernel
-  mov cx, 13
-  call print_str_bios
+  mov eax, 1 ;start from sector 1 cuz sector 0 is the bootloader itself
+  mov ecx, 100 ;makefile appends 100 sector worth of space for kernel so read 100 sectors. if number is less kernel cant be fully loaded
+              ;if number is higher ud
+  mov edi, 0x0100000 ;address to load
+  call ata_lba_read
+  jmp CODE_SEG:0x0100000 ;jump to kernel
 
-  mov bx, kernel_offset ;read from disk and store in 0x1000
-  mov dh, 2
-  mov dl, [boot_drive]
-  call disk_load_bios
+ata_lba_read:
+  mov ebx, eax ;backup lba
+  shr eax, 24 ;get 8 highest bits of lba
+  or eax, 0xe0 ;select master drive
+  mov dx, 0x1f6 ;port
+  out dx, al ; send 8 bits to lba
+  
+  ;send total sectors to read
+  mov eax, ecx 
+  mov dx, 0x1f2
+  out dx, al
 
-  mov bx, _ok
-  call print_str_bios
-  call print_nl
+  mov eax, ebx
+  mov dx, 0x1f3
+  out dx, al  
 
-  mov bx, _msg_protected_mode 
-  call print_str_bios
+  mov dx, 0x1f4
+  mov eax, ebx
+  shr eax, 8
+  out dx, al
+  
+  mov dx, 0x1f5
+  mov eax, ebx
+  shr eax, 16
+  out dx, al
 
+  mov dx, 0x1f7
+  mov al, 0x20
+  out dx, al
 
-  mov bx, _msg_giving_kernel
-  call print_str_pm
+;read all sectors into memory
+_next_sector:
+  push ecx
+
+res:
+  mov dx, 0x1f7
+  in al, dx
+  test al, 8 
+  jz res
+
+  ;read 256 words at a time
+  mov ecx, 256
+  mov dx, 0x1f0
+  rep insw ;reads a word 256 times. each word is 2 byte. thus making a total of 512 bytes (1 sector) at a time
+  pop ecx
+  loop _next_sector
   ret
 
-[bits 32]
-
-BEGIN_PM: ;where program arrives after switch_to_pm subroutine call
-  call kernel_offset ;give control to kernel
-  jmp $ ;ideally would never return from kernel call. but loops forever if kernel ever returns (hope it doesnt :< )
-
-boot_drive db 0
-_ok: db " [OK]", 0
-_msg_real_mode: db "[b] booting started...", 0
-_msg_load_kernel: db "[b] loading kernel into memory", 0
-_msg_protected_mode: db "[b] switched to protected mode [OK]", 0
-_msg_giving_kernel: db "[b] giving controll to kernel [OK]", 0
-
 times 510 - ($-$$) db 0
-dw 0XAA55
+dw 0xaa55
