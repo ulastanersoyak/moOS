@@ -3,6 +3,20 @@
 #include <stddef.h>
 #include <stdint.h>
 
+void *memchr(const void *str, uint32_t c, size_t n) {
+  unsigned char *p = (unsigned char *)str;
+  unsigned char *chr = NULL;
+  while ((str != NULL) && (n--)) {
+    if (*p != (unsigned char)c) {
+      p++;
+    } else {
+      chr = p;
+      break;
+    }
+  }
+  return chr;
+}
+
 int32_t memcmp(const void *str1, const void *str2, size_t n) {
   // check if both point to the same memory location
   if (str1 == str2) {
