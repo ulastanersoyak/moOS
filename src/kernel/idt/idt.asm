@@ -17,8 +17,8 @@ idt_load:
   pop ebp
   ret
 
-int21h:
-  ;keyboard interrupt
+int21h: ;keyboard interrupt
+  
   cli
   pushad
   call int21h_handler

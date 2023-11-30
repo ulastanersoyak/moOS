@@ -9,6 +9,7 @@ struct idtr_desc idtr_descriptor;
 
 extern void int21h();
 extern void no_intr();
+
 extern void int21h_handler() {
   terminal_writestring("keyboard pressed");
   outb(0x20, 0x20);
@@ -16,7 +17,7 @@ extern void int21h_handler() {
 
 void no_intr_handler() { outb(0x20, 0x20); }
 
-void idt_zero() { terminal_writestring("divide by zero error\n"); }
+void idt_zero() { terminal_writestring("divide by zero error"); }
 
 void idt_init(void) {
   memset(idt, 0, sizeof(idt));
@@ -25,7 +26,10 @@ void idt_init(void) {
   for (int i = 0; i < total_interrupts; i++) {
     idt_set(i, no_intr);
   }
+
   idt_set(0, idt_zero);
+  idt_set(0x21, int21h);
+
   idt_load(&idtr_descriptor);
 }
 

@@ -1,4 +1,3 @@
-;initialize 32 bit protected mode
 [bits 32]
 
 global _start
@@ -23,12 +22,12 @@ _start:
   mov al, 00010001b
   out 0x20, al
 
-  mov al,0x20 ; isr master 
+  mov al, 0x20 ;master pic. number is completely random
   out 0x21, al
 
   mov al, 00000001b
   out 0x21, al
-  ;remap paster pic
+  ;remap master pic
 
   sti
 
