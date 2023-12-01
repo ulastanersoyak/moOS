@@ -8,7 +8,7 @@
 #define KERNEL_DATA_SEG 0x10 // start of data segment determined in gdt
 
 // heap constants
-#define HEAP_SIZE_BYTE 1024 * 1024 /* 1mb */ * 500 /* 500 mb default heap*/
+#define HEAP_SIZE_BYTE 1024 * 1024 /* 1mb */ * 100 /* 100 mb default heap*/
 
 #define HEAP_BLOCK_SIZE 1024 * 4 // 4 kb block size
 
@@ -21,7 +21,7 @@
 
 #define IO_ERROR 1
 
-#define MEMORY_ERROR 2
+#define NO_MEMORY_ERROR 2
 
 #define INVALID_ARG_ERROR 3
 

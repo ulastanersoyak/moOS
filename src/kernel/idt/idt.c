@@ -1,5 +1,6 @@
 #include "idt.h"
 #include "../../drivers/screen/terminal.h"
+#include "../../drivers/screen/vga.h"
 #include "../../libc/string/string.h"
 #include "../config.h"
 #include "../io/io.h"
@@ -20,6 +21,7 @@ void no_intr_handler() { outb(0x20, 0x20); }
 void idt_zero() { terminal_writestring("divide by zero error"); }
 
 void idt_init(void) {
+  terminal_writestring("interrupt descriptor table initializing");
   memset(idt, 0, sizeof(idt));
   idtr_descriptor.limit = ((sizeof(struct idt_entry) * TOTAL_INTERRUPTS) - 1);
   idtr_descriptor.base = (uint32_t)&idt[0];
@@ -29,8 +31,10 @@ void idt_init(void) {
 
   idt_set(0, idt_zero);
   idt_set(0x21, int21h);
-
   idt_load(&idtr_descriptor);
+  terminal_setcolour(green);
+  terminal_writestring(" [OK]\n");
+  terminal_setcolour(white);
 }
 
 void idt_set(uint32_t interrupt_num, void *addr) {

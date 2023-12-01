@@ -11,7 +11,7 @@
 #define HEAP_BLOCK_HAS_NEXT                                                    \
   0b10000000 // bitmap for checking next block taken or not
 
-#define HEAP_BLOCK_IS_FREE 0b01000000 // bitmap for checking block free or not
+#define HEAP_BLOCK_IS_FIRST 0b01000000 // bitmap for checking block free or not
 
 typedef unsigned char
     HEAP_BLOCK_TABLE_ENTRY; // entries for each block. contains information
@@ -32,4 +32,6 @@ struct heap_desc {
 int32_t heap_desc_init(struct heap_desc *heap, void *start, void *end,
                        struct heap_table *table);
 
+void *heap_malloc(struct heap_desc *heap, size_t size);
+void heap_free(struct heap_desc *heap, void *ptr);
 #endif // !HEAP_H
