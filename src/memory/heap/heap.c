@@ -2,6 +2,7 @@
 #include "../../drivers/screen/terminal.h"
 #include "../../kernel/config.h"
 #include "../../libc/string/string.h"
+#include <stdint.h>
 
 int32_t heap_desc_init(struct heap_desc *heap, void *start, void *end,
                        struct heap_table *table) {
@@ -111,4 +112,18 @@ void *heap_malloc(struct heap_desc *heap, size_t size) {
   return heap_malloc_blocks(heap, total_blocks);
 }
 
-void heap_free(struct heap_desc *heap, void *ptr) {}
+static void heap_free_blocks(struct heap_desc *heap, void *addr) {
+  uint32_t block_number = ((uint32_t)(addr - heap->addr)) / HEAP_BLOCK_SIZE;
+  struct heap_table *table = heap->table;
+  for (size_t i = block_number; i < table->total_entries; i++) {
+    HEAP_BLOCK_TABLE_ENTRY entry = table->entries[i];
+    table->entries[i] = HEAP_BLOCK_TABLE_ENTRY_FREE;
+    if (!(entry & HEAP_BLOCK_HAS_NEXT)) {
+      break;
+    }
+  }
+}
+
+void heap_free(struct heap_desc *heap, void *addr) {
+  heap_free_blocks(heap, addr);
+}
