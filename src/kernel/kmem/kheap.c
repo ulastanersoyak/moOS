@@ -18,6 +18,9 @@ void kernel_heap_init(void) {
   if (res < 0) {
     init_ER();
   } else {
+    terminal_writestring(" <");
+    terminal_writeint(kernel_heap_table.total_entries * HEAP_BLOCK_SIZE);
+    terminal_writestring(" bytes>");
     init_OK();
   }
 }

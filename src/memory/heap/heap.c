@@ -7,19 +7,15 @@
 int32_t heap_desc_init(struct heap_desc *heap, void *start, void *end,
                        struct heap_table *table) {
 
-  uint32_t rs = OK;
-
   // check if start and end addresses allign with block size
   if (!((uint32_t)start % HEAP_BLOCK_SIZE == 0) &&
       !((uint32_t)end % HEAP_BLOCK_SIZE == 0)) {
-    rs = -INVALID_ARG_ERROR;
-    return rs;
+    return -INVALID_ARG_ERROR;
   }
 
   // check if table contains same entries as declared
   if ((table->total_entries != ((size_t)(end - start) / HEAP_BLOCK_SIZE))) {
-    rs = -INVALID_ARG_ERROR;
-    return rs;
+    return -INVALID_ARG_ERROR;
   }
 
   memset(heap, 0, sizeof(struct heap_desc));
@@ -30,20 +26,18 @@ int32_t heap_desc_init(struct heap_desc *heap, void *start, void *end,
   memset(table->entries, HEAP_BLOCK_TABLE_ENTRY_FREE,
          table_size); // mark up whole memory as free and usable.
 
-  return rs;
+  return OK;
 }
 
 // finds the available adjacent blocks that equal to requested amount
 static uint32_t find_free_block(struct heap_desc *heap, uint32_t total_blocks) {
-  struct heap_table *table = heap->table;
-
   uint32_t current_block = 0;
   int32_t start_block = -1;
 
-  for (size_t i = 0; i < table->total_entries; i++) {
+  for (size_t i = 0; i < heap->table->total_entries; i++) {
 
     // check if entries last 4 bit maps to the free bits
-    if ((table->entries[i] & 0x0f) != HEAP_BLOCK_TABLE_ENTRY_FREE) {
+    if ((heap->table->entries[i] & 0x0f) != HEAP_BLOCK_TABLE_ENTRY_FREE) {
       current_block = 0;
       start_block = -1;
       continue;
@@ -63,13 +57,13 @@ static uint32_t find_free_block(struct heap_desc *heap, uint32_t total_blocks) {
   if (start_block == -1) {
     return -NO_MEMORY_ERROR;
   }
+
   return start_block;
 }
 
 static void mark_taken_blocks(struct heap_desc *heap, uint32_t start_block,
                               uint32_t total_blocks) {
   uint32_t end_block = (start_block + total_blocks) - 1;
-
   // mark head as taken and first bits
   HEAP_BLOCK_TABLE_ENTRY entry =
       HEAP_BLOCK_TABLE_ENTRY_TAKEN | HEAP_BLOCK_IS_FIRST;
@@ -92,7 +86,9 @@ static void mark_taken_blocks(struct heap_desc *heap, uint32_t start_block,
 static void *heap_malloc_blocks(struct heap_desc *heap, uint32_t total_blocks) {
   void *address = 0;
   int32_t start_block = find_free_block(heap, total_blocks);
-
+  terminal_writestring("start block: ");
+  terminal_writeint(start_block);
+  terminal_writestring("\n");
   if (start_block < 0) {
     return 0;
   }
@@ -109,6 +105,9 @@ void *heap_malloc(struct heap_desc *heap, size_t size) {
     size = (size - (size % HEAP_BLOCK_SIZE)) + HEAP_BLOCK_SIZE;
   }
   uint32_t total_blocks = size / HEAP_BLOCK_SIZE;
+  terminal_writestring("total blocks: ");
+  terminal_writeint(total_blocks);
+  terminal_writestring("\n");
   return heap_malloc_blocks(heap, total_blocks);
 }
 
