@@ -90,15 +90,25 @@ void terminal_writeint(int32_t num) {
     terminal_putchar(map[digits[i]]);
   }
 }
+
 void terminal_writeaddr(void *addr) {
-  int32_t address = (int32_t)addr;
-  terminal_writeint(address);
+  uint32_t address = (uint32_t)addr;
+  char hex_string[9];
+  hex_string[0] = '0';
+  hex_string[1] = 'x';
+  for (int i = 0; i < 8; i++) {
+    int nibble = (address >> (28 - 4 * i)) & 0xF;
+    hex_string[2 + i] = (nibble < 10) ? ('0' + nibble) : ('A' + nibble - 10);
+  }
+  terminal_writestring(hex_string);
 }
+
 void init_OK(void) {
   terminal_setcolour(green);
   terminal_writestring(" [OK]\n");
   terminal_setcolour(white);
 }
+
 void init_ER(void) {
   terminal_setcolour(red);
   terminal_writestring(" [FAIL]\n");
