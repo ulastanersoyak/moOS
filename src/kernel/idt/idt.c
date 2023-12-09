@@ -20,7 +20,7 @@ void no_intr_handler() { outb(0x20, 0x20); }
 void idt_zero() { terminal_writestring("divide by zero error"); }
 
 void idt_init(void) {
-  terminal_writestring("interrupt descriptor table initializing");
+  terminal_writestring("idt initializing");
   memset(idt, 0, sizeof(idt));
   idtr_descriptor.limit = ((sizeof(struct idt_entry) * TOTAL_INTERRUPTS) - 1);
   idtr_descriptor.base = (uint32_t)&idt[0];

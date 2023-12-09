@@ -7,7 +7,7 @@ struct heap_desc kernel_heap;
 struct heap_table kernel_heap_table;
 
 void kernel_heap_init(void) {
-  terminal_writestring("kernel heap initializing");
+  terminal_writestring("heap initializing");
   uint32_t total_table_entries = HEAP_SIZE_BYTE / HEAP_BLOCK_SIZE;
   kernel_heap_table.entries = (HEAP_BLOCK_TABLE_ENTRY *)(HEAP_ADDRESS);
   kernel_heap_table.total_entries = total_table_entries;
@@ -19,8 +19,8 @@ void kernel_heap_init(void) {
     init_ER();
   } else {
     terminal_writestring(" <");
-    terminal_writeint(kernel_heap_table.total_entries * HEAP_BLOCK_SIZE);
-    terminal_writestring(" bytes>");
+    terminal_writeint(kernel_heap_table.total_entries);
+    terminal_writestring(" blocks>");
     init_OK();
   }
 }

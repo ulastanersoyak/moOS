@@ -24,20 +24,19 @@ int32_t heap_desc_init(struct heap_desc *heap, void *start, void *end,
 
   size_t table_size = sizeof(HEAP_BLOCK_TABLE_ENTRY) * table->total_entries;
   memset(table->entries, HEAP_BLOCK_TABLE_ENTRY_FREE,
-         table_size); // mark up whole memory as free and usable.
-
+         table_size); // set whole memory as free
   return OK;
 }
 
 // finds the available adjacent blocks that equal to requested amount
-static uint32_t find_free_block(struct heap_desc *heap, uint32_t total_blocks) {
+static uint32_t find_free_block(struct heap_desc *desc, uint32_t total_blocks) {
   uint32_t current_block = 0;
   int32_t start_block = -1;
 
-  for (size_t i = 0; i < heap->table->total_entries; i++) {
+  for (size_t i = 0; i < desc->table->total_entries; i++) {
 
-    // check if entries last 4 bit maps to the free bits
-    if ((heap->table->entries[i] & 0x0f) != HEAP_BLOCK_TABLE_ENTRY_FREE) {
+    // if entries last bit is 1 it is in use, else its free
+    if ((desc->table->entries[i] & 0x0f) != HEAP_BLOCK_TABLE_ENTRY_FREE) {
       current_block = 0;
       start_block = -1;
       continue;
@@ -86,14 +85,11 @@ static void mark_taken_blocks(struct heap_desc *heap, uint32_t start_block,
 static void *heap_malloc_blocks(struct heap_desc *heap, uint32_t total_blocks) {
   void *address = 0;
   int32_t start_block = find_free_block(heap, total_blocks);
-  terminal_writestring("start block: ");
-  terminal_writeint(start_block);
-  terminal_writestring("\n");
   if (start_block < 0) {
     return 0;
   }
   // get the address of heap memory start
-  address = (heap->addr) + (HEAP_BLOCK_SIZE * total_blocks);
+  address = (heap->addr) + (HEAP_BLOCK_SIZE * start_block);
   mark_taken_blocks(heap, start_block, total_blocks);
   return address;
 }
@@ -105,9 +101,6 @@ void *heap_malloc(struct heap_desc *heap, size_t size) {
     size = (size - (size % HEAP_BLOCK_SIZE)) + HEAP_BLOCK_SIZE;
   }
   uint32_t total_blocks = size / HEAP_BLOCK_SIZE;
-  terminal_writestring("total blocks: ");
-  terminal_writeint(total_blocks);
-  terminal_writestring("\n");
   return heap_malloc_blocks(heap, total_blocks);
 }
 
