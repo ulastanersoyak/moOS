@@ -25,4 +25,7 @@ void idt_set(uint32_t interrupt_num, void *adr);
 
 extern void idt_load(struct idtr_desc *ptr);
 
+void enable_interrupts();
+void disable_interrupts();
+
 #endif // !IDT_H

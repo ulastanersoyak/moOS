@@ -32,6 +32,10 @@ void idt_init(void) {
   idt_set(0x21, int21h);
   idt_load(&idtr_descriptor);
   init_OK();
+
+  terminal_writestring("enabling interrupts");
+  enable_interrupts();
+  init_OK();
 }
 
 void idt_set(uint32_t interrupt_num, void *addr) {
