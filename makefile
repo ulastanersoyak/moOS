@@ -1,7 +1,7 @@
 CC := ~/opt/cross/bin/i686-elf-gcc
 LD := ~/opt/cross/bin/i686-elf-ld
 
-FILES = ./build/kernel.asm.o ./build/kernel.o ./build/terminal.o ./build/libc.o ./build/idt.asm.o ./build/idt.o ./build/io.asm.o ./build/heap.o ./build/kheap.o ./build/ascii.o
+FILES = ./build/kernel.asm.o ./build/kernel.o ./build/terminal.o ./build/libc.o ./build/idt.asm.o ./build/idt.o ./build/io.asm.o ./build/heap.o ./build/kheap.o ./build/ascii.o ./build/page.asm.o ./build/page.o
 FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-labels -falign-loops -fstrength-reduce -fomit-frame-pointer -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
 
 .PHONY: build_dirs
@@ -48,6 +48,12 @@ all: build_dirs ./bin/bootloader.bin ./bin/kernel.bin
 
 ./build/ascii.o : ./src/kernel/ascii/ascii.c
 	$(CC) -I./src/kernel/ascii/ $(FLAGS) -std=gnu99 -c ./src/kernel/ascii/ascii.c -o ./build/ascii.o
+
+./build/page.asm.o : ./src/memory/paging/page.asm
+	nasm -f elf -g ./src/memory/paging/page.asm -o ./build/page.asm.o
+
+./build/page.o : ./src/memory/paging/page.c
+	$(CC) -I./src/memory/paging/ $(FLAGS) -std=gnu99 -c ./src/memory/paging/page.c -o ./build/page.o
 
 build_dirs:
 	if [ ! -d "bin" ]; then mkdir bin; fi

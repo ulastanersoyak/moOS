@@ -22,10 +22,12 @@ void idt_init(void);
 
 // add a new interrupt to given index.
 void idt_set(uint32_t interrupt_num, void *adr);
+void enable_interrupts(void);
+void disble_interrupts(void);
 
 extern void idt_load(struct idtr_desc *ptr);
 
-void enable_interrupts();
-void disable_interrupts();
+void enable_intr();
+void disable_intr();
 
 #endif // !IDT_H
