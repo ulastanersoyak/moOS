@@ -8,7 +8,7 @@
 #define KERNEL_DATA_SEG 0x10 // start of data segment determined in gdt
 
 // heap constants
-#define HEAP_SIZE_BYTE 104857600 /* 100 mb default heap*/
+#define HEAP_SIZE_BYTE 104857600 // 100 mb default heap
 
 #define HEAP_BLOCK_SIZE 4096 // 4 kb block size
 

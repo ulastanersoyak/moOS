@@ -7,7 +7,7 @@ global enable_paging
 
 load_page_dir:
   push ebp
-  mov ebp,esp
+  mov ebp, esp
   mov eax, [ebp+8]
   ; at this point eax holds systems paging directory pointer 
   mov cr3, eax

@@ -1,5 +1,5 @@
-#ifndef PAGING_H
-#define PAGING_H
+#ifndef PAGE_H
+#define PAGE_H
 
 #include <stdint.h>
 
@@ -19,9 +19,10 @@ struct page_dir *page_dir_init(uint32_t flags);
 
 // switches paging directories using an asm subroutine that tells
 // processor where to find entry point of pagind directory
-void switch_page_dir(struct page_dir *dir);
+void switch_page_dir(uint32_t *dir_entry);
 
-// wrapper for enable_paging asm subroutine.
-void enable_system_paging(void);
+// prototype for the function that enables paging using 31th bit of cr0 register
+// DO NOT CALL BEFORE INITALIZING PAGE DIRECTORY!!! CAUSES SYSTEM PANIC
+void enable_paging(void);
 
-#endif //PAGING_H
+#endif //PAGE_H

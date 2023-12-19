@@ -10,11 +10,7 @@
 // of the page directory
 void load_page_dir(uint32_t *dir);
 
-// prototype for the function that enables paging using 31th bit of cr0 register
-// DO NOT CALL BEFORE INITALIZING PAGE DIRECTORY!!! CAUSES SYSTEM PANIC
-void enable_paging(void);
-
-static struct page_dir *current_page_dir = 0;
+static uint32_t *current_dir_entry = 0;
 
 struct page_dir *page_dir_init(uint32_t flags){
   uint32_t *dir_entry= kcalloc(sizeof(uint32_t) * TOTAL_ENTRIES_PER_DIRECTORY);
@@ -39,14 +35,7 @@ struct page_dir *page_dir_init(uint32_t flags){
   return dir;
 }
 
-void switch_page_dir(struct page_dir *dir){
-  uint32_t *entry = dir->dir_entry;
-  load_page_dir(entry);
-  current_page_dir = dir;
-}
-
-void enable_system_paging(void){
-  terminal_writestring("initializing virtual memory");
-  enable_paging();
-  init_OK();
+void switch_page_dir(uint32_t *dir_entry){
+  load_page_dir(dir_entry);
+  current_dir_entry = dir_entry;
 }
