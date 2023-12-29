@@ -41,12 +41,12 @@ void *memcpy(void *dest, const void *src, size_t n) {
   return dest;
 }
 
-void *memset(void *str, int c, size_t n) {
-  char *c_ptr = (char *)str;
+void *memset(void *ptr, int c, size_t n) {
+  char *c_ptr = (char *)ptr;
   for (size_t i = 0; i < n; i++) {
     c_ptr[i] = (char)c;
   }
-  return str;
+  return ptr;
 }
 
 size_t strlen(const char *str) {

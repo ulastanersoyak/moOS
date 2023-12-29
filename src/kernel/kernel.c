@@ -8,7 +8,7 @@
 #include "kmem/kheap.h"
 
 // system paging directory pointer.
-static struct page_dir *system_page_dir = 0;
+static struct page_dir* system_page_dir = 0;
 
 void kernel_main(void) {
   // initialize terminal so ascii chars can be shown
@@ -22,7 +22,7 @@ void kernel_main(void) {
   // tell processor where to find entry of system page directory
   switch_page_dir(system_page_dir->dir_entry);
   // initialize paging for virtual memory and full system memory coverage
-  enable_paging();
+  enable_system_paging();
   // set everything before interrupts so system gets initialized without processor interrupts
   enable_interrupts();
 }
