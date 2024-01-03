@@ -32,7 +32,8 @@ Arch:
 - QEMU: `sudo pacman -S qemu`
 - Make: `sudo pacman -S make`
 - NASM: `sudo pacman -S nasm`
-- i686-gcc cross-compiler and linker: Follow [this guide](https://wiki.osdev.org/GCC_Cross-Compiler).
+
+i686-gcc cross-compiler and linker: Follow [this guide](https://wiki.osdev.org/GCC_Cross-Compiler).
 
 Once dependencies are set, clone the repository and compile the code:
 ```bash
