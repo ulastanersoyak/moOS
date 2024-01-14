@@ -20,7 +20,6 @@ void no_intr_handler() { outb(0x20, 0x20); }
 void idt_zero() { terminal_writestring("divide by zero error"); }
 
 void idt_init(void) {
-  terminal_writestring("idt initializing");
   memset(idt, 0, sizeof(idt));
   idtr_descriptor.limit = ((sizeof(struct idt_entry) * TOTAL_INTERRUPTS) - 1);
   idtr_descriptor.base = (uint32_t)&idt[0];
@@ -31,18 +30,13 @@ void idt_init(void) {
   idt_set(0, idt_zero);
   idt_set(0x21, int21h);
   idt_load(&idtr_descriptor);
-  init_OK();
 }
 
 void enable_interrupts(void) {
-  terminal_writestring("enabling interrupts");
   enable_intr();
-  init_OK();
 }
 void disble_interrupts(void) {
-  terminal_writestring("disabling interrupts");
   disable_intr();
-  init_OK();
 }
 
 void idt_set(uint32_t interrupt_num, void *addr) {

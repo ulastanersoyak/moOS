@@ -3,11 +3,11 @@
 #include "../../drivers/screen/vga.h"
 
 void cowsay(const char *str) {
-  terminal_writestring("----------\n");
+  terminal_writestring("-----------------------------------\n");
   terminal_writestring(" <");
   terminal_writestring(str);
   terminal_writestring(">\n");
-  terminal_writestring("----------\n");
+  terminal_writestring("-----------------------------------\n");
   terminal_writestring("    ^__^\n");
   terminal_writestring("    (oo)_______\n");
   terminal_writestring("    (__)       )-/\n");

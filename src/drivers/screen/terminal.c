@@ -28,8 +28,6 @@ void terminal_init(void) {
   terminal_colour = vga_entry_colour(white, black);
   terminal_buffer = VGA_MEMORY;
   terminal_clean();
-  terminal_writestring("terminal initializing");
-  init_OK();
 }
 void terminal_setcolour(uint8_t colour) { terminal_colour = colour; }
 
@@ -101,16 +99,4 @@ void terminal_writeaddr(void *addr) {
     hex_string[2 + i] = (nibble < 10) ? ('0' + nibble) : ('A' + nibble - 10);
   }
   terminal_writestring(hex_string);
-}
-
-void init_OK(void) {
-  terminal_setcolour(green);
-  terminal_writestring(" [OK]\n");
-  terminal_setcolour(white);
-}
-
-void init_ER(void) {
-  terminal_setcolour(red);
-  terminal_writestring(" [FAIL]\n");
-  terminal_setcolour(white);
 }
