@@ -32,8 +32,11 @@ void kernel_main(void) {
   ptr2[1] = 'k';
   terminal_writestring(ptr2);
   terminal_writestring("\n");
+  terminal_writeaddr(ptr2);
+  terminal_writestring("\n");
   terminal_writestring(ptr);
   terminal_writestring("\n");
+  terminal_writeaddr(ptr);
   // set everything before interrupts so system gets initialized without processor interrupts
   enable_interrupts();
 }

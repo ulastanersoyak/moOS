@@ -4,7 +4,9 @@
 #include "../config.h"
 #include "../io/io.h"
 
+// idt table array
 struct idt_entry idt[TOTAL_INTERRUPTS];
+// idt tables descriptor that contains address and length of idt
 struct idtr_desc idtr_descriptor;
 
 extern void int21h();
@@ -17,7 +19,7 @@ extern void int21h_handler() {
 
 void no_intr_handler() { outb(0x20, 0x20); }
 
-void idt_zero() { terminal_writestring("divide by zero error"); }
+void divide_by_zero_exc() { terminal_writestring("divide by zero exception occured\n"); }
 
 void idt_init(void) {
   memset(idt, 0, sizeof(idt));
@@ -27,7 +29,7 @@ void idt_init(void) {
     idt_set(i, no_intr);
   }
 
-  idt_set(0, idt_zero);
+  idt_set(0, divide_by_zero_exc);
   idt_set(0x21, int21h);
   idt_load(&idtr_descriptor);
 }

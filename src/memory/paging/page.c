@@ -47,11 +47,14 @@ void switch_page_dir(uint32_t* dir_entry) {
 void enable_system_paging(void) {
   enable_paging();
 }
-static int32_t check_memory_alignment(void* addr) { return ((uint32_t)addr % PAGE_SIZE == 0) ? 0 : INVALID_ARG_ERROR; }
+
+static int32_t check_memory_alignment(void* addr) { 
+  return ((uint32_t)addr % PAGE_SIZE == 0) ? 0 : INVALID_ARG_ERROR; 
+}
 
 int32_t set_page_location(struct page_location* page_loc, void* vir_addr) {
   // return error if memory is not aligned
-  if (!check_memory_alignment(vir_addr)) {
+  if (check_memory_alignment(vir_addr)) {
     return -INVALID_ARG_ERROR;
   }
   // each dir is 4kb big so dividing the aligned vir addr with 4kb will result 
@@ -59,14 +62,14 @@ int32_t set_page_location(struct page_location* page_loc, void* vir_addr) {
   page_loc->dir_idx = ((uint32_t)vir_addr / (TOTAL_ENTRIES_PER_DIRECTORY * PAGE_SIZE));
   // result of modulo operator is the address within the page directory. dividing it by
   // page size will result index within the page table
-  page_loc->page_idx = ((uint32_t)vir_addr % (TOTAL_ENTRIES_PER_TABLE * PAGE_SIZE) / PAGE_SIZE);
+  page_loc->page_idx = (((uint32_t)vir_addr % (TOTAL_ENTRIES_PER_TABLE * PAGE_SIZE)) / PAGE_SIZE);
   return OK;
 }
 
 
 int32_t virtualize_mem(uint32_t* dir, void* vir_addr, uint32_t phys_addr) {
   // return error if memory is not aligned
-  if (!check_memory_alignment(vir_addr)) {
+  if (check_memory_alignment(vir_addr)) {
     return -INVALID_ARG_ERROR;
   }
   struct page_location page_loc = { .page_idx = 0, .dir_idx = 0 };
