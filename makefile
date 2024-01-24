@@ -1,7 +1,7 @@
 CC := ~/opt/cross/bin/i686-elf-gcc
 LD := ~/opt/cross/bin/i686-elf-ld
 
-FILES = ./build/kernel.asm.o ./build/kernel.o ./build/terminal.o ./build/libc.o ./build/idt.asm.o ./build/idt.o ./build/io.asm.o ./build/heap.o ./build/kheap.o ./build/ascii.o ./build/page.asm.o ./build/page.o ./build/disk.o
+FILES = ./build/kernel.asm.o ./build/kernel.o ./build/terminal.o ./build/libc.o ./build/idt.asm.o ./build/idt.o ./build/io.asm.o ./build/heap.o ./build/kheap.o ./build/ascii.o ./build/page.asm.o ./build/page.o ./build/disk.o ./build/stdlib.o
 FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-labels -falign-loops -fstrength-reduce -fomit-frame-pointer -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
 
 .PHONY: build_dirs
@@ -56,7 +56,11 @@ all: build_dirs ./bin/bootloader.bin ./bin/kernel.bin
 	$(CC) -I./src/memory/paging/ $(FLAGS) -std=gnu99 -c ./src/memory/paging/page.c -o ./build/page.o
 
 ./build/disk.o : ./src/drivers/disk/disk.c
-	$(CC) -I./src/drivers/disk $(FLAGS) -std=gnu99 -c ./src/drivers/disk/disk.c -o ./build/disk.o
+	$(CC) -I./src/drivers/disk/ $(FLAGS) -std=gnu99 -c ./src/drivers/disk/disk.c -o ./build/disk.o
+
+./build/stdlib.o : ./src/libc/stdlib/stdlib.c
+	$(CC) -I./src/libc/stdlib/ $(FLAGS) -std=gnu99 -c ./src/libc/stdlib/stdlib.c -o ./build/stdlib.o
+
 build_dirs:
 	if [ ! -d "bin" ]; then mkdir bin; fi
 	if [ ! -d "build" ]; then mkdir build; fi

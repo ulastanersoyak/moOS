@@ -1,6 +1,7 @@
 #include "kernel.h"
 #include "../drivers/screen/terminal.h"
 #include "../libc/string/string.h"
+#include "../libc/stdlib/stdlib.h"
 #include "../memory/paging/page.h"
 #include "./ascii/ascii.h"
 #include "idt/idt.h"
@@ -28,4 +29,7 @@ void kernel_main(void) {
   enable_system_paging();
   // set everything before interrupts so system gets initialized without processor interrupts
   enable_interrupts();
+  char *ptr = "1text234text56";
+  int32_t rs = atoi(ptr);
+  terminal_writeint(rs);
 }
