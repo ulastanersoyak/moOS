@@ -23,6 +23,9 @@
 
 #define PAGE_SIZE 4096
 
+// disk constants
+#define MASTER_MAIN_DISK_SECTOR_SIZE 512
+
 // error message codes
 #define OK 0
 
