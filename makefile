@@ -1,7 +1,7 @@
 CC := ~/opt/cross/bin/i686-elf-gcc
 LD := ~/opt/cross/bin/i686-elf-ld
 
-FILES = ./build/kernel.asm.o ./build/kernel.o ./build/terminal.o ./build/libc.o ./build/idt.asm.o ./build/idt.o ./build/io.asm.o ./build/heap.o ./build/kheap.o ./build/ascii.o ./build/page.asm.o ./build/page.o ./build/disk.o ./build/stdlib.o ./build/ctype.o
+FILES = ./build/kernel.asm.o ./build/kernel.o ./build/terminal.o ./build/libc.o ./build/idt.asm.o ./build/idt.o ./build/io.asm.o ./build/heap.o ./build/kheap.o ./build/ascii.o ./build/page.asm.o ./build/page.o ./build/disk.o ./build/stdlib.o ./build/ctype.o ./build/path_parser.o
 FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-labels -falign-loops -fstrength-reduce -fomit-frame-pointer -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
 
 .PHONY: build_dirs
@@ -63,6 +63,10 @@ all: build_dirs ./bin/bootloader.bin ./bin/kernel.bin
 
 ./build/ctype.o : ./src/libc/ctype/ctype.c
 	$(CC) -I./src/libc/ctype/ $(FLAGS) -std=gnu99 -c ./src/libc/ctype/ctype.c -o ./build/ctype.o
+
+./build/path_parser.o : ./src/file_system/path_parser.c
+	$(CC) -I./src/file_system/ $(FLAGS) ./src/file_system/path_parser.c -std=gnu99 -c -o ./build/path_parser.o
+	
 
 build_dirs:
 	if [ ! -d "bin" ]; then mkdir bin; fi

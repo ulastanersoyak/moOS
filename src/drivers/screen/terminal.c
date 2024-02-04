@@ -67,6 +67,7 @@ void terminal_writestring(const char *data) {
   terminal_write(data, strlen(data));
 }
 
+// TODO: negative number implementation
 void terminal_writeint(int32_t num) {
   char map[10] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
   size_t idx = 0;

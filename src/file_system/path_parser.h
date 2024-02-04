@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-int8_t is_file_path_valid(const char *path);
+int32_t is_file_path_valid(const char *path);
 
 
 #endif // !PATH_PARSER_H
