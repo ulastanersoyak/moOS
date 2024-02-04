@@ -27,9 +27,4 @@ TODO
 
 [ ] multi-thread kernel
 
-[ ] pacman
-
-[ ] pong
-
-[ ] snake
-
+[ ] doom
