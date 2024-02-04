@@ -12,9 +12,9 @@
 
 #define HEAP_BLOCK_SIZE 4096 // 4 kb block size
 
-#define HEAP_ADDRESS 0x01000000 // address of heap start
+#define HEAP_ADDRESS 0x01000000 // heap memory start location
 
-#define HEAP_TABLE_ADDRESS 0x00007E00
+#define HEAP_TABLE_ADDRESS 0x00007E00 // heap table memory location
 
 // paging constants
 #define TOTAL_ENTRIES_PER_TABLE 1024

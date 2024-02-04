@@ -49,7 +49,6 @@ static uint32_t find_free_block(struct heap_desc* desc, uint32_t total_blocks) {
 
 static void mark_taken_blocks(struct heap_desc* heap, uint32_t start_block, uint32_t total_blocks) {
   uint32_t end_block = (start_block + total_blocks) - 1;
-  // taken block sign
   HEAP_BLOCK_TABLE_ENTRY entry = HEAP_BLOCK_TABLE_ENTRY_TAKEN | HEAP_BLOCK_IS_FIRST;
   // if heap has more than 1 block mark head as has next
   if (total_blocks > 1) {
@@ -85,7 +84,6 @@ void* heap_malloc(struct heap_desc* heap, size_t size) {
   if (size % HEAP_BLOCK_SIZE > 0) {
     size = (size - (size % HEAP_BLOCK_SIZE)) + HEAP_BLOCK_SIZE;
   }
-
   uint32_t total_blocks = size / HEAP_BLOCK_SIZE;
   return heap_malloc_blocks(heap, total_blocks);
 }
