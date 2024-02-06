@@ -38,7 +38,6 @@ int32_t strcmp(const char *str1, const char *str2);
 int32_t strncmp(const char *str1, const char *str2, uint32_t n);
 
 // compares str1 to str2. result depends on the LC_COLLATE setting of the
-// location
 int32_t strcoll(const char *str1, const char *str2);
 
 // copies src to dest

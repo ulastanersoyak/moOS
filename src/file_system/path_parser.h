@@ -3,7 +3,17 @@
 
 #include <stdint.h>
 
-int32_t is_file_path_valid(const char *path);
+struct path_root{
+  int32_t drive_no;
+  struct path_body *body;
+};
 
+struct path_body{
+  char *body;
+  struct path_body *next;
+};
+
+// returns 0 if error
+struct path_root *get_path(const char* path);
 
 #endif // !PATH_PARSER_H
