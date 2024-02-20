@@ -9,11 +9,13 @@ struct path_root{
 };
 
 struct path_body{
-  char *body;
+  char *body_str;
   struct path_body *next;
 };
 
 // returns 0 if error
 struct path_root *get_path(const char* path);
 
+// no real usage. just for debug. TODO: might implement it in a future printf
+void write_path(const struct path_root *root);
 #endif // !PATH_PARSER_H
