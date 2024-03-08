@@ -46,6 +46,8 @@ void switch_page_dir(uint32_t* dir_entry) {
 
 void enable_system_paging(void) {
   enable_paging();
+  terminal_writestring("system paging");
+  init_OK();
 }
 
 static int32_t check_memory_alignment(void* addr) { 

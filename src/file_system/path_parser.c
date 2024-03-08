@@ -1,5 +1,4 @@
 #include "../drivers/screen/terminal.h"
-
 #include "path_parser.h"
 #include "../libc/string/string.h"
 #include "../libc/ctype/ctype.h"
@@ -8,7 +7,6 @@
 #include "../libc/stdlib/stdlib.h"
 
 static int32_t is_file_path_valid(const char *path){
-  // path len > 3 && 0:/ 1:/ 2:/ && path[0] is digit 
   size_t size = strlen(path);
   //TODO: replace memcmp with strncmp
   if(size > 3 && size < MAX_PATH_LEN && isdigit(path[0]) && memcmp(path, ":/", 2)){return -INVALID_PATH_ERROR;}
@@ -18,7 +16,9 @@ static int32_t is_file_path_valid(const char *path){
 static void get_body(const char **path, struct path_body *body){
   // TODO: might be a better way of implementing this
   // TODO: maybe without recursion?
-  if(**path == 0){return;}
+  if(**path == 0){
+    return;
+  }
   struct path_body *path_body = kcalloc(sizeof(struct path_body));
   char* body_str = kcalloc(MAX_PATH_LEN);
   uint32_t i = 0;
@@ -54,4 +54,15 @@ void write_path(const struct path_root *root){
     terminal_writestring("/");
     body = body->next;
   }
+}
+
+void free_path_heap(struct path_root *root){
+  struct path_body *body = root->body;
+  while(body){
+    struct path_body *temp = body;
+    kfree(body->body_str);
+    kfree(body);
+    body = temp->next;
+  }
+  kfree(root);
 }

@@ -28,12 +28,14 @@ void terminal_init(void) {
   terminal_colour = vga_entry_colour(white, black);
   terminal_buffer = VGA_MEMORY;
   terminal_clean();
+  terminal_writestring("terminal init");
+  init_OK();
 }
+
 void terminal_setcolour(uint8_t colour) { terminal_colour = colour; }
 
 // internal print char function
-void terminal_putentryat(const unsigned char c, uint8_t colour, size_t x,
-                         size_t y) {
+void terminal_putentryat(const unsigned char c, uint8_t colour, size_t x, size_t y) {
   const size_t idx = (y * VGA_WIDTH) + x;
   terminal_buffer[idx] = vga_entry(c, colour);
 }
@@ -96,8 +98,20 @@ void terminal_writeaddr(void *addr) {
   hex_string[0] = '0';
   hex_string[1] = 'x';
   for (int i = 0; i < 8; i++) {
-    int nibble = (address >> (28 - 4 * i)) & 0xF;
+    int32_t nibble = (address >> (28 - 4 * i)) & 0xF;
     hex_string[2 + i] = (nibble < 10) ? ('0' + nibble) : ('A' + nibble - 10);
   }
   terminal_writestring(hex_string);
+}
+
+void init_OK(void){
+  terminal_setcolour(green);
+  terminal_writestring(" [OK]\n");
+  terminal_setcolour(white);
+}
+
+void init_ER(void){
+  terminal_setcolour(red);
+  terminal_writestring(" [ER]\n");
+  terminal_setcolour(white);
 }
