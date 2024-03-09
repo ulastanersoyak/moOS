@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "../../libc/string/string.h"
+#include "../../libc/stdio/stdio.h"
 #include "terminal.h"
 #include "vga.h"
 
@@ -28,7 +29,7 @@ void terminal_init(void) {
   terminal_colour = vga_entry_colour(white, black);
   terminal_buffer = VGA_MEMORY;
   terminal_clean();
-  terminal_writestring("terminal init");
+  printf("terminal init");
   init_OK();
 }
 
@@ -46,6 +47,9 @@ void terminal_putchar(char c) {
   if (uc == '\n') {
     terminal_column = 0;
     terminal_row += 1;
+    return;
+  }else if(uc =='\t'){
+    terminal_column+=4;
     return;
   }
   terminal_putentryat(uc, terminal_colour, terminal_column, terminal_row);
@@ -74,6 +78,10 @@ void terminal_writeint(int32_t num) {
   char map[10] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
   size_t idx = 0;
   uint32_t digits[100];
+  if(num < 0 ){
+    terminal_putchar('-');
+    num*=-1;
+  }
   if (num == 0) {
     terminal_putchar(map[num]);
     return;

@@ -8,6 +8,7 @@
 #include "../file_system/path_parser.h"
 #include "../drivers/disk/disk.h"
 #include "../drivers/disk/disk_stream.h"
+#include "../libc/stdio/stdio.h"
 
 
 //TODO: READ.ME and all TODOs
