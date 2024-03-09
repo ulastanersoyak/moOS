@@ -1,14 +1,14 @@
 #include "disk_stream.h"
 #include "disk.h"
-#include "../../kernel/kmem/kheap.h"
 #include "../../kernel/config.h"
+#include "../../libc/stdlib/stdlib.h"
 
 struct disk_stream *get_disk_stream(uint32_t disk_id){
   struct disk_t *disk = get_disk(disk_id); 
   if(!disk){
     return 0;
   }
-  struct disk_stream *disk_stream = kcalloc(sizeof(struct disk_stream));
+  struct disk_stream *disk_stream = calloc(sizeof(struct disk_stream));
   disk_stream->disk = disk;
   return disk_stream;
 }
@@ -37,5 +37,5 @@ void stream_seek(struct disk_stream *stream, int32_t pos){
 }
 
 void stream_free(struct disk_stream *stream){
-  kfree(stream);
+  free(stream);
 }

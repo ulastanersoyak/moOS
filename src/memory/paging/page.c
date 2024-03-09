@@ -1,7 +1,7 @@
 #include "./page.h"
 #include "../../libc/string/string.h"
 #include "../../libc/stdio/stdio.h"
-#include "../../kernel/kmem/kheap.h"
+#include "../../libc/stdlib/stdlib.h"
 #include "../../kernel/config.h"
 #include "../../drivers/screen/terminal.h"
 
@@ -18,12 +18,12 @@ void enable_paging(void);
 static uint32_t* current_dir_entry = 0;
 
 struct page_dir* page_dir_init(uint32_t flags) {
-  uint32_t* dir_entry = kcalloc(sizeof(uint32_t) * TOTAL_ENTRIES_PER_DIRECTORY);
+  uint32_t* dir_entry = calloc(sizeof(uint32_t) * TOTAL_ENTRIES_PER_DIRECTORY);
   // hold offset for each table so they dont overwrite eachother while initializing
   uint32_t offset = 0;
   for (size_t i = 0; i < TOTAL_ENTRIES_PER_DIRECTORY; i++) {
     // initialize the tables for the page dir
-    uint32_t* table_entry = kcalloc(sizeof(uint32_t) * TOTAL_ENTRIES_PER_TABLE);
+    uint32_t* table_entry = calloc(sizeof(uint32_t) * TOTAL_ENTRIES_PER_TABLE);
     for (size_t j = 0; j < TOTAL_ENTRIES_PER_TABLE; j++) {
       // jth entry = offset (aka table number but in bytes) + 
       // j * pagesize ( jth page block). | flags is using the last
@@ -35,7 +35,7 @@ struct page_dir* page_dir_init(uint32_t flags) {
     // mark table as writable. individual pages might not be writable
     dir_entry[i] = (uint32_t)table_entry | flags | IS_WRITABLE;
   }
-  struct page_dir* dir = kcalloc(sizeof(struct page_dir));
+  struct page_dir* dir = calloc(sizeof(struct page_dir));
   dir->dir_entry = dir_entry;
   return dir;
 }

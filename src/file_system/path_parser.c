@@ -3,7 +3,6 @@
 #include "../libc/string/string.h"
 #include "../libc/ctype/ctype.h"
 #include "../kernel/config.h"
-#include "../kernel/kmem/kheap.h"
 #include "../libc/stdlib/stdlib.h"
 
 static int32_t is_file_path_valid(const char *path){
@@ -19,8 +18,8 @@ static void get_body(const char **path, struct path_body *body){
   if(**path == 0){
     return;
   }
-  struct path_body *path_body = kcalloc(sizeof(struct path_body));
-  char* body_str = kcalloc(MAX_PATH_LEN);
+  struct path_body *path_body = calloc(sizeof(struct path_body));
+  char* body_str = calloc(MAX_PATH_LEN);
   uint32_t i = 0;
   while(**path != '/' && **path != 0x00){
     body_str[i] = **path;
@@ -40,7 +39,7 @@ struct path_root *get_path(const char *path){
     return 0;
   }
   const char *temp_path = path;
-  struct path_root *root = kcalloc(sizeof(struct path_root));
+  struct path_root *root = calloc(sizeof(struct path_root));
   root->drive_no = atoi(&temp_path[0]);
   temp_path+=3;
   get_body(&temp_path,root->body);
@@ -60,9 +59,9 @@ void free_path_heap(struct path_root *root){
   struct path_body *body = root->body;
   while(body){
     struct path_body *temp = body;
-    kfree(body->body_str);
-    kfree(body);
+    free(body->body_str);
+    free(body);
     body = temp->next;
   }
-  kfree(root);
+  free(root);
 }
