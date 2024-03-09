@@ -28,4 +28,12 @@ void kernel_main(void) {
   init_main_master_disk();
   enable_interrupts();
   cowsay("booted without error! hopefully");
+  struct disk_stream *stream= get_disk_stream(0);
+  terminal_writeaddr(stream);
+  terminal_writestring("\n");
+  unsigned char c = 0;
+  stream_seek(stream, 0x201);
+  int32_t rs = disk_stream_read(stream, &c, 1);
+  terminal_writeint((int)c);
+  if(rs){}
 }
