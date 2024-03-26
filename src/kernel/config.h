@@ -44,4 +44,5 @@
 // printf max format string char
 #define MAX_STRING_FORMAT_CHAR 100
 
+#define RAND_MAX 32767 //2^15 -1
 #endif // !CONFIG_H
