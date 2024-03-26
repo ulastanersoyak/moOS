@@ -2,30 +2,9 @@
 #include "../stdlib/stdlib.h"
 #include "../../kernel/config.h"
 #include "../../drivers/screen/terminal.h"
+#include "../../drivers/screen/vga.h"
 
 #include <stdarg.h>
-
-// struct printf_args{
-//   size_t count;
-//   int32_t arg_pos[MAX_STRING_FORMAT_CHAR];
-// };
-
-// static struct printf_args *get_arg_count(const char *str){
-//   uint32_t arg_count = 0;
-//   const char *temp_str = str;
-//   int32_t i = 0;
-//   int32_t pos = 0;
-//   struct printf_args* args = calloc(sizeof(struct printf_args)); 
-//   while(*temp_str != 0){
-//     if(*temp_str == '%' && *temp_str+1 == '%'){
-//       args->arg_pos[pos]= i;
-//       pos++;
-//     }
-//     i++;
-//     temp_str+=1;
-//   }
-//   return args;
-// }
 
 void printf(const char *str, ...){
   va_list args;
@@ -34,7 +13,7 @@ void printf(const char *str, ...){
     if(*str == '%'){
       str++;
       if(*str == 'd'){
-        int32_t arg = va_arg(args, int);
+        int32_t arg = va_arg(args, int32_t);
         terminal_writeint(arg);
         str++;
       }else if(*str == 's'){
@@ -44,6 +23,10 @@ void printf(const char *str, ...){
       }else if(*str == 'p'){
         void *addr = va_arg(args,void *);
         terminal_writeaddr(addr);
+        str++;
+      }else if(*str == 'C'){
+        enum vga_colour col = va_arg(args,enum vga_colour);
+        terminal_setcolour(col);
         str++;
       }
     }

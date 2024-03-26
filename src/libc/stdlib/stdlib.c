@@ -9,9 +9,11 @@
 void *malloc(size_t size){
  return kmalloc(size); 
 }
+
 void *calloc(size_t size){
   return kcalloc(size);
 }
+
 void free(void *ptr){
   kfree(ptr);
 }
@@ -27,8 +29,7 @@ uint32_t atoi(const char *buffer){
   return rs;
 }
 
-
-static unsigned long int next = 1;  // NB: "unsigned long int" is assumed to be 32 bits wide
+static uint32_t next = 1;  // NB: "unsigned long int" is assumed to be 32 bits wide
  
 uint32_t rand(void)  // RAND_MAX assumed to be 32767
 {

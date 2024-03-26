@@ -42,12 +42,14 @@ struct disk_t* get_disk(uint32_t idx){
   return &main_master_disk;
 }
 
-void init_main_master_disk(void){
+void init_main_master_disk(uint8_t verbose){
   memset(&main_master_disk, 0, sizeof(main_master_disk));
   main_master_disk.type = REAL_DISK_TYPE;
   main_master_disk.sector_size = MASTER_MAIN_DISK_SECTOR_SIZE; 
-  printf("master disk init");
-  init_OK();
+  if(verbose){
+    printf("master disk init");
+    init_OK();
+  }
 }
 
 int32_t disk_read_block(struct disk_t *disk, uint32_t logical_block_addr, uint32_t total_block, void *buffer){

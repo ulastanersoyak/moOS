@@ -17,13 +17,13 @@ struct idtr_desc {
 } __attribute__((packed));
 
 // initialize interrupt descriptor table
-void idt_init(void);
+void idt_init(uint8_t verbose);
 
 // add a new interrupt to given index.
 void idt_set(uint32_t interrupt_num, void *adr);
 
 // asm wrapper functions
-void enable_interrupts(void);
+void enable_interrupts(uint8_t verbose);
 void disble_interrupts(void);
 
 // asm functions
