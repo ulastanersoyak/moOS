@@ -19,6 +19,7 @@ disable_intr:
 
 idt_load:
   push ebp
+  push 0x0303030
   mov ebp,esp
 
   mov ebx, [ebp+8]

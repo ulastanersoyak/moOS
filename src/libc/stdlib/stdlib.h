@@ -13,7 +13,6 @@ void *calloc(size_t size);
 // free a pointers heap memory
 void free(void *ptr);
 
-
 // ascii to integer
 uint32_t atoi(const char *buffer);
 
@@ -26,7 +25,7 @@ void srand(uint32_t seed);
 // return a random number between lower and upper. lower inclusive
 uint32_t rand_range(uint32_t lower, uint32_t upper);
 
-//TODO: DECIMAL, OCTAL, HEX handle negative numbers
-// integer to ascii 
-char *itoa(int32_t integer, char *buffer,int8_t base);
+// TODO: DECIMAL, OCTAL, HEX handle negative numbers
+//  integer to ascii
+char *itoa(int32_t integer, char *buffer, int8_t base);
 #endif // !STDLIB_H
