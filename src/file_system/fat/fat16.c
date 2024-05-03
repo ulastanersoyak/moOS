@@ -9,7 +9,7 @@
 
 // all code written here is based of Microsoft Extensible Firmware Initiative
 // FAT32 File System Specification
-//  and NOT A FAT16 MANUAL. TODO: DOUBLE CHECK WITH A FAT16 MANUAL
+// and NOT A FAT16 MANUAL. TODO: DOUBLE CHECK WITH A FAT16 MANUAL
 
 #include <stdint.h>
 
