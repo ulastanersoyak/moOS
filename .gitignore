@@ -4,3 +4,4 @@ todo.txt
 resource/
 bin/
 build/
+.gdb_history
