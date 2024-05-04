@@ -5,3 +5,4 @@ resource/
 bin/
 build/
 .gdb_history
+.gdbinit
