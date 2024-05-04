@@ -1,6 +1,6 @@
 #!/bin/bash
 
-directory="./src"
+directory="../src"
 
 if [ -d "$directory" ]; then
     echo "TODO's in $directory"

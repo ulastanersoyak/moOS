@@ -65,7 +65,7 @@ file_desc_init (struct file_desc **desc_out)
   int32_t rs = -FILE_HANDLER_OVERFLOW;
   // iterate through file descriptors(open file) array and return first free
   // one
-  for (size_t i = 0; i < MAX_FILE_DESCS; i++)
+  for (int32_t i = 0; i < MAX_FILE_DESCS; i++)
     {
       if (file_descs[i] == 0)
         {
@@ -80,8 +80,8 @@ file_desc_init (struct file_desc **desc_out)
   return rs;
 }
 
-static struct file_desc *
-get_desc (uint32_t id)
+struct file_desc *
+get_desc (int32_t id)
 {
   if (id <= 0 || id > MAX_FILE_DESCS)
     {
@@ -96,7 +96,6 @@ fs_resolve (struct disk_t *disk)
   struct file_system *fs = 0;
   for (size_t i = 0; i < MAX_FILE_SYSTEMS; i++)
     {
-      // printf("%d\t",file_systems[i]->resolve_fn(disk));
       if (file_systems[i] != 0 && file_systems[i]->resolve_fn (disk) == 0)
         {
           // check if one of the kernel's file system can resolve the given

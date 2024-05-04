@@ -27,6 +27,10 @@ struct disk_t;
 typedef void *(*FS_OPEN) (struct disk_t *disk, struct path_root *root,
                           enum FILE_MODE mode);
 
+// general file system interface that reads a file
+typedef uint32_t (*FS_READ) (struct disk_t *disk, void *priv, uint32_t size,
+                             uint32_t nmemb, char *out);
+
 // resolves if file system can operate on the given disk
 typedef int32_t (*FS_RESOLVE) (struct disk_t *disk);
 
@@ -35,6 +39,7 @@ struct file_system
   // file system should return 0 if disk is usable
   FS_RESOLVE resolve_fn;
   FS_OPEN open_fn;
+  FS_READ read_fn;
   char *fs_name;
 };
 
@@ -55,5 +60,7 @@ void add_file_system (struct file_system *fs);
 int32_t file_desc_init (struct file_desc **desc_out);
 
 struct file_system *fs_resolve (struct disk_t *disk);
+
+struct file_desc *get_desc (int32_t id);
 
 #endif // !FILE_H

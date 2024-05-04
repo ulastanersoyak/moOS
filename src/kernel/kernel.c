@@ -4,7 +4,6 @@
 #include "../drivers/screen/terminal.h"
 #include "../drivers/screen/vga.h"
 #include "../file_system/file.h"
-#include "../file_system/path_parser.h"
 #include "../libc/stdio/stdio.h"
 #include "../libc/stdlib/stdlib.h"
 #include "../libc/string/string.h"
@@ -12,6 +11,7 @@
 #include "ascii/ascii.h"
 #include "idt/idt.h"
 #include "kmem/kheap.h"
+#include <stdint.h>
 
 // TODO: READ.ME and all TODOs
 
@@ -20,7 +20,7 @@ static struct page_dir *system_page_dir = 0;
 void
 kernel_main (void)
 {
-  uint8_t verbose = 1;
+  uint8_t verbose = 0;
   terminal_init (verbose);
   idt_init (verbose);
   kernel_heap_init (verbose);
@@ -32,7 +32,18 @@ kernel_main (void)
   enable_system_paging (verbose);
   init_main_master_disk (verbose);
   enable_interrupts (verbose);
-  moose ("VERSION 0.06 everything looks OK", light_magenta);
-  int fd = fopen ("0:/hello.txt", "r");
-  printf ("%d", fd);
+  if (verbose)
+    {
+      moose ("VERSION 0.06 everything looks OK", light_magenta);
+    }
+  int32_t fd = fopen ("0:/fs_test.txt", "r");
+  if (fd > 0)
+    {
+      printf ("opened file %d\n", fd);
+      char buf[15];
+      memset (buf, 0x00, 15);
+      fread (buf, 6, 1, fd);
+      size_t len = strlen (buf);
+      printf ("size:%d'\ncontent:%s", len, buf);
+    }
 }

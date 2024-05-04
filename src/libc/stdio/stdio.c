@@ -143,3 +143,19 @@ fopen (const char *file_name, const char *file_mode)
     }
   return rs;
 }
+
+int32_t
+fread (void *buffer, uint32_t size, uint32_t nmemb, int32_t fd)
+{
+  if (size <= 0 || nmemb <= 0 || fd < 1)
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  struct file_desc *desc = get_desc (fd);
+  if (!desc)
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  return desc->fs->read_fn (desc->disk, desc->priv, size, nmemb,
+                            (char *)buffer);
+}

@@ -13,7 +13,7 @@ all: build_dirs ./bin/bootloader.bin ./bin/kernel.bin
 	dd if=./bin/kernel.bin >> ./bin/os.bin
 	dd if=/dev/zero bs=1048576 count=16 >> ./bin/os.bin
 	sudo mount -t vfat ./bin/os.bin /mnt/d
-	sudo cp ./test/file_system_test.txt /mnt/d
+	sudo cp ./test/fs_test.txt /mnt/d
 	sudo umount /mnt/d
 
 ./bin/kernel.bin: $(FILES)

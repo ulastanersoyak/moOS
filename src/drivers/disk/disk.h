@@ -29,7 +29,7 @@ int32_t disk_read (int32_t logical_block_addr, uint32_t total_block,
 struct disk_t *get_disk (uint32_t idx);
 
 // reads the given disk
-int32_t disk_read_block (struct disk_t *disk, uint32_t logical_block_addr,
+int32_t disk_read_block (struct disk_t *disk, int32_t logical_block_addr,
                          uint32_t total_block, void *buffer);
 
 // searches and initializes all disks available. currently only main master
