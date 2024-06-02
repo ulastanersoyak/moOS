@@ -30,7 +30,7 @@ void kernel_main(void) {
   enable_system_paging(verbose);
   init_main_master_disk(verbose);
   enable_interrupts(verbose);
-  moose("VERSION 0.03",light_red);
+  moose("VERSION 0.03. everything looks OK",light_red);
   struct disk_stream *stream= get_disk_stream(0);
   unsigned char c = 0;
   stream_seek(stream, 0x201);

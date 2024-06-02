@@ -1,7 +1,7 @@
 CC := ~/opt/cross/bin/i686-elf-gcc
 LD := ~/opt/cross/bin/i686-elf-ld
 
-FILES = ./build/kernel.asm.o ./build/kernel.o ./build/terminal.o ./build/libc.o ./build/idt.asm.o ./build/idt.o ./build/io.asm.o ./build/heap.o ./build/kheap.o ./build/ascii.o ./build/page.asm.o ./build/page.o ./build/disk.o ./build/stdlib.o ./build/ctype.o ./build/path_parser.o ./build/disk_stream.o ./build/stdio.o ./build/file_system.o
+FILES = ./build/kernel.asm.o ./build/kernel.o ./build/terminal.o ./build/libc.o ./build/idt.asm.o ./build/idt.o ./build/io.asm.o ./build/heap.o ./build/kheap.o ./build/ascii.o ./build/page.asm.o ./build/page.o ./build/disk.o ./build/stdlib.o ./build/ctype.o ./build/path_parser.o ./build/disk_stream.o ./build/stdio.o ./build/file.o
 FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-labels -falign-loops -fstrength-reduce -fomit-frame-pointer -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
 
 .PHONY: build_dirs
@@ -76,8 +76,8 @@ all: build_dirs ./bin/bootloader.bin ./bin/kernel.bin
 ./build/stdio.o : ./src/libc/stdio/stdio.c
 	$(CC) -I./src/libc/stdio/ $(FLAGS) -std=gnu99 -c ./src/libc/stdio/stdio.c -o ./build/stdio.o
 	
-./build/file_system.o : ./src/file_system/file.c
-	$(CC) -I./src/file_system/ $(FLAGS) ./src/file_system/file.c -std=gnu99 -c -o ./build/file_system.o
+./build/file.o : ./src/file_system/file.c
+	$(CC) -I./src/file_system/ $(FLAGS) ./src/file_system/file.c -std=gnu99 -c -o ./build/file.o
 
 build_dirs:
 	if [ ! -d "bin" ]; then mkdir bin; fi

@@ -1,6 +1,8 @@
 #ifndef DISK_H
 #define DISK_H
 
+#include "../../file_system/file.h"
+
 #include <stdint.h> 
 
 typedef uint8_t DISK_TYPE;
@@ -12,6 +14,7 @@ typedef uint8_t DISK_TYPE;
 struct disk_t{
   DISK_TYPE type;
   uint32_t sector_size;    
+  struct file_system *file_system;
 };
 
 // starting from logical_block_addr, reads total_block amount of blocks into the given buffer
