@@ -79,6 +79,17 @@ char *strchr(const char *str, uint32_t n){
   return 0;
 }
 
+char *strcpy(char *dest, const char *src){
+  char *temp = dest;
+  while(*src != 0){
+    *temp = *src;
+    temp++;
+    src++;
+  }
+  *temp = 0x00;
+  return dest;
+}
+
 size_t strlen(const char *str) {
   size_t size = 0;
   while (str[size]) {
