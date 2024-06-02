@@ -16,7 +16,7 @@ struct file_system *fat16_init(){
 
 int32_t fat16_resolve(struct disk_t *disk){
   
-  return IO_ERROR;
+  return 0;
 }
 
 void *fat16_open(struct disk_t *disk, struct path_root *root, enum FILE_MODE mode){
