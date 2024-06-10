@@ -18,7 +18,7 @@ all: build_dirs ./bin/bootloader.bin ./bin/kernel.bin
 
 ./bin/kernel.bin: $(FILES)
 	$(LD) -g -relocatable $(FILES) -o ./build/kernelfull.o
-	$(CC) $(FLAGS) -T ./linker.ld -o ./bin/kernel.bin -ffreestanding -O0 -nostdlib ./build/kernelfull.o 
+	$(CC) $(FLAGS) -T ./src/linker.ld -o ./bin/kernel.bin -ffreestanding -O0 -nostdlib ./build/kernelfull.o 
 
 ./bin/bootloader.bin: ./src/bootloader/bootloader.asm
 	nasm -f bin ./src/bootloader/bootloader.asm -o ./bin/bootloader.bin

@@ -15,14 +15,14 @@ disk_read (int32_t logical_block_addr, uint32_t total_block, void *buffer)
   // works same as bootloader disk read
   outb (0x1F6, (logical_block_addr >> 24) | 0xE0);
   outb (0x1F2, total_block);
-  outb (0x1F3, (uint16_t)(logical_block_addr & 0xff));
-  outb (0x1F4, (uint16_t)(logical_block_addr >> 8));
-  outb (0x1F5, (uint16_t)(logical_block_addr >> 16));
+  outb (0x1F3, (uint8_t)(logical_block_addr & 0xFF));
+  outb (0x1F4, (uint8_t)(logical_block_addr >> 8));
+  outb (0x1F5, (uint8_t)(logical_block_addr >> 16));
   outb (0x1F7, 0x20);
   uint16_t *buff = (uint16_t *)buffer;
   for (size_t i = 0; i < total_block; i++)
     {
-      unsigned char c = insb (0x1F7);
+      uint8_t c = insb (0x1F7);
       while (!(c & 0x08))
         {
           // wait until 0x08th bit is set
@@ -32,7 +32,7 @@ disk_read (int32_t logical_block_addr, uint32_t total_block, void *buffer)
       // 256x2 = 512 byte (1 sector)
       for (size_t j = 0; j < 256; j++)
         {
-          *buff = insw (0x1f0);
+          *buff = insw (0x1F0);
           buff++;
         }
     }
