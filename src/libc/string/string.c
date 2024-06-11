@@ -1,8 +1,5 @@
 #include "string.h"
 
-#include <stddef.h>
-#include <stdint.h>
-
 void *
 memchr (const void *str, uint32_t c, size_t n)
 {

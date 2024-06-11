@@ -33,4 +33,4 @@ _start:
 
 	jmp $
 
-times 512 - ($ - $$) db 0; allign with c code
+times 512 - ($ - $$) db 0; align with c code

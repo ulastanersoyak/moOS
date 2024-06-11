@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// searches for the first occurence of the char c in the first n bytes of the
+// searches for the first occurrence of the char c in the first n bytes of the
 // string pointed to.
 void *memchr (const void *str, uint32_t c, size_t n);
 
@@ -29,7 +29,7 @@ char *strcat (char *dest, const char *src);
 // appends src t to the end of the dest up to n bytes
 char *strncat (char *dest, const char *src, uint32_t n);
 
-// searches for the first occurence of the char c in the string pointed to
+// searches for the first occurrence of the char c in the string pointed to
 char *strchr (const char *str, uint32_t n);
 
 // compares str1 to str2
@@ -68,8 +68,8 @@ char *strchr (const char *str, uint32_t c);
 // chars in str2
 size_t strspn (const char *str1, const char *str2);
 
-// finds the first occurence of the entire str2 (not including null terminator)
-// in the str2
+// finds the first occurrence of the entire str2 (not including null
+// terminator) in the str2
 char *strstr (const char *str1, const char *str2);
 
 // transforms first n chars of the src into current locale and places them in

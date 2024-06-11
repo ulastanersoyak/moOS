@@ -27,7 +27,7 @@ void idt_set (uint32_t interrupt_num, void *adr);
 
 // asm wrapper functions
 void enable_interrupts (uint8_t verbose);
-void disble_interrupts (void);
+void disable_interrupts (void);
 
 // asm functions
 extern void idt_load (struct idtr_desc *ptr);

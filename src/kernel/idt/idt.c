@@ -7,6 +7,7 @@
 
 // idt table array
 struct idt_entry idt[TOTAL_INTERRUPTS];
+
 // idt tables descriptor that contains address and length of idt
 struct idtr_desc idtr_descriptor;
 
@@ -16,7 +17,7 @@ extern void no_intr ();
 extern void
 int21h_handler ()
 {
-  terminal_writestring ("keyboard pressed");
+  printf ("keyboard pressed");
   outb (0x20, 0x20);
 }
 
@@ -29,7 +30,7 @@ no_intr_handler ()
 void
 divide_by_zero_exc ()
 {
-  terminal_writestring ("divide by zero exception occured\n");
+  printf ("divide by zero exception occurred\n");
 }
 
 void
@@ -63,7 +64,7 @@ enable_interrupts (uint8_t verbose)
     }
 }
 void
-disble_interrupts (void)
+disable_interrupts (void)
 {
   disable_intr ();
 }

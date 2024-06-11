@@ -5,8 +5,11 @@
 int32_t
 isalnum (int32_t c)
 {
-  /* decimal numbers */ /* uppercase chars */ /* lowercase chars */
-  return ((c >= 48 && c <= 57) || (c >= 65 && c <= 90)
+  /* decimal numbers */
+  return ((c >= 48 && c <= 57)
+          /* uppercase chars */
+          || (c >= 65 && c <= 90)
+          /* lowercase chars */
           || (c >= 97 && c <= 122))
              ? 0
              : 1;
@@ -15,8 +18,12 @@ isalnum (int32_t c)
 int32_t
 isalpha (int32_t c)
 {
-  /* uppercase chars */ /* lowercase chars */
-  return ((c >= 65 && c <= 90) || (c >= 97 && c <= 122)) ? 0 : 1;
+  /* uppercase chars */
+  return ((c >= 65 && c <= 90) ||
+          /* lowercase chars */
+          (c >= 97 && c <= 122))
+             ? 0
+             : 1;
 }
 
 int32_t

@@ -1,6 +1,7 @@
 #ifndef STDIO_H
 #define STDIO_H
 
+#include "../../file_system/file.h"
 #include <stdint.h>
 
 // custom printf implementation. currently only accepts %d for integers, %s for
@@ -8,10 +9,10 @@
 // the printf indicators.
 void printf (const char *str, ...);
 
-// tries to open given path, if it is a file that system can manage, calls
-// appropriate  file systems open function
-int32_t fopen (const char *file_name, const char *mode);
-
-int32_t fread (void *ptr, uint32_t size, uint32_t nmemb, int32_t fd);
+int fopen (const char *filename, const char *mode_str);
+int fseek (int fd, int offset, FILE_SEEK_MODE whence);
+int fread (void *ptr, uint32_t size, uint32_t nmemb, int fd);
+int fstat (int fd, struct file_stat *stat);
+int fclose (int fd);
 
 #endif // !STDIO_H

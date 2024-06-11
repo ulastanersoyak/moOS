@@ -12,8 +12,7 @@
 void load_page_dir (uint32_t *dir);
 
 // prototype for the function that enables paging using 31th bit of cr0
-// register DO NOT CALL BEFORE INITALIZING PAGE DIRECTORY!!! CAUSES SYSTEM
-// PANIC
+// register DO NOT CALL BEFORE INITIALIZING PAGE DIRECTORY!!!
 void enable_paging (void);
 
 static uint32_t *current_dir_entry = 0;

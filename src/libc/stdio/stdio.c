@@ -11,6 +11,8 @@
 
 #include <stdarg.h>
 
+extern struct file_descriptor *file_descriptors[MAX_FILE_SYSTEMS];
+
 void
 printf (const char *str, ...)
 {
@@ -33,18 +35,6 @@ printf (const char *str, ...)
               terminal_writestring (arg_str);
               str++;
             }
-          else if (*str == 'p')
-            {
-              void *addr = va_arg (args, void *);
-              terminal_writeaddr (addr);
-              str++;
-            }
-          else if (*str == 'P')
-            {
-              void *path = va_arg (args, void *);
-              write_path (path);
-              str++;
-            }
           else if (*str == 'C')
             {
               enum vga_colour col = va_arg (args, enum vga_colour);
@@ -57,105 +47,205 @@ printf (const char *str, ...)
     }
 }
 
-static int32_t
-strcmp_without_case_sens (const char *str1, const char *str2)
+FILE_MODE
+file_get_mode_by_string (const char *str)
 {
-  if (strlen (str1) != strlen (str2))
+  FILE_MODE mode = FILE_MODE_INVALID;
+  if (strncmp (str, "r", 1) == 0)
     {
-      return -1;
+      mode = FILE_MODE_READ;
     }
-  for (size_t i = 0; i < strlen (str1); i++)
+  else if (strncmp (str, "w", 1) == 0)
     {
-      if (tolower (str1[i]) != tolower (str2[i]))
-        {
-          return -1;
-        }
+      mode = FILE_MODE_WRITE;
     }
-  return 0;
-}
-
-static enum FILE_MODE
-get_file_mode (const char *str)
-{
-  enum FILE_MODE mode = INVALID;
-  if (!(strncmp (str, "r", 1)))
+  else if (strncmp (str, "a", 1) == 0)
     {
-      mode = READ;
-    }
-  else if (!(strncmp (str, "w", 1)))
-    {
-      mode = WRITE;
-    }
-  else if (!(strncmp (str, "a", 1)))
-    {
-      mode = APPEND;
+      mode = FILE_MODE_APPEND;
     }
   return mode;
 }
 
-int32_t
-fopen (const char *file_name, const char *file_mode)
+static struct file_descriptor *
+file_get_descriptor (int fd)
 {
-  struct path_root *root = get_path (file_name);
-  if (!root)
+  if (fd <= 0 || fd >= MAX_FILE_DESCS)
     {
-      return -INVALID_PATH_ERROR;
+      return 0;
     }
-  // return an error if file path is root.
-  if (!root->body->body_str)
-    {
-      return -INVALID_PATH_ERROR;
-    }
-  // check if disk has a driver
-  struct disk_t *disk = get_disk (root->drive_no);
-  if (!disk)
-    {
-      return -INVALID_DISK_ERROR;
-    }
-  // check if disk has a file system kernel can handle
-  if (!disk->file_system)
-    {
-      return -IO_ERROR;
-    }
-  enum FILE_MODE mode = get_file_mode (file_mode);
-  if (mode == INVALID)
-    {
-      return -INVALID_ARG_ERROR;
-    }
-  void *desc_private = disk->file_system->open_fn (disk, root, mode);
-  if (IS_ERR (desc_private))
-    {
-      return -ERROR_I (desc_private);
-    }
-  struct file_desc *desc = 0;
-  int32_t rs = file_desc_init (&desc);
-  if (rs < 0)
-    {
-      return rs;
-    }
-  desc->fs = disk->file_system;
-  desc->priv = desc_private;
-  desc->disk = disk;
-  rs = desc->idx;
-  if (rs < 0)
-    {
-      rs = 0;
-    }
-  return rs;
+
+  // Descriptors start at 1
+  int index = fd - 1;
+  return file_descriptors[index];
 }
 
-int32_t
-fread (void *buffer, uint32_t size, uint32_t nmemb, int32_t fd)
+static int
+file_new_descriptor (struct file_descriptor **desc_out)
 {
-  if (size <= 0 || nmemb <= 0 || fd < 1)
+  int res = -NO_MEMORY_ERROR;
+  for (int i = 0; i < MAX_FILE_DESCS; i++)
     {
-      return -INVALID_ARG_ERROR;
+      if (file_descriptors[i] == 0)
+        {
+          struct file_descriptor *desc
+              = calloc (sizeof (struct file_descriptor));
+          // Descriptors start at 1
+          desc->index = i + 1;
+          file_descriptors[i] = desc;
+          *desc_out = desc;
+          res = 0;
+          break;
+        }
     }
-  struct file_desc *desc = get_desc (fd);
+
+  return res;
+}
+
+int
+fopen (const char *filename, const char *mode_str)
+{
+  int res = 0;
+  struct path_root *root_path = pathparser_parse (filename, NULL);
+  if (!root_path)
+    {
+      res = -INVALID_ARG_ERROR;
+      goto out;
+    }
+
+  // cannot have just a root path 0:/ 0:/test.txt
+  if (!root_path->first)
+    {
+      res = -INVALID_ARG_ERROR;
+      goto out;
+    }
+
+  // ensure the disk we are reading from exists
+  struct disk *disk = get_disk (root_path->drive_no);
+  if (!disk)
+    {
+      res = -IO_ERROR;
+      goto out;
+    }
+
+  if (!disk->file_system)
+    {
+      res = -IO_ERROR;
+      goto out;
+    }
+
+  FILE_MODE mode = file_get_mode_by_string (mode_str);
+  if (mode == FILE_MODE_INVALID)
+    {
+      res = -INVALID_ARG_ERROR;
+      goto out;
+    }
+
+  void *descriptor_priv_data
+      = disk->file_system->open (disk, root_path->first, mode);
+  if (descriptor_priv_data < 0)
+    {
+      res = ERROR_I (descriptor_priv_data);
+      goto out;
+    }
+
+  struct file_descriptor *desc = 0;
+  res = file_new_descriptor (&desc);
+  if (res < 0)
+    {
+      goto out;
+    }
+  desc->file_system = disk->file_system;
+  desc->priv = descriptor_priv_data;
+  desc->disk = disk;
+  res = desc->index;
+
+out:
+  // fopen shouldnt return negative values
+  if (res < 0)
+    {
+      res = 0;
+    }
+
+  return res;
+}
+
+int
+fstat (int fd, struct file_stat *stat)
+{
+  int res = 0;
+  struct file_descriptor *desc = file_get_descriptor (fd);
   if (!desc)
     {
-      return -INVALID_ARG_ERROR;
+      res = -IO_ERROR;
+      goto out;
     }
-  return desc->fs->read_fn (desc->disk, desc->priv, size, nmemb,
-                            (char *)buffer);
+
+  res = desc->file_system->stat (desc->disk, desc->priv, stat);
+out:
+  return res;
+}
+
+static void
+file_free_descriptor (struct file_descriptor *desc)
+{
+  file_descriptors[desc->index - 1] = 0x00;
+  free (desc);
+}
+
+int
+fclose (int fd)
+{
+  int res = 0;
+  struct file_descriptor *desc = file_get_descriptor (fd);
+  if (!desc)
+    {
+      res = -IO_ERROR;
+      goto out;
+    }
+
+  res = desc->file_system->close (desc->priv);
+  if (res == OK)
+    {
+      file_free_descriptor (desc);
+    }
+out:
+  return res;
+}
+
+int
+fseek (int fd, int offset, FILE_SEEK_MODE whence)
+{
+  int res = 0;
+  struct file_descriptor *desc = file_get_descriptor (fd);
+  if (!desc)
+    {
+      res = -IO_ERROR;
+      goto out;
+    }
+
+  res = desc->file_system->seek (desc->priv, offset, whence);
+out:
+  return res;
+}
+int
+fread (void *ptr, uint32_t size, uint32_t nmemb, int fd)
+{
+  int res = 0;
+  if (size == 0 || nmemb == 0 || fd < 1)
+    {
+      res = -INVALID_ARG_ERROR;
+      goto out;
+    }
+
+  struct file_descriptor *desc = file_get_descriptor (fd);
+  if (!desc)
+    {
+      res = -INVALID_ARG_ERROR;
+      goto out;
+    }
+
+  res = desc->file_system->read (desc->disk, desc->priv, size, nmemb,
+                                 (char *)ptr);
+out:
+  return res;
 }

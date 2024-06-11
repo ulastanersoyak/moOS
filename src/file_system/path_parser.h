@@ -1,25 +1,19 @@
-#ifndef PATH_PARSER_H
-#define PATH_PARSER_H
-
-#include <stdint.h>
+#ifndef PATHPARSER_H
+#define PATHPARSER_H
 
 struct path_root
 {
-  int32_t drive_no;
-  struct path_body *body;
+    int drive_no;
+    struct path_part* first;
 };
 
-struct path_body
+struct path_part
 {
-  char *body_str;
-  struct path_body *next;
+    const char* part;
+    struct path_part* next;
 };
 
-// returns 0 if error
-struct path_root *get_path (const char *path);
+struct path_root* pathparser_parse(const char* path, const char* current_directory_path);
+void pathparser_free(struct path_root* root);
 
-void free_path_heap (struct path_root *root);
-
-// no real usage. just for debug. TODO: might implement it in a future printf
-void write_path (const struct path_root *root);
-#endif // !PATH_PARSER_H
+#endif
