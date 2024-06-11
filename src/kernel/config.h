@@ -65,6 +65,6 @@
 // max open files
 #define MAX_FILE_DESCS 512
 
-#define TOTAL_GDT_SEGMENTS 3
+#define TOTAL_GDT_SEGMENTS 6
 
 #endif // !CONFIG_H
