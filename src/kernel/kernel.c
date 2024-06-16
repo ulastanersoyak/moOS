@@ -31,5 +31,5 @@ void kernel_main(void) {
   enable_system_paging(verbose);
   init_main_master_disk(verbose);
   enable_interrupts(verbose);
-  moose("VERSION 0.04. everything looks OK",light_red);
+  moose("VERSION 0.05 everything looks OK",light_magenta);
 }

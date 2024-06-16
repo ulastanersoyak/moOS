@@ -73,7 +73,10 @@ static struct file_desc *get_desc(uint32_t id){
 struct file_system *fs_resolve(struct disk_t *disk){
     struct file_system *fs = 0;
     for(size_t i = 0; i < MAX_FILE_SYSTEMS; i++){
+        // printf("%d\t",file_systems[i]->resolve_fn(disk));
        if(file_systems[i] != 0 && file_systems[i]->resolve_fn(disk) == 0){
+            // check if one of the kernel's file system can resolve the given disk
+            // if one can bind them together
             fs = file_systems[i];
             break;
         } 

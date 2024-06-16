@@ -2,6 +2,7 @@
 #include "disk.h"
 #include "../../kernel/config.h"
 #include "../../libc/stdlib/stdlib.h"
+#include "../../libc/stdio/stdio.h"
 
 struct disk_stream *get_disk_stream(uint32_t disk_id){
   struct disk_t *disk = get_disk(disk_id); 

@@ -46,12 +46,15 @@ void init_main_master_disk(uint8_t verbose){
   memset(&main_master_disk, 0, sizeof(main_master_disk));
   main_master_disk.type = REAL_DISK_TYPE;
   main_master_disk.sector_size = MASTER_MAIN_DISK_SECTOR_SIZE; 
+  main_master_disk.id = 0;
   main_master_disk.file_system = fs_resolve(&main_master_disk);
   if(verbose){
     printf("master disk init");
     if(!main_master_disk.file_system){
       init_ER();
+      printf("%d",(int32_t)main_master_disk.id);
     }else{
+      printf("->%s",main_master_disk.file_system->fs_name);
       init_OK();
     }
   }

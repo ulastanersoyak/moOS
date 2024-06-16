@@ -39,6 +39,10 @@
 
 #define FILE_HANDLER_OVERFLOW 5
 
+#define INVALID_DISK_ERROR 6
+
+#define SIGNATURE_ERROR 7
+
 // printf max format string char
 #define MAX_STRING_FORMAT_CHAR 100
 
