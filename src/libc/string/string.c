@@ -86,7 +86,7 @@ char *strcpy(char *dest, const char *src){
     dest++;
     src++;
   }
-  *dest = 0x00;
+  *dest = '\0';
   return temp;
 }
 

@@ -2,6 +2,7 @@
 #include "../drivers/screen/terminal.h"
 #include "../drivers/screen/vga.h"
 #include "../libc/stdlib/stdlib.h"
+#include "../libc/string/string.h"
 #include "../memory/paging/page.h"
 #include "ascii/ascii.h"
 #include "idt/idt.h"
@@ -31,5 +32,5 @@ void kernel_main(void) {
   enable_system_paging(verbose);
   init_main_master_disk(verbose);
   enable_interrupts(verbose);
-  moose("VERSION 0.05 everything looks OK",light_magenta);
+  moose("VERSION 0.06 everything looks OK",light_magenta);
 }

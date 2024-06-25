@@ -52,9 +52,8 @@ void init_main_master_disk(uint8_t verbose){
     printf("master disk init");
     if(!main_master_disk.file_system){
       init_ER();
-      printf("%d",(int32_t)main_master_disk.id);
     }else{
-      printf("->%s",main_master_disk.file_system->fs_name);
+      printf(" <FS: %s> ",main_master_disk.file_system->fs_name);
       init_OK();
     }
   }
