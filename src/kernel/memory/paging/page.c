@@ -1,9 +1,9 @@
 #include "./page.h"
-#include "../../libc/string/string.h"
-#include "../../libc/stdio/stdio.h"
-#include "../../libc/stdlib/stdlib.h"
-#include "../../kernel/config.h"
-#include "../../drivers/screen/terminal.h"
+#include "../../../libc/string/string.h"
+#include "../../../libc/stdio/stdio.h"
+#include "../../../libc/stdlib/stdlib.h"
+#include "../../config.h"
+#include "../../../drivers/screen/terminal.h"
 
 #include <stddef.h>
 

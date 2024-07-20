@@ -1,7 +1,7 @@
 #include "heap.h"
-#include "../../drivers/screen/terminal.h"
-#include "../../kernel/config.h"
-#include "../../libc/string/string.h"
+#include "../../../drivers/screen/terminal.h"
+#include "../../config.h"
+#include "../../../libc/string/string.h"
 #include <stdint.h>
 
 int32_t heap_desc_init(struct heap_desc* heap, void* start, void* end, struct heap_table* table) {
