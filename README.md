@@ -18,73 +18,77 @@ My future objectives for moOS encompass a multi-threaded kernel, the potential d
 ## Project Structure:
 ```bash
 moOS/
-├── bin/
-├── build/
+├── bin
+├── build
 ├── file_sys_test.txt
 ├── find_todos.sh
+├── LICENSE
 ├── linker.ld
 ├── makefile
+├── moosv6.png
+├── README.md
 ├── run.sh
-└── src/
-├── bootloader/
-│ ├── bootloader.asm
-│ └── kernel.asm
-├── drivers/
-│ ├── disk/
-│ │ ├── disk.c
-│ │ ├── disk.h
-│ │ ├── disk_stream.c
-│ │ └── disk_stream.h
-│ └── screen/
-│ ├── terminal.c
-│ ├── terminal.h
-│ └── vga.h
-├── file_system/
-│ ├── fat/
-│ │ ├── fat16.c
-│ │ └── fat16.h
-│ ├── file.c
-│ ├── file.h
-│ ├── path_parser.c
-│ └── path_parser.h
-├── kernel/
-│ ├── ascii/
-│ │ ├── ascii.c
-│ │ └── ascii.h
-│ ├── config.h
-│ ├── idt/
-│ │ ├── idt.asm
-│ │ ├── idt.c
-│ │ └── idt.h
-│ ├── io/
-│ │ ├── io.asm
-│ │ └── io.h
-│ ├── kernel.c
-│ ├── kernel.h
-│ └── kmem/
-│ ├── kheap.c
-│ └── kheap.h
-├── libc/
-│ ├── ctype/
-│ │ ├── ctype.c
-│ │ └── ctype.h
-│ ├── stdio/
-│ │ ├── stdio.c
-│ │ └── stdio.h
-│ ├── stdlib/
-│ │ ├── stdlib.c
-│ │ └── stdlib.h
-│ └── string/
-│ ├── string.c
-│ └── string.h
-└── memory/
-├── heap/
-│ ├── heap.c
-│ └── heap.h
-└── paging/
-├── page.asm
-├── page.c
-└── page.h
+└── src
+    ├── bootloader
+    │   ├── bootloader.asm
+    │   └── kernel.asm
+    ├── drivers
+    │   ├── disk
+    │   │   ├── disk.c
+    │   │   ├── disk.h
+    │   │   ├── disk_stream.c
+    │   │   └── disk_stream.h
+    │   └── screen
+    │       ├── terminal.c
+    │       ├── terminal.h
+    │       └── vga.h
+    ├── file_system
+    │   ├── fat
+    │   │   ├── fat16.c
+    │   │   └── fat16.h
+    │   ├── file.c
+    │   ├── file.h
+    │   ├── path_parser.c
+    │   └── path_parser.h
+    ├── kernel
+    │   ├── ascii
+    │   │   ├── ascii.c
+    │   │   └── ascii.h
+    │   ├── config.h
+    │   ├── idt
+    │   │   ├── idt.asm
+    │   │   ├── idt.c
+    │   │   └── idt.h
+    │   ├── io
+    │   │   ├── io.asm
+    │   │   └── io.h
+    │   ├── kernel.c
+    │   ├── kernel.h
+    │   ├── kmem
+    │   │   ├── kheap.c
+    │   │   └── kheap.h
+    │   └── memory
+    │       ├── heap
+    │       │   ├── heap.c
+    │       │   └── heap.h
+    │       └── paging
+    │           ├── page.asm
+    │           ├── page.c
+    │           └── page.h
+    └── libc
+        ├── ctype
+        │   ├── ctype.c
+        │   └── ctype.h
+        ├── stdio
+        │   ├── stdio.c
+        │   └── stdio.h
+        ├── stdlib
+        │   ├── stdlib.c
+        │   └── stdlib.h
+        └── string
+            ├── string.c
+            └── string.h
+
 ```
 
 ## Installation:
