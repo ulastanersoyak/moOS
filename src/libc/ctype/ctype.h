@@ -36,4 +36,9 @@ int32_t isupper(int32_t c);
 // checks whether the passed character is a hexadecimal digit
 int32_t isxdigit(int32_t c);
 
+// converts uppercase char to lowercase 
+int32_t tolower(int32_t c);
+
+// converts lowercase char to uppercase
+int32_t toupper(int32_t c);
 #endif // !CTYPE_H

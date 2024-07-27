@@ -1,8 +1,12 @@
 #include "stdio.h"
 #include "../stdlib/stdlib.h"
+#include "../string/string.h"
 #include "../../kernel/config.h"
 #include "../../drivers/screen/terminal.h"
 #include "../../drivers/screen/vga.h"
+#include "../../drivers/disk/disk.h"
+#include "../../file_system/file.h"
+#include "../../file_system/path_parser.h"
 
 
 #include <stdarg.h>
@@ -36,6 +40,35 @@ void printf(const char *str, ...){
   }
 }
 
+// static enum FILE_MODE get_file_mode(const char* str){
+//   enum FILE_MODE mode = INVALID;
+//   if(!(strncmp(str,"r",1))){
+//     mode = READ;
+//   }else if(!(strncmp(str,"w",1))){
+//     mode = WRITE;
+//   }else if(!(strncmp(str,"a",1))){
+//     mode = APPEND;
+//   }
+//   return mode;
+// }
+
 int32_t fopen(const char* file_name, const char* mode){
-  return -IO_ERROR;  
+  struct path_root *root = get_path(file_name);
+  if(!root){
+    return -INVALID_PATH_ERROR;
+  }
+  // return an error if file path is root.
+  if(!root->body){
+    return -INVALID_PATH_ERROR;
+  }
+  struct disk_t *disk = get_disk(root->drive_no);
+  if(!disk){
+    return -INVALID_DISK_ERROR;
+  }  
+  if(!disk->file_system){
+   return -IO_ERROR; 
+  }
+  // enum FILE_MODE file_mode = get_file_mode(mode);
+
+  return OK;
 }

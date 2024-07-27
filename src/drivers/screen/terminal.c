@@ -30,7 +30,7 @@ void terminal_init(uint8_t verbose) {
   terminal_buffer = VGA_MEMORY;
   terminal_clean();
   if(verbose){
-    printf("terminal init");
+    printf("vga driver init");
     init_OK();
   }
 }
