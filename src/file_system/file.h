@@ -47,6 +47,8 @@ void file_system_init(uint8_t verbose);
 
 void add_file_system(struct file_system *fs);
 
+int32_t file_desc_init(struct file_desc **desc_out);
+
 struct file_system *fs_resolve(struct disk_t *disk);
 
 #endif// !FILE_H

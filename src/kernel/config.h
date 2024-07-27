@@ -1,6 +1,10 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#define ERROR(val) (void*)(val)
+#define ERROR_I(val) (int)(val)
+#define IS_ERR(val) ((int)val < 0)
+
 #define TOTAL_INTERRUPTS 256
 
 #define KERNEL_CODE_SEG 0x08 // start of code segment determined in gdt

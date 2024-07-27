@@ -35,6 +35,7 @@ int32_t disk_read(int32_t logical_block_addr, uint32_t total_block, void *buffer
 }
 
 //just works on disk 0 (main mastar disk)
+// TODO: maybe add more disks
 struct disk_t* get_disk(uint32_t idx){
   if(idx != 0){
     return 0;

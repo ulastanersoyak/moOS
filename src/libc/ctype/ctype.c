@@ -1,5 +1,7 @@
 #include "ctype.h"
 
+#include "../stdio/stdio.h"
+
 int32_t isalnum(int32_t c){
           /* decimal numbers */  /* uppercase chars */    /* lowercase chars */
   return ((c >= 48 && c <= 57) || (c >= 65 && c<= 90) || (c >= 97 && c <= 122)) ? 0 : 1;
@@ -49,14 +51,14 @@ int32_t isxdigit(int32_t c){
 }
 
 int32_t tolower(int32_t c){
-  if(!isupper(c)){
+  if(isupper(c)){
     return c - 32;
   }
   return c;
 }
 
 int32_t toupper(int32_t c){
-  if(!islower(c)){
+  if(islower(c)){
     return c + 32;
   }
   return c;
