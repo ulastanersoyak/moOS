@@ -1,0 +1,6 @@
+Checks:
+  # Enable some core checks (adjust as needed)
+  - readability-braces-around-statements
+  - readability-braces
+  - modernize-loop-condition
+  - cert-secure-c
