@@ -1,7 +1,7 @@
 #include "idt.h"
 #include "../../drivers/screen/terminal.h"
-#include "../../libc/string/string.h"
 #include "../../libc/stdio/stdio.h"
+#include "../../libc/string/string.h"
 #include "../config.h"
 #include "../io/io.h"
 
@@ -20,7 +20,9 @@ extern void int21h_handler() {
 
 void no_intr_handler() { outb(0x20, 0x20); }
 
-void divide_by_zero_exc() { terminal_writestring("divide by zero exception occured\n"); }
+void divide_by_zero_exc() {
+  terminal_writestring("divide by zero exception occured\n");
+}
 
 void idt_init(uint8_t verbose) {
   memset(idt, 0, sizeof(idt));
@@ -33,7 +35,7 @@ void idt_init(uint8_t verbose) {
   idt_set(0, divide_by_zero_exc);
   idt_set(0x21, int21h);
   idt_load(&idtr_descriptor);
-  if(verbose){
+  if (verbose) {
     printf("idt init");
     init_OK();
   }
@@ -41,14 +43,12 @@ void idt_init(uint8_t verbose) {
 
 void enable_interrupts(uint8_t verbose) {
   enable_intr();
-  if(verbose){  
+  if (verbose) {
     printf("enable interrupts");
     init_OK();
   }
 }
-void disble_interrupts(void) {
-  disable_intr();
-}
+void disble_interrupts(void) { disable_intr(); }
 
 void idt_set(uint32_t interrupt_num, void *addr) {
   struct idt_entry *desc = &idt[interrupt_num];

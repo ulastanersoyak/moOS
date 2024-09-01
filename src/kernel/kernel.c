@@ -1,23 +1,22 @@
 #include "kernel.h"
+#include "../drivers/disk/disk.h"
+#include "../drivers/disk/disk_stream.h"
 #include "../drivers/screen/terminal.h"
 #include "../drivers/screen/vga.h"
+#include "../file_system/file.h"
+#include "../file_system/path_parser.h"
+#include "../libc/stdio/stdio.h"
 #include "../libc/stdlib/stdlib.h"
 #include "../libc/string/string.h"
 #include "./memory/paging/page.h"
 #include "ascii/ascii.h"
 #include "idt/idt.h"
 #include "kmem/kheap.h"
-#include "../file_system/path_parser.h"
-#include "../drivers/disk/disk.h"
-#include "../drivers/disk/disk_stream.h"
-#include "../libc/stdio/stdio.h"
-#include "../file_system/file.h"
 
+// TODO: READ.ME and all TODOs
+// TODO: custom memory tracker for leak detection
 
-//TODO: READ.ME and all TODOs
-//TODO: custom memory tracker for leak detection
-
-static struct page_dir* system_page_dir = 0;
+static struct page_dir *system_page_dir = 0;
 
 void kernel_main(void) {
   uint8_t verbose = 1;
@@ -32,7 +31,7 @@ void kernel_main(void) {
   enable_system_paging(verbose);
   init_main_master_disk(verbose);
   enable_interrupts(verbose);
-  moose("VERSION 0.06 everything looks OK",light_magenta);
-  int fd = fopen("0:/hello.txt","r");
-  printf("%d",fd);
+  moose("VERSION 0.06 everything looks OK", light_magenta);
+  int fd = fopen("0:/hello.txt", "r");
+  printf("%d", fd);
 }

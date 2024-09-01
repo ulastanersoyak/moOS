@@ -1,7 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#define ERROR(val) (void*)(val)
+#define ERROR(val) (void *)(val)
 #define ERROR_I(val) (int)(val)
 #define IS_ERR(val) ((int)val < 0)
 
@@ -60,6 +60,5 @@
 
 // max open files
 #define MAX_FILE_DESCS 512
-
 
 #endif // !CONFIG_H

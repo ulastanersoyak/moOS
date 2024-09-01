@@ -10,4 +10,4 @@ int32_t fat16_resolve(struct disk_t *disk);
 
 void *fat16_open(struct disk_t *disk, struct path_root *root, enum FILE_MODE);
 
-#endif// !FAT16_H
+#endif // !FAT16_H

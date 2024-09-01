@@ -15,7 +15,7 @@ int32_t iscntrl(int32_t c);
 // checks whether the passed character is decimal digit
 int32_t isdigit(int32_t c);
 
-// checks whether the passed character has graphical representation 
+// checks whether the passed character has graphical representation
 int32_t isgraph(int32_t c);
 
 // checks whether the passed character is lowercase letter
@@ -36,7 +36,7 @@ int32_t isupper(int32_t c);
 // checks whether the passed character is a hexadecimal digit
 int32_t isxdigit(int32_t c);
 
-// converts uppercase char to lowercase 
+// converts uppercase char to lowercase
 int32_t tolower(int32_t c);
 
 // converts lowercase char to uppercase

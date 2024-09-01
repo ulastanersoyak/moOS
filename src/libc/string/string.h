@@ -4,7 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// searches for the first occurence of the char c in the first n bytes of the string pointed to.
+// searches for the first occurence of the char c in the first n bytes of the
+// string pointed to.
 void *memchr(const void *str, uint32_t c, size_t n);
 
 // compares first n bytes of pointed area. if return value < 0 str1 is less than

@@ -3,18 +3,18 @@
 
 #include <stdint.h>
 
-struct path_root{
+struct path_root {
   int32_t drive_no;
   struct path_body *body;
 };
 
-struct path_body{
+struct path_body {
   char *body_str;
   struct path_body *next;
 };
 
 // returns 0 if error
-struct path_root *get_path(const char* path);
+struct path_root *get_path(const char *path);
 
 void free_path_heap(struct path_root *root);
 

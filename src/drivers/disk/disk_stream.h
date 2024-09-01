@@ -3,10 +3,10 @@
 
 #include "disk.h"
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
-struct disk_stream{
+struct disk_stream {
   int32_t pos;
   struct disk_t *disk;
 };
@@ -19,4 +19,4 @@ void stream_seek(struct disk_stream *stream, int32_t pos);
 
 void stream_free(struct disk_stream *stream);
 
-#endif// !DISK_STREAM_H
+#endif // !DISK_STREAM_H

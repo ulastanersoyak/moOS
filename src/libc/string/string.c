@@ -48,63 +48,63 @@ void *memset(void *ptr, int c, size_t n) {
   return ptr;
 }
 
-char *strcat(char *dest,const char *src){
+char *strcat(char *dest, const char *src) {
   size_t size = strlen(dest);
-  size_t i;
-  for(i = 0; src[i] != '\0'; i++){
+  size_t i = 0;
+  for (; src[i] != '\0'; i++) {
     dest[size + i] = src[i];
   }
   dest[size + i] = '\0';
   return dest;
 }
 
-char *strncat(char *dest, const char *src, uint32_t n){
+char *strncat(char *dest, const char *src, uint32_t n) {
   // TODO: there might be a better way of doing this
   size_t size = strlen(dest);
-  size_t i;
-  for(i = 0; i < n; i++){
+  size_t i = 0;
+  for (; i < n; i++) {
     dest[size + i] = src[i];
   }
   dest[size + i] = '\0';
   return dest;
 }
 
-char *strchr(const char *str, uint32_t n){
-  for(size_t i = 0; str[i] != '\0'; i++){
-    if(str[i] == n){
+char *strchr(const char *str, uint32_t n) {
+  for (size_t i = 0; str[i] != '\0'; i++) {
+    if (str[i] == n) {
       // add offset i to base pointer to return the string FROM offset to end.
-      return (char*)str + i;
-    }   
+      return (char *)str + i;
+    }
   }
   return 0;
 }
 
-int32_t strcmp(const char *str1, const char *str2){
-  if(!(strlen(str1) == strlen(str2))){
+int32_t strcmp(const char *str1, const char *str2) {
+  if (!(strlen(str1) == strlen(str2))) {
     return -1;
   }
-  for(size_t i = 0; i <strlen(str1); i++){
-    if(str1[i] != str2[i]){
+  for (size_t i = 0; i < strlen(str1); i++) {
+    if (str1[i] != str2[i]) {
       return -1;
     }
   }
   return 0;
 }
 
-int32_t strncmp(const char *str1, const char *str2, uint32_t n){
-  if(n > strlen(str1) || n> strlen(str2)){
+int32_t strncmp(const char *str1, const char *str2, uint32_t n) {
+  if (n > strlen(str1) || n > strlen(str2)) {
     return -1;
   }
-  for(size_t i = 0; i < n; i++){
-    if(str1[i] != str2[i]){
+  for (size_t i = 0; i < n; i++) {
+    if (str1[i] != str2[i]) {
       return str1[i] - str2[i];
     }
   }
   return 0;
 }
 
-char *strcpy(char *dest, const char *src){
-  while(*src != 0){
+char *strcpy(char *dest, const char *src) {
+  while (*src != 0) {
     *dest = *src;
     dest++;
     src++;
@@ -113,12 +113,11 @@ char *strcpy(char *dest, const char *src){
   return dest;
 }
 
-
-size_t strcspn(const char *str1, const char *str2){
+size_t strcspn(const char *str1, const char *str2) {
   size_t rs = 0;
 
-  while(*str1){
-    if(strchr(str2,(uint32_t)*str1)){
+  while (*str1) {
+    if (strchr(str2, (uint32_t)*str1)) {
       return rs;
     }
     str1++;

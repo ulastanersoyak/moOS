@@ -5,7 +5,8 @@
 
 struct idt_entry {
   uint16_t isr_low;   // lower 16 bits of isr address
-  uint16_t kernel_cs; // gdt segment selector that cpu will load into code segment before calling isr
+  uint16_t kernel_cs; // gdt segment selector that cpu will load into code
+                      // segment before calling isr
   uint8_t zero;       // unused. set to zero
   uint8_t type_attr;  // gate type, dpl and p fields
   uint16_t isr_high;  // higher 16 bits of isr
