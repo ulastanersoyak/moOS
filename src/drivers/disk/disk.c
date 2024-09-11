@@ -22,7 +22,7 @@ disk_read (int32_t logical_block_addr, uint32_t total_block, void *buffer)
   uint16_t *buff = (uint16_t *)buffer;
   for (size_t i = 0; i < total_block; i++)
     {
-      char c = insb (0x1F7);
+      unsigned char c = insb (0x1F7);
       while (!(c & 0x08))
         {
           // wait until 0x08th bit is set
@@ -57,6 +57,7 @@ init_main_master_disk (uint8_t verbose)
   memset (&main_master_disk, 0, sizeof (main_master_disk));
   main_master_disk.type = REAL_DISK_TYPE;
   main_master_disk.sector_size = MASTER_MAIN_DISK_SECTOR_SIZE;
+  main_master_disk.fs_private_data = 0;
   main_master_disk.id = 0;
   main_master_disk.file_system = fs_resolve (&main_master_disk);
   if (verbose)
@@ -75,7 +76,7 @@ init_main_master_disk (uint8_t verbose)
 }
 
 int32_t
-disk_read_block (struct disk_t *disk, uint32_t logical_block_addr,
+disk_read_block (struct disk_t *disk, int32_t logical_block_addr,
                  uint32_t total_block, void *buffer)
 {
   if (disk != &main_master_disk)

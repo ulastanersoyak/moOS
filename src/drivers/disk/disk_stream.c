@@ -28,9 +28,9 @@ disk_stream_read (struct disk_stream *stream, void *buffer, size_t len)
     {
       return rs;
     }
-  int32_t total = len > MASTER_MAIN_DISK_SECTOR_SIZE
-                      ? MASTER_MAIN_DISK_SECTOR_SIZE
-                      : len;
+  size_t total = len > MASTER_MAIN_DISK_SECTOR_SIZE
+                     ? MASTER_MAIN_DISK_SECTOR_SIZE
+                     : len;
   for (size_t i = 0; i < total; i++)
     {
       *(char *)buffer++ = local_buffer[offset_idx + i];

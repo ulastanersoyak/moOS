@@ -4,12 +4,14 @@
 #include <stdint.h>
 
 // custom printf implementation. currently only accepts %d for integers, %s for
-// strings, %p for pointers and custom %C for VGA colours. TODO: add rest of the
-// printf indicators.
-void printf(const char *str, ...);
+// strings, %p for pointers and custom %C for VGA colours. TODO: add rest of
+// the printf indicators.
+void printf (const char *str, ...);
 
 // tries to open given path, if it is a file that system can manage, calls
 // appropriate  file systems open function
-int32_t fopen(const char *file_name, const char *mode);
+int32_t fopen (const char *file_name, const char *mode);
+
+int32_t fread (void *ptr, uint32_t size, uint32_t nmemb, int32_t fd);
 
 #endif // !STDIO_H

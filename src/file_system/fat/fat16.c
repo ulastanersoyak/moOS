@@ -9,7 +9,7 @@
 
 // all code written here is based of Microsoft Extensible Firmware Initiative
 // FAT32 File System Specification
-// and NOT A FAT16 MANUAL. TODO: DOUBLE CHECK WITH A FAT16 MANUAL
+//  and NOT A FAT16 MANUAL. TODO: DOUBLE CHECK WITH A FAT16 MANUAL
 
 #include <stdint.h>
 
@@ -122,13 +122,12 @@ struct FAT_private
   struct disk_stream *dir_stream;
 };
 
-struct file_system fat16_fs = {
-  .resolve_fn = fat16_resolve,
-  .open_fn = fat16_open,
-};
+struct file_system fat16_fs = { .resolve_fn = fat16_resolve,
+                                .open_fn = fat16_open,
+                                .read_fn = fat16_read };
 
 struct file_system *
-fat16_init ()
+fat16_init (void)
 {
   memset (fat16_fs.fs_name, 'a', 20);
   strcpy (fat16_fs.fs_name, "FAT16");
@@ -264,31 +263,39 @@ end:
 // each file has a 8 byte long names. if file's name doesnt fill the buffer
 // space chars will. so this functions strips that space away
 static void
-format_file_name (char **buffer, const char *input)
+format_file_name (char **buffer, const char *input, size_t size)
 {
-  while (*input != 0x00 || *input != 0x20)
+  uint32_t i = 0;
+  while (*input != 0x00 && *input != 0x20)
     {
       **buffer = *input;
-      (*buffer)++;
-      input++;
+      *buffer += 1;
+      input += 1;
+      //  cant process anymore since it has exceeded the input buffer size
+      if (i >= size - 1)
+        {
+          break;
+        }
+      i++;
     }
-  if (*input == 0x20)
-    {
-      **buffer = 0x00;
-    }
+
+  **buffer = 0x00;
 }
 
 static void
 get_relative_file_name (struct FAT_dir_item *item, char *buffer, size_t size)
 {
   memset (buffer, 0, size);
+  char *temp_buffer = buffer;
   // strip space chars in filename and sets buffer to it.
-  format_file_name (&buffer, (const char *)item->filename);
+  format_file_name (&temp_buffer, (const char *)item->filename,
+                    sizeof (item->filename));
   // add .extension after the buffer if extension for the given file exists
   if (item->ext[0] != 0x00 && item->ext[0] != 0x20)
     {
       *buffer++ = '.';
-      format_file_name (&buffer, (const char *)item->ext);
+      format_file_name (&buffer, (const char *)item->ext,
+                        sizeof (item->filename));
     }
 }
 
@@ -382,7 +389,7 @@ fat16_read_internal (struct disk_t *disk, int32_t cluster, int32_t offset,
   int32_t start_sector
       = priv->root_dir.sector_end_pos
         + ((cluster - 2) * priv->header.primary_header.sectors_per_cluster);
-  int32_t start_pos = (start_sector * disk->sector_size) * offset_from_cluster;
+  int32_t start_pos = (start_sector * disk->sector_size) + offset_from_cluster;
   int32_t total_to_read = total > size_of_cluster ? size_of_cluster : total;
   stream_seek (stream, start_pos);
   int32_t rs = disk_stream_read (stream, buffer, total_to_read);
@@ -428,8 +435,8 @@ load_fat_dir (struct disk_t *disk, struct FAT_dir_item *item)
       return 0;
     }
   // join high 16 and low 16 for full cluster addr
-  int32_t cluster
-      = item->high_16_bit_first_cluster | item->low_16_bit_first_cluster;
+  int32_t cluster = (item->high_16_bit_first_cluster << 16)
+                    | item->low_16_bit_first_cluster;
   int32_t cluster_sector
       = priv->root_dir.sector_end_pos
         + ((cluster - 2) * priv->header.primary_header.sectors_per_cluster);
@@ -559,4 +566,28 @@ fat16_open (struct disk_t *disk, struct path_root *root, enum FILE_MODE mode)
   desc->item = get_dir_entry (disk, root->body);
   desc->pos = 0;
   return desc;
+}
+
+uint32_t
+fat16_read (struct disk_t *disk, void *desc, uint32_t size, uint32_t nmemb,
+            char *out)
+{
+  struct FAT_file_desc *fat_desc = desc;
+  struct FAT_dir_item *item = fat_desc->item->item;
+  uint32_t offset = fat_desc->pos;
+  uint32_t rs = 0;
+  for (size_t i = 0; i < nmemb; i++)
+    {
+      rs = fat16_read_internal (disk,
+                                ((item->high_16_bit_first_cluster << 16)
+                                 | item->low_16_bit_first_cluster),
+                                offset, size, out);
+      if (IS_ERR (rs))
+        {
+          return rs;
+        }
+      out += size;
+      offset += size;
+    }
+  return nmemb;
 }
