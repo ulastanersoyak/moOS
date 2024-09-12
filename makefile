@@ -1,7 +1,7 @@
 CC := ~/opt/cross/bin/i686-elf-gcc
 LD := ~/opt/cross/bin/i686-elf-ld
 
-FILES = ./build/kernel.asm.o ./build/kernel.o ./build/terminal.o ./build/libc.o ./build/idt.asm.o ./build/idt.o ./build/io.asm.o ./build/heap.o ./build/kheap.o ./build/ascii.o ./build/page.asm.o ./build/page.o ./build/disk.o ./build/stdlib.o ./build/ctype.o ./build/path_parser.o ./build/disk_stream.o ./build/stdio.o ./build/file.o ./build/fat16.o ./build/gdt.o ./build/gdt.asm.o
+FILES = ./build/kernel.asm.o ./build/kernel.o ./build/terminal.o ./build/libc.o ./build/idt.asm.o ./build/idt.o ./build/io.asm.o ./build/heap.o ./build/kheap.o ./build/ascii.o ./build/page.asm.o ./build/page.o ./build/disk.o ./build/stdlib.o ./build/ctype.o ./build/path_parser.o ./build/disk_stream.o ./build/stdio.o ./build/file.o ./build/fat16.o ./build/gdt.o ./build/gdt.asm.o ./build/tss.asm.o
 
 FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-labels -falign-loops -fstrength-reduce -fomit-frame-pointer -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
 
@@ -88,6 +88,9 @@ all: build_dirs ./bin/bootloader.bin ./bin/kernel.bin
 
 ./build/gdt.o: ./src/kernel/gdt/gdt.c
 	$(CC) -I./src/kernel/gdt/ $(FLAGS) -std=gnu99 -c ./src/kernel/gdt/gdt.c -o ./build/gdt.o
+
+./build/tss.asm.o: ./src/kernel/task/tss.asm
+	nasm -f elf -g ./src/kernel/task/tss.asm -o ./build/tss.asm.o
 
 build_dirs:
 	if [ ! -d "bin" ]; then mkdir bin; fi
