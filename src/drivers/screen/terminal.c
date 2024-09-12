@@ -28,7 +28,7 @@ terminal_clean (void)
     }
 }
 
-// initializes terminal attribiutes and clens the screen
+// initializes terminal attributes and cleans the screen
 void
 terminal_init (uint8_t verbose)
 {
@@ -131,21 +131,6 @@ terminal_writeint (int32_t num)
         }
       terminal_putchar (map[digits[i]]);
     }
-}
-
-void
-terminal_writeaddr (void *addr)
-{
-  uint32_t address = (uint32_t)addr;
-  char hex_string[9];
-  hex_string[0] = '0';
-  hex_string[1] = 'x';
-  for (int i = 0; i < 8; i++)
-    {
-      int32_t nibble = (address >> (28 - 4 * i)) & 0xF;
-      hex_string[2 + i] = (nibble < 10) ? ('0' + nibble) : ('A' + nibble - 10);
-    }
-  terminal_writestring (hex_string);
 }
 
 void

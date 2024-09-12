@@ -9,7 +9,7 @@
 struct disk_stream
 {
   int32_t pos;
-  struct disk_t *disk;
+  struct disk *disk;
 };
 
 struct disk_stream *get_disk_stream (uint32_t disk_id);

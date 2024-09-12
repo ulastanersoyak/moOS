@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-// page mask bits. used in addresses last bytes since addresses are alligned to
+// page mask bits. used in addresses last bytes since addresses are aligned to
 // 4kb and dont need to use last bytes
 #define CACHE_DISABLED 0b00010000
 #define WRITE_THROUGH 0b00001000
@@ -31,7 +31,7 @@ struct page_dir *page_dir_init (uint32_t flags);
 // returns 0 if successful
 int32_t set_page_location (struct page_location *page_loc, void *vir_addr);
 
-// sets a physical address to a virtual address return 0 if sucessful
+// sets a physical address to a virtual address return 0 if successful
 int32_t virtualize_mem (uint32_t *dir, void *vir_addr, uint32_t phys_addr);
 
 // asm wrapper functions

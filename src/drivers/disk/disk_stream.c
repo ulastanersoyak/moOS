@@ -7,7 +7,7 @@
 struct disk_stream *
 get_disk_stream (uint32_t disk_id)
 {
-  struct disk_t *disk = get_disk (disk_id);
+  struct disk *disk = get_disk (disk_id);
   if (!disk)
     {
       return 0;

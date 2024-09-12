@@ -7,7 +7,7 @@
 
 #include <stddef.h>
 
-struct disk_t main_master_disk;
+struct disk main_master_disk;
 // TODO: ADD ALL DISK TYPES
 int32_t
 disk_read (int32_t logical_block_addr, uint32_t total_block, void *buffer)
@@ -41,7 +41,7 @@ disk_read (int32_t logical_block_addr, uint32_t total_block, void *buffer)
 
 // just works on disk 0 (main mastar disk)
 //  TODO: maybe add more disks
-struct disk_t *
+struct disk *
 get_disk (uint32_t idx)
 {
   if (idx != 0)
@@ -69,14 +69,14 @@ init_main_master_disk (uint8_t verbose)
         }
       else
         {
-          printf (" <FS: %s>", main_master_disk.file_system->fs_name);
+          printf (" <FS: %s>", main_master_disk.file_system->name);
           init_OK ();
         }
     }
 }
 
 int32_t
-disk_read_block (struct disk_t *disk, int32_t logical_block_addr,
+disk_read_block (struct disk *disk, int32_t logical_block_addr,
                  uint32_t total_block, void *buffer)
 {
   if (disk != &main_master_disk)

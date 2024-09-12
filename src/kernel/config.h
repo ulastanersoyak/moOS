@@ -47,6 +47,10 @@
 
 #define SIGNATURE_ERROR 7
 
+#define NON_PERMITTED_READ_ERROR 8
+
+#define UNIMPLEMENTED_FEATURE_ERROR 9
+
 // printf max format string char
 #define MAX_STRING_FORMAT_CHAR 100
 
@@ -60,5 +64,7 @@
 
 // max open files
 #define MAX_FILE_DESCS 512
+
+#define TOTAL_GDT_SEGMENTS 3
 
 #endif // !CONFIG_H

@@ -1,108 +1,83 @@
 #include "file.h"
+#include "../drivers/disk/disk.h"
 #include "../drivers/screen/terminal.h"
-#include "../drivers/screen/vga.h"
 #include "../kernel/config.h"
-#include "../kernel/kpanic.h"
 #include "../libc/stdio/stdio.h"
 #include "../libc/stdlib/stdlib.h"
 #include "../libc/string/string.h"
 #include "fat/fat16.h"
 
-#include <stddef.h>
+struct file_system *filesystems[MAX_FILE_SYSTEMS];
+struct file_descriptor *file_descriptors[MAX_FILE_SYSTEMS];
 
-struct file_system *file_systems[MAX_FILE_SYSTEMS];
-
-struct file_desc *file_descs[MAX_FILE_DESCS];
-
-// iterate over file system table and find a free slot
 static struct file_system **
-find_free_fs (void)
+fs_get_free_filesystem ()
 {
-  for (size_t i = 0; i < MAX_FILE_SYSTEMS; i++)
+  int i = 0;
+  for (i = 0; i < MAX_FILE_SYSTEMS; i++)
     {
-      if (file_systems[i] == 0)
+      if (filesystems[i] == 0)
         {
-          return &file_systems[i];
+          return &filesystems[i];
         }
     }
+
   return 0;
 }
 
 void
-add_file_system (struct file_system *fs)
+fs_insert_filesystem (struct file_system *filesystem)
 {
-  struct file_system **fs_slot = find_free_fs ();
-  if (!fs || !fs_slot)
+  struct file_system **fs;
+  fs = fs_get_free_filesystem ();
+  if (!fs)
     {
-      panic (strcat ("no available slot for the file system named ",
-                     fs->fs_name));
+      printf ("Problem inserting filesystem");
+      while (1)
+        {
+        }
     }
-  *fs_slot = fs;
+
+  *fs = filesystem;
 }
 
 static void
-load_present_file_systems (void)
+fs_static_load ()
 {
-  add_file_system (fat16_init ());
+  fs_insert_filesystem (fat16_init ());
 }
 
 void
-file_system_init (uint8_t verbose)
+fs_load ()
 {
-  memset (file_descs, 0, sizeof (file_descs));
-  memset (file_systems, 0, sizeof (file_systems));
-  load_present_file_systems ();
+  memset (filesystems, 0, sizeof (filesystems));
+  fs_static_load ();
+}
+
+void
+fs_init (int verbose)
+{
   if (verbose)
     {
       printf ("file system init");
       init_OK ();
     }
-}
-
-int32_t
-file_desc_init (struct file_desc **desc_out)
-{
-  int32_t rs = -FILE_HANDLER_OVERFLOW;
-  // iterate through file descriptors(open file) array and return first free
-  // one
-  for (int32_t i = 0; i < MAX_FILE_DESCS; i++)
-    {
-      if (file_descs[i] == 0)
-        {
-          struct file_desc *desc = calloc (sizeof (struct file_desc));
-          desc->idx = i + 1; // descriptor indexes start at 1
-          file_descs[i] = desc;
-          *desc_out = desc;
-          rs = OK;
-          break;
-        }
-    }
-  return rs;
-}
-
-struct file_desc *
-get_desc (int32_t id)
-{
-  if (id <= 0 || id > MAX_FILE_DESCS)
-    {
-      return 0;
-    }
-  return file_descs[id - 1];
+  memset (file_descriptors, 0, sizeof (file_descriptors));
+  fs_load ();
 }
 
 struct file_system *
-fs_resolve (struct disk_t *disk)
+fs_resolve (struct disk *disk)
 {
   struct file_system *fs = 0;
-  for (size_t i = 0; i < MAX_FILE_SYSTEMS; i++)
+  for (int i = 0; i < MAX_FILE_SYSTEMS; i++)
     {
-      if (file_systems[i] != 0 && file_systems[i]->resolve_fn (disk) == 0)
+      if (filesystems[i] != 0 && filesystems[i]->resolve (disk) == 0)
         {
-          // check if one of the kernel's file system can resolve the given
-          // disk if one can bind them together
-          fs = file_systems[i];
+          fs = filesystems[i];
           break;
         }
     }
+
   return fs;
 }

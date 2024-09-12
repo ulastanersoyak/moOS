@@ -1,66 +1,82 @@
 #ifndef FILE_H
 #define FILE_H
 
+#include "path_parser.h"
 #include <stdint.h>
 
-#include "path_parser.h"
-
-enum FILE_SEEK_MODE
+typedef unsigned int FILE_SEEK_MODE;
+enum
 {
   SEEK_SET,
   SEEK_CUR,
   SEEK_END
 };
 
-enum FILE_MODE
+typedef unsigned int FILE_MODE;
+enum
 {
-  READ,
-  WRITE,
-  APPEND,
-  INVALID
+  FILE_MODE_READ,
+  FILE_MODE_WRITE,
+  FILE_MODE_APPEND,
+  FILE_MODE_INVALID
 };
 
-struct disk_t;
+enum
+{
+  FILE_STAT_READ_ONLY = 0b00000001
+};
 
-// general file system interface that opens a file in given disk and path with
-// given file modes
-typedef void *(*FS_OPEN) (struct disk_t *disk, struct path_root *root,
-                          enum FILE_MODE mode);
+typedef unsigned int FILE_STAT_FLAGS;
 
-// general file system interface that reads a file
-typedef uint32_t (*FS_READ) (struct disk_t *disk, void *priv, uint32_t size,
-                             uint32_t nmemb, char *out);
+struct disk;
+typedef void *(*FS_OPEN_FUNCTION) (struct disk *disk, struct path_part *path,
+                                   FILE_MODE mode);
+typedef int (*FS_READ_FUNCTION) (struct disk *disk, void *priv, uint32_t size,
+                                 uint32_t nmemb, char *out);
+typedef int (*FS_RESOLVE_FUNCTION) (struct disk *disk);
 
-// resolves if file system can operate on the given disk
-typedef int32_t (*FS_RESOLVE) (struct disk_t *disk);
+typedef int (*FS_CLOSE_FUNCTION) (void *priv);
+
+typedef int (*FS_SEEK_FUNCTION) (void *priv, uint32_t offset,
+                                 FILE_SEEK_MODE seek_mode);
+
+struct file_stat
+{
+  FILE_STAT_FLAGS flags;
+  uint32_t filesize;
+};
+
+typedef int (*FS_STAT_FUNCTION) (struct disk *disk, void *priv,
+                                 struct file_stat *stat);
 
 struct file_system
 {
-  // file system should return 0 if disk is usable
-  FS_RESOLVE resolve_fn;
-  FS_OPEN open_fn;
-  FS_READ read_fn;
-  char *fs_name;
+  // file_system should return zero from resolve if the provided disk is using
+  // its file_system
+  FS_RESOLVE_FUNCTION resolve;
+  FS_OPEN_FUNCTION open;
+  FS_READ_FUNCTION read;
+  FS_SEEK_FUNCTION seek;
+  FS_STAT_FUNCTION stat;
+  FS_CLOSE_FUNCTION close;
+  char name[20];
 };
 
-struct file_desc
+struct file_descriptor
 {
-  int32_t idx;
-  struct file_system *fs;
-  // internal file descriptors private data
+  // The descriptor index
+  int index;
+  struct file_system *file_system;
+
+  // Private data for internal file descriptor
   void *priv;
-  // disk that file desc used on
-  struct disk_t *disk;
+
+  // The disk that the file descriptor should be used on
+  struct disk *disk;
 };
 
-void file_system_init (uint8_t verbose);
+void fs_init (int verbose);
 
-void add_file_system (struct file_system *fs);
-
-int32_t file_desc_init (struct file_desc **desc_out);
-
-struct file_system *fs_resolve (struct disk_t *disk);
-
-struct file_desc *get_desc (int32_t id);
-
-#endif // !FILE_H
+void fs_insert_file_system (struct file_system *file_system);
+struct file_system *fs_resolve (struct disk *disk);
+#endif
