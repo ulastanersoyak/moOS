@@ -36,14 +36,7 @@ kernel_main (void)
     {
       moose ("VERSION 0.06 everything looks OK", light_magenta);
     }
-  int32_t fd = fopen ("0:/fs_test.txt", "r");
-  if (fd > 0)
-    {
-      printf ("opened file %d\n", fd);
-      char buf[15];
-      memset (buf, 0x00, 15);
-      fread (buf, 6, 1, fd);
-      size_t len = strlen (buf);
-      printf ("size:%d'\ncontent:%s", len, buf);
-    }
+  struct disk_t *d = get_disk (0);
+  char *buff[512];
+  disk_read_block (d, 0, 1, buff);
 }

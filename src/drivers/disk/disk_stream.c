@@ -14,6 +14,7 @@ get_disk_stream (uint32_t disk_id)
     }
   struct disk_stream *disk_stream = calloc (sizeof (struct disk_stream));
   disk_stream->disk = disk;
+  disk_stream->pos = 0;
   return disk_stream;
 }
 
