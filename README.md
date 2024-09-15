@@ -1,47 +1,49 @@
-## Table of Contents
-1. [introduction](#introduction)
-2. [installation](#installation)
-    - [linux](#linux)
-    - [mac](#mac)
-    - [windows](#windows)
+# moos
 
-<a name="introduction"></a>
-## introduction
-moOS is a 32-bit operating system project in its early stages, featuring a dedicated bootloader, kernel, and standard library. presently, the system is at a foundational stage, not yet offering specific functionalities, but the groundwork has been laid down.
+a 32-bit operating system written in c and assembly. it implements basic os features like memory management, device drivers, and system initialization.
 
-![Screenshot from 2023-11-05 17-51-21](https://github.com/ulastanersoyak/moOS/assets/92662728/c7377806-eaa6-427b-b570-86b314c03937)
+## features
 
-## installation:
+currently working:
+- vga display driver
+- basic interrupt handling
+- memory management with paging
+- heap memory allocation
+- disk i/o operations
 
-### linux:
-in order to work with moOS on linux, ensure you have the following dependencies installed:
+in development:
+- full interrupt system
+- keyboard support
+- file system
+- user space programs
 
-ubuntu/debian:
-- git: `sudo apt-get install git` 
-- qemu: `sudo apt-get install qemu-system-x86`
-- make: `sudo apt-get install make`
-- nasm: `sudo apt-get install nasm`
+## getting started
 
-  
-arch:
-- git: `sudo pacman -S git` 
-- qemu: `sudo pacman -S qemu`
-- make: `sudo pacman -S make`
-- nasm: `sudo pacman -S nasm`
+requirements:
+- i686-gcc cross-compiler
+- nasm
+- qemu
+- make
 
-i686-gcc cross-compiler and linker: follow [this guide](https://wiki.osdev.org/GCC_Cross-Compiler).
-
-once dependencies are set, clone the repository and compile the code:
+to run:
 ```bash
-git clone git@github.com:ulastanersoyak/moOS.git
-cd ./moOS
-make run # to run moOS in QEMU
+make run
 ```
 
-### mac:
+## project structure
+- `src/bootloader/` - system boot process
+- `src/kernel/` - core os functionality
+- `src/drivers/` - hardware drivers
+- `src/libc/` - standard library implementation
 
-steps above will **probably** work fine.
+## installation
 
-### windows:
+### arch linux
+```bash
+sudo pacman -S git qemu make nasm
+```
 
-i have no idea how you can run it on Windows. wsl or a unix based virtual machine might help.
+for i686-gcc cross-compiler, follow [this guide](https://wiki.osdev.org/GCC_Cross-Compiler)
+
+## license
+see license file for details
