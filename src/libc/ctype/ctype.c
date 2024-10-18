@@ -76,7 +76,7 @@ tolower (int32_t c)
 {
   if (isupper (c))
     {
-      return c - 32;
+      return c + 32;
     }
   return c;
 }
@@ -86,7 +86,7 @@ toupper (int32_t c)
 {
   if (islower (c))
     {
-      return c + 32;
+      return c - 32;
     }
   return c;
 }
