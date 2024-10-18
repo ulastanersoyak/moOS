@@ -1,4 +1,5 @@
 #include "string.h"
+#include "../ctype/ctype.h"
 
 void *
 memchr (const void *str, uint32_t c, size_t n)
@@ -107,32 +108,37 @@ strchr (const char *str, uint32_t n)
 int32_t
 strcmp (const char *str1, const char *str2)
 {
-  if (!(strlen (str1) == strlen (str2)))
+  while (*str1 != '\0' && *str1 == *str2)
     {
-      return -1;
+      str1++;
+      str2++;
     }
-  for (size_t i = 0; i < strlen (str1); i++)
+  return (unsigned char)*str1 - (unsigned char)*str2;
+}
+
+int32_t
+strncmp (const char *str1, const char *str2, uint32_t n)
+{
+  for (uint32_t i = 0; i < n; i++)
     {
-      if (str1[i] != str2[i])
+      if (str1[i] != str2[i] || str1[i] == '\0')
         {
-          return -1;
+          return (unsigned char)str1[i] - (unsigned char)str2[i];
         }
     }
   return 0;
 }
 
 int32_t
-strncmp (const char *str1, const char *str2, uint32_t n)
+istrncmp (const char *str1, const char *str2, uint32_t n)
 {
-  if (n > strlen (str1) || n > strlen (str2))
+  for (uint32_t i = 0; i < n; i++)
     {
-      return -1;
-    }
-  for (size_t i = 0; i < n; i++)
-    {
-      if (str1[i] != str2[i])
+      int32_t c1 = tolower ((unsigned char)str1[i]);
+      int32_t c2 = tolower ((unsigned char)str2[i]);
+      if (c1 != c2 || c1 == '\0')
         {
-          return str1[i] - str2[i];
+          return c1 - c2;
         }
     }
   return 0;

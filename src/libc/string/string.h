@@ -38,6 +38,9 @@ int32_t strcmp (const char *str1, const char *str2);
 // compares str1 to str2 up to n byte
 int32_t strncmp (const char *str1, const char *str2, uint32_t n);
 
+// compares str1 to str2 up to n byte ignoring case
+int32_t istrncmp (const char *str1, const char *str2, uint32_t n);
+
 // compares str1 to str2. result depends on the LC_COLLATE setting of the
 int32_t strcoll (const char *str1, const char *str2);
 
