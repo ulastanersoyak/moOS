@@ -1,88 +1,74 @@
 #include "ctype.h"
 
-#include "../stdio/stdio.h"
+// all predicates return non-zero when the char matches and zero otherwise
 
 int32_t
 isalnum (int32_t c)
 {
-  /* decimal numbers */
-  return ((c >= 48 && c <= 57)
-          /* uppercase chars */
-          || (c >= 65 && c <= 90)
-          /* lowercase chars */
-          || (c >= 97 && c <= 122))
-             ? 0
-             : 1;
+  return isdigit (c) || isalpha (c);
 }
 
 int32_t
 isalpha (int32_t c)
 {
-  /* uppercase chars */
-  return ((c >= 65 && c <= 90) ||
-          /* lowercase chars */
-          (c >= 97 && c <= 122))
-             ? 0
-             : 1;
+  return isupper (c) || islower (c);
 }
 
 int32_t
 iscntrl (int32_t c)
 {
   // ascii control chars
-  return ((c >= 0 && c <= 31) || c == 127) ? 0 : 1;
+  return (c >= 0 && c <= 31) || c == 127;
 }
 
 int32_t
 isdigit (int32_t c)
 {
-  return (c >= 48 && c <= 57) ? 0 : 1;
+  return c >= '0' && c <= '9';
 }
 
 int32_t
 isgraph (int32_t c)
 {
-  return (c >= 33 && c <= 126) ? 0 : 1;
+  return c >= 33 && c <= 126;
 }
 
 int32_t
 islower (int32_t c)
 {
-  return (c >= 97 && c <= 122) ? 0 : 1;
+  return c >= 'a' && c <= 'z';
 }
 
 int32_t
 isprint (int32_t c)
 {
-  return (c >= 33 && c <= 126) ? 0 : 1;
+  // printable chars are graphical chars plus space
+  return c >= 32 && c <= 126;
 }
 
 int32_t
 ispunct (int32_t c)
 {
-  // TODO: might be a better way of doing this
-  return ((c >= 33 && c <= 47) || (c >= 58 && c <= 64) || (c >= 91 && c <= 96)
-          || (c >= 123 && c <= 126))
-             ? 0
-             : 1;
+  return isgraph (c) && !isalnum (c);
 }
 
 int32_t
 isspace (int32_t c)
 {
-  return c == 32 ? 0 : 1;
+  // space, \t, \n, \v, \f, \r
+  return c == ' ' || (c >= 9 && c <= 13);
 }
 
 int32_t
 isupper (int32_t c)
 {
-  return (c >= 65 && c <= 90) ? 0 : 1;
+  return c >= 'A' && c <= 'Z';
 }
 
 int32_t
 isxdigit (int32_t c)
 {
-  return ((c >= 48 && c <= 57) || (c >= 97 && c <= 102)) ? 0 : 1;
+  return isdigit (c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 }
 
 int32_t
