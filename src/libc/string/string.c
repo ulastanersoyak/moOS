@@ -82,7 +82,7 @@ strncat (char *dest, const char *src, uint32_t n)
   // TODO: there might be a better way of doing this
   size_t size = strlen (dest);
   size_t i = 0;
-  for (; i < n; i++)
+  for (; i < n && src[i] != '\0'; i++)
     {
       dest[size + i] = src[i];
     }
@@ -147,6 +147,7 @@ istrncmp (const char *str1, const char *str2, uint32_t n)
 char *
 strcpy (char *dest, const char *src)
 {
+  char *start = dest;
   while (*src != 0)
     {
       *dest = *src;
@@ -154,7 +155,7 @@ strcpy (char *dest, const char *src)
       src++;
     }
   *dest = '\0';
-  return dest;
+  return start;
 }
 
 size_t
