@@ -53,6 +53,29 @@ memcpy (void *dest, const void *src, size_t n)
 }
 
 void *
+memmove (void *dest, void *src, size_t n)
+{
+  uint8_t *destin = (uint8_t *)dest;
+  uint8_t *source = (uint8_t *)src;
+  if (destin < source)
+    {
+      for (size_t i = 0; i < n; i++)
+        {
+          destin[i] = source[i];
+        }
+    }
+  else
+    {
+      // copy backwards so overlapping tail of src isnt overwritten first
+      for (size_t i = n; i > 0; i--)
+        {
+          destin[i - 1] = source[i - 1];
+        }
+    }
+  return dest;
+}
+
+void *
 memset (void *ptr, int c, size_t n)
 {
   char *c_ptr = (char *)ptr;
