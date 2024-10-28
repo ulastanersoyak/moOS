@@ -4,9 +4,9 @@
 #include "../../file_system/file.h"
 #include <stdint.h>
 
-// custom printf implementation. currently only accepts %d for integers, %s for
-// strings, %p for pointers and custom %C for VGA colours. TODO: add rest of
-// the printf indicators.
+// custom printf implementation. accepts %d and %u for integers (%d prints
+// digit groups as 1_000), %x for hex, %c for chars, %s for strings, %% and
+// custom %C for VGA colours. TODO: add rest of the printf indicators.
 void printf (const char *str, ...);
 
 int fopen (const char *filename, const char *mode_str);

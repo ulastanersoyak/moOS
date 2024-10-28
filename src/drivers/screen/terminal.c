@@ -134,6 +134,34 @@ terminal_writeint (int32_t num)
 }
 
 void
+terminal_writeuint (uint32_t num)
+{
+  char digits[10];
+  size_t idx = 0;
+  do
+    {
+      digits[idx++] = '0' + (num % 10);
+      num /= 10;
+    }
+  while (num > 0);
+  while (idx > 0)
+    {
+      terminal_putchar (digits[--idx]);
+    }
+}
+
+void
+terminal_writehex (uint32_t num)
+{
+  const char *map = "0123456789abcdef";
+  terminal_writestring ("0x");
+  for (int32_t shift = 28; shift >= 0; shift -= 4)
+    {
+      terminal_putchar (map[(num >> shift) & 0xF]);
+    }
+}
+
+void
 init_OK (void)
 {
   terminal_setcolour (green);

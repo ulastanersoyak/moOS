@@ -32,6 +32,21 @@ printf (const char *str, ...)
           int32_t arg = va_arg (args, int32_t);
           terminal_writeint (arg);
         }
+      else if (*str == 'u')
+        {
+          uint32_t arg = va_arg (args, uint32_t);
+          terminal_writeuint (arg);
+        }
+      else if (*str == 'c')
+        {
+          char arg = (char)va_arg (args, int);
+          terminal_putchar (arg);
+        }
+      else if (*str == 'x')
+        {
+          uint32_t arg = va_arg (args, uint32_t);
+          terminal_writehex (arg);
+        }
       else if (*str == 's')
         {
           char *arg_str = va_arg (args, char *);
