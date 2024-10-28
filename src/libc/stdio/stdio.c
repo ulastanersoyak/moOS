@@ -20,31 +20,40 @@ printf (const char *str, ...)
   va_start (args, str);
   while (*str != '\0')
     {
-      if (*str == '%')
+      if (*str != '%')
         {
+          terminal_putchar (*str);
           str++;
-          if (*str == 'd')
-            {
-              int32_t arg = va_arg (args, int32_t);
-              terminal_writeint (arg);
-              str++;
-            }
-          else if (*str == 's')
-            {
-              char *arg_str = va_arg (args, char *);
-              terminal_writestring (arg_str);
-              str++;
-            }
-          else if (*str == 'C')
-            {
-              enum vga_colour col = va_arg (args, enum vga_colour);
-              terminal_setcolour (col);
-              str++;
-            }
+          continue;
         }
-      terminal_putchar (*str);
+      str++;
+      if (*str == 'd')
+        {
+          int32_t arg = va_arg (args, int32_t);
+          terminal_writeint (arg);
+        }
+      else if (*str == 's')
+        {
+          char *arg_str = va_arg (args, char *);
+          terminal_writestring (arg_str);
+        }
+      else if (*str == 'C')
+        {
+          enum vga_colour col = va_arg (args, enum vga_colour);
+          terminal_setcolour (col);
+        }
+      else if (*str == '%')
+        {
+          terminal_putchar ('%');
+        }
+      else if (*str == '\0')
+        {
+          // format string ended with a lone %
+          break;
+        }
       str++;
     }
+  va_end (args);
 }
 
 FILE_MODE
