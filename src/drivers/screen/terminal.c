@@ -105,27 +105,28 @@ terminal_writeint (int32_t num)
 {
   char map[10] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
   size_t idx = 0;
-  uint32_t digits[100];
+  uint32_t digits[10];
+  // use unsigned magnitude so INT32_MIN doesnt overflow on negation
+  uint32_t mag = (uint32_t)num;
   if (num < 0)
     {
       terminal_putchar ('-');
-      num *= -1;
+      mag = -mag;
     }
-  if (num == 0)
+  if (mag == 0)
     {
-      terminal_putchar (map[num]);
+      terminal_putchar (map[0]);
       return;
     }
-  while (num > 0)
+  while (mag > 0)
     {
-      uint32_t digit = num % 10;
-      digits[idx] = digit;
+      digits[idx] = mag % 10;
       idx++;
-      num /= 10;
+      mag /= 10;
     }
   for (int32_t i = idx - 1; i >= 0; i--)
     {
-      if ((i - 2) % 3 == 0 && i != idx - 1)
+      if ((i - 2) % 3 == 0 && i != (int32_t)idx - 1)
         {
           terminal_putchar ('_');
         }
