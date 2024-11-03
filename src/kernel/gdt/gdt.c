@@ -5,20 +5,23 @@
 void
 encode_gdt_entry (uint8_t *target, struct gdt source)
 {
-  if ((source.limit > 65536) && (source.limit & 0xFFFF) != 0xFFFF)
+  // limits above 64kb need 4kb granularity, so the low 12 bits must be set
+  if ((source.limit > 65536) && (source.limit & 0xFFF) != 0xFFF)
     {
       panic ("encode_gdt_entry: invalid argument");
     }
+  // 32 bit protected mode segment, byte granularity
   target[6] = 0x40;
-  if (source.limit > 655536)
+  if (source.limit > 65536)
     {
+      // 32 bit protected mode segment, 4kb granularity
       source.limit = source.limit >> 12;
       target[6] = 0xC0;
     }
   // encodes limit
   target[0] = source.limit & 0xFF;
   target[1] = (source.limit >> 8) & 0xFF;
-  target[6] = (source.limit >> 16) & 0x0F;
+  target[6] |= (source.limit >> 16) & 0x0F;
 
   // encodes base
   target[2] = source.base & 0xFF;
