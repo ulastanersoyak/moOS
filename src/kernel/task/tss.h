@@ -11,9 +11,10 @@ struct tss
   uint32_t esp0; // kernel stack ptr
   uint32_t ss0;  // kernel stack segment
   uint32_t esp1;
+  uint32_t ss1;
   uint32_t esp2;
   uint32_t ss2;
-  uint32_t sr3;
+  uint32_t cr3;
   uint32_t eip;
   uint32_t eflags;
   uint32_t eax;
@@ -21,6 +22,7 @@ struct tss
   uint32_t edx;
   uint32_t ebx;
   uint32_t esp;
+  uint32_t ebp;
   uint32_t esi;
   uint32_t edi;
   uint32_t es;
@@ -30,7 +32,8 @@ struct tss
   uint32_t fs;
   uint32_t gs;
   uint32_t ldtr;
-  uint32_t iopb;
+  uint16_t trap;
+  uint16_t iopb; // offset of io permission bitmap from tss base
 }__attribute__ ((packed));
 // clang-format on
 
