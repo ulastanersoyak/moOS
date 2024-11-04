@@ -1,5 +1,6 @@
 #include "../drivers/disk/disk.h"
 #include "../drivers/screen/terminal.h"
+#include "../libc/stdio/stdio.h"
 #include "../libc/string/string.h"
 #include "./memory/paging/page.h"
 #include "config.h"
@@ -46,7 +47,12 @@ kernel_main (void)
   };
   memset (gdt_real, 0x00, sizeof (gdt_real));
   gdt_to_raw (gdt_real, gdt, TOTAL_GDT_SEGMENTS);
-  gdt_raw_load (gdt_real, sizeof (gdt_real));
+  gdt_raw_load (gdt_real, sizeof (gdt_real) - 1);
+  if (verbose)
+    {
+      printf ("gdt init");
+      init_OK ();
+    }
 
   idt_init (verbose);
 

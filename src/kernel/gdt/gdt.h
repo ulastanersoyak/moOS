@@ -20,7 +20,8 @@ struct gdt
   uint8_t type;
 };
 
-// loads gdt. functionalized version of the bootloader gdt load
+// loads gdt and reloads every segment register with the kernel segments.
+// size is the gdt limit, which is one less than its size in bytes
 void gdt_raw_load (struct gdt_raw *raw, uint32_t size);
 
 // transforms structured gdt to format expected by processor
