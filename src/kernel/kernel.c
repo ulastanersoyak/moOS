@@ -24,6 +24,12 @@
 
 #define IS_RTOS (0)
 
+// gdt and tss must outlive kernel_main. the cpu keeps reading them from memory
+// (e.g. iret reloads cs from the gdt) and interrupts reuse the stack once
+// kernel_main returns
+static struct tss tss;
+static struct gdt_raw gdt_real[TOTAL_GDT_SEGMENTS];
+
 void
 kernel_main (void)
 {
@@ -31,8 +37,6 @@ kernel_main (void)
 
   terminal_init (verbose);
 
-  struct tss tss;
-  struct gdt_raw gdt_real[TOTAL_GDT_SEGMENTS];
   // segments specified in bootloader written in c
   struct gdt gdt[TOTAL_GDT_SEGMENTS] = {
     { .base = 0x00, .limit = 0x00, .type = 0x00 },       // null segment
