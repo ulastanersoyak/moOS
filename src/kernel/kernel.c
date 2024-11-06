@@ -43,11 +43,11 @@ kernel_main (void)
     { .base = 0x00, .limit = 0xFFFFFFFF, .type = 0x9A }, // kernel code segment
     { .base = 0x00, .limit = 0xFFFFFFFF, .type = 0x92 }, // kernel data segment
     // user segments has all system memory available because of paging
-    { .base = 0x00, .limit = 0xFFFFFFFF, .type = 0xF8 }, // user code segment
-    { .base = 0x00, .limit = 0xFFFFFFFF, .type = 0xF8 }, // user data segment
+    { .base = 0x00, .limit = 0xFFFFFFFF, .type = 0xFA }, // user code segment
+    { .base = 0x00, .limit = 0xFFFFFFFF, .type = 0xF2 }, // user data segment
     { .base = (uint32_t)&tss,
-      .limit = sizeof (tss),
-      .type = 0xE9 }, // tss segment
+      .limit = sizeof (tss) - 1,
+      .type = 0x89 }, // tss segment, ring 0 available 32 bit tss
   };
   memset (gdt_real, 0x00, sizeof (gdt_real));
   gdt_to_raw (gdt_real, gdt, TOTAL_GDT_SEGMENTS);
@@ -63,7 +63,13 @@ kernel_main (void)
   memset (&tss, 0x00, sizeof (tss));
   tss.esp0 = 0x600000; // kernels stack
   tss.ss0 = KERNEL_DATA_SEG;
-  tss_load (0x28); // offset in gdt
+  tss.iopb = sizeof (tss); // no io permission bitmap
+  tss_load (TSS_SEG);
+  if (verbose)
+    {
+      printf ("tss init");
+      init_OK ();
+    }
 
   kernel_heap_init (verbose);
 

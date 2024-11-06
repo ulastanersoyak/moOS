@@ -11,6 +11,8 @@
 
 #define KERNEL_DATA_SEG 0x10 // start of data segment determined in gdt
 
+#define TSS_SEG 0x28 // tss selector, 6th entry of gdt
+
 // heap constants
 #define HEAP_SIZE_BYTE 104857600 // 100 mb default heap
 
