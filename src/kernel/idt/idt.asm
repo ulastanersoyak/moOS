@@ -14,16 +14,15 @@ enable_intr:
 	ret
 
 disable_intr:
-	sti
+	cli
 	ret
 
 idt_load:
-	push  ebp
-	;push 0x0303030
-	mov   ebp, esp
+	push ebp
+	mov  ebp, esp
 
-	mov  ebx, [ebp+8]
-	lidt [ebx]
+	mov  eax, [ebp+8]
+	lidt [eax]
 
 	pop ebp
 	ret
