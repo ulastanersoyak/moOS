@@ -19,6 +19,30 @@ struct idtr_desc
   uint32_t base;
 } __attribute__ ((packed));
 
+// stack layout built by isr_common in idt.asm, lowest address first
+struct interrupt_frame
+{
+  // pushed by pushad
+  uint32_t edi;
+  uint32_t esi;
+  uint32_t ebp;
+  uint32_t esp;
+  uint32_t ebx;
+  uint32_t edx;
+  uint32_t ecx;
+  uint32_t eax;
+  // pushed by the stub
+  uint32_t vector;
+  uint32_t error_code;
+  // pushed by the cpu
+  uint32_t eip;
+  uint32_t cs;
+  uint32_t eflags;
+} __attribute__ ((packed));
+
+// common c handler called by every exception and irq stub
+void interrupt_handler (struct interrupt_frame *frame);
+
 // initialize interrupt descriptor table
 void idt_init (uint8_t verbose);
 

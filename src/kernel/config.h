@@ -7,6 +7,15 @@
 
 #define TOTAL_INTERRUPTS 256
 
+// 32 cpu exceptions + 16 pic irqs have asm stubs
+#define TOTAL_ISR_STUBS 48
+
+// pic ports and commands. pics are remapped to 0x20-0x2f in kernel.asm
+#define PIC_MASTER_COMMAND 0x20
+#define PIC_SLAVE_COMMAND 0xA0
+#define PIC_EOI 0x20
+#define PIC_MASTER_OFFSET 0x20
+
 #define KERNEL_CODE_SEG 0x08 // start of code segment determined in gdt
 
 #define KERNEL_DATA_SEG 0x10 // start of data segment determined in gdt
