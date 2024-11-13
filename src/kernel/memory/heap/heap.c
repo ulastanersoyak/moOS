@@ -9,8 +9,8 @@ heap_desc_init (struct heap_desc *heap, void *start, void *end,
                 struct heap_table *table)
 {
   // check if start and end addresses align with block size
-  if (!((uint32_t)start % HEAP_BLOCK_SIZE == 0)
-      && (!((uint32_t)end % HEAP_BLOCK_SIZE == 0)))
+  if (((uint32_t)start % HEAP_BLOCK_SIZE != 0)
+      || ((uint32_t)end % HEAP_BLOCK_SIZE != 0))
     {
       return -INVALID_ARG_ERROR;
     }
