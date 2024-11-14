@@ -29,7 +29,7 @@ heap_desc_init (struct heap_desc *heap, void *start, void *end,
 }
 
 // finds the available adjacent blocks that equal to requested amount
-static uint32_t
+static int32_t
 find_free_block (struct heap_desc *desc, uint32_t total_blocks)
 {
   uint32_t current_block = 0;
@@ -51,14 +51,11 @@ find_free_block (struct heap_desc *desc, uint32_t total_blocks)
       current_block++;
       if (current_block == total_blocks)
         {
-          break;
+          return start_block;
         }
     }
-  if (start_block == -1)
-    {
-      return -NO_MEMORY_ERROR;
-    }
-  return start_block;
+  // reached end of heap without finding enough adjacent free blocks
+  return -NO_MEMORY_ERROR;
 }
 
 static void
@@ -112,6 +109,10 @@ heap_malloc (struct heap_desc *heap, size_t size)
       size = (size - (size % HEAP_BLOCK_SIZE)) + HEAP_BLOCK_SIZE;
     }
   uint32_t total_blocks = size / HEAP_BLOCK_SIZE;
+  if (total_blocks == 0)
+    {
+      return 0;
+    }
   return heap_malloc_blocks (heap, total_blocks);
 }
 
