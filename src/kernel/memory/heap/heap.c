@@ -131,8 +131,22 @@ heap_free_blocks (struct heap_desc *desc, void *addr)
     }
 }
 
-void
+// returns 0 if freed. pointers that are not the start of an allocation
+// (double free, pointer into the middle of a block) are rejected
+int32_t
 heap_free (struct heap_desc *heap, void *addr)
 {
+  if (addr < heap->addr
+      || addr >= heap->addr + (heap->table->total_entries * HEAP_BLOCK_SIZE)
+      || (uint32_t)(addr - heap->addr) % HEAP_BLOCK_SIZE != 0)
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  uint32_t block_number = (uint32_t)(addr - heap->addr) / HEAP_BLOCK_SIZE;
+  if (!(heap->table->entries[block_number] & HEAP_BLOCK_IS_FIRST))
+    {
+      return -INVALID_ARG_ERROR;
+    }
   heap_free_blocks (heap, addr);
+  return OK;
 }

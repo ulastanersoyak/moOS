@@ -31,6 +31,6 @@ struct heap_desc
 int32_t heap_desc_init (struct heap_desc *heap, void *start, void *end,
                         struct heap_table *table);
 void *heap_malloc (struct heap_desc *heap, size_t size);
-void heap_free (struct heap_desc *heap, void *ptr);
+int32_t heap_free (struct heap_desc *heap, void *ptr);
 
 #endif // !HEAP_H

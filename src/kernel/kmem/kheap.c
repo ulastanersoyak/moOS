@@ -1,5 +1,6 @@
 #include "kheap.h"
 #include "../../drivers/screen/terminal.h"
+#include "../../drivers/screen/vga.h"
 #include "../../kernel/memory/heap/heap.h"
 #include "../../libc/stdio/stdio.h"
 #include "../../libc/string/string.h"
@@ -53,5 +54,8 @@ kcalloc (size_t size)
 void
 kfree (void *addr)
 {
-  heap_free (&kernel_heap, addr);
+  if (addr && heap_free (&kernel_heap, addr) < 0)
+    {
+      printf ("%Ckfree: invalid pointer %x\n%C", red, (uint32_t)addr, white);
+    }
 }
