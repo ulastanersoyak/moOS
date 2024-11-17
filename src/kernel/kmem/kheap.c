@@ -59,3 +59,9 @@ kfree (void *addr)
       printf ("%Ckfree: invalid pointer %x\n%C", red, (uint32_t)addr, white);
     }
 }
+
+void
+kheap_stats (struct heap_stats *stats)
+{
+  heap_stats (&kernel_heap, stats);
+}

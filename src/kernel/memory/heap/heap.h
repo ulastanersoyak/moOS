@@ -28,9 +28,16 @@ struct heap_desc
   void *addr;               // start address of heap
 };
 
+struct heap_stats
+{
+  uint32_t total_blocks;
+  uint32_t used_blocks;
+};
+
 int32_t heap_desc_init (struct heap_desc *heap, void *start, void *end,
                         struct heap_table *table);
 void *heap_malloc (struct heap_desc *heap, size_t size);
 int32_t heap_free (struct heap_desc *heap, void *ptr);
+void heap_stats (struct heap_desc *heap, struct heap_stats *stats);
 
 #endif // !HEAP_H

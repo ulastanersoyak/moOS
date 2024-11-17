@@ -150,3 +150,17 @@ heap_free (struct heap_desc *heap, void *addr)
   heap_free_blocks (heap, addr);
   return OK;
 }
+
+void
+heap_stats (struct heap_desc *heap, struct heap_stats *stats)
+{
+  stats->total_blocks = heap->table->total_entries;
+  stats->used_blocks = 0;
+  for (size_t i = 0; i < heap->table->total_entries; i++)
+    {
+      if ((heap->table->entries[i] & 0x0f) == HEAP_BLOCK_TABLE_ENTRY_TAKEN)
+        {
+          stats->used_blocks++;
+        }
+    }
+}
