@@ -31,8 +31,10 @@ struct page_dir *page_dir_init (uint32_t flags);
 // returns 0 if successful
 int32_t set_page_location (struct page_location *page_loc, void *vir_addr);
 
-// sets a physical address to a virtual address return 0 if successful
-int32_t virtualize_mem (uint32_t *dir, void *vir_addr, uint32_t phys_addr);
+// maps a virtual address to a physical address with given page flags.
+// returns 0 if successful
+int32_t virtualize_mem (uint32_t *dir, void *vir_addr, uint32_t phys_addr,
+                        uint32_t flags);
 
 // asm wrapper functions
 

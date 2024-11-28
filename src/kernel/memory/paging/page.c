@@ -15,6 +15,9 @@ void load_page_dir (uint32_t *dir);
 // register DO NOT CALL BEFORE INITIALIZING PAGE DIRECTORY!!!
 void enable_paging (void);
 
+// invalidates the tlb entry of the given virtual address
+void flush_tlb_entry (void *vir_addr);
+
 static uint32_t *current_dir_entry = 0;
 
 struct page_dir *
@@ -80,9 +83,8 @@ set_page_location (struct page_location *page_loc, void *vir_addr)
     {
       return -INVALID_ARG_ERROR;
     }
-  // each dir is 4kb big so dividing the aligned vir addr with 4kb will result
-  // with the directory idx. simply calculates which dir this virmem belongs
-  // to.
+  // each directory entry covers 4mb (1024 pages of 4kb) so dividing the
+  // vir addr by 4mb results with the directory idx.
   page_loc->dir_idx
       = ((uint32_t)vir_addr / (TOTAL_ENTRIES_PER_DIRECTORY * PAGE_SIZE));
   // result of modulo operator is the address within the page directory.
@@ -94,7 +96,8 @@ set_page_location (struct page_location *page_loc, void *vir_addr)
 }
 
 int32_t
-virtualize_mem (uint32_t *dir, void *vir_addr, uint32_t phys_addr)
+virtualize_mem (uint32_t *dir, void *vir_addr, uint32_t phys_addr,
+                uint32_t flags)
 {
   // return error if memory is not aligned
   if (check_memory_alignment (vir_addr))
@@ -112,6 +115,8 @@ virtualize_mem (uint32_t *dir, void *vir_addr, uint32_t phys_addr)
   // & with 0xfffff000 to get highest 20 bits aka address, zeroing flags
   uint32_t *table_loc = (uint32_t *)(dir_loc & 0xfffff000);
   // map the table's page index to given physical address
-  table_loc[page_loc.page_idx] = phys_addr;
+  table_loc[page_loc.page_idx] = (phys_addr & 0xfffff000) | flags;
+  // cpu may still have the old translation cached
+  flush_tlb_entry (vir_addr);
   return OK;
 }
