@@ -11,17 +11,17 @@ nop
 ;fat16            header
 OEMIdentifier     db 'MOOS    '; 8 byte oemidentifier
 BytesPerSector    dw 0x200; 512 bytes per sector
-SectorsPerCluster db 0x80
-ReservedSectors   dw 200; reserved sectors for kernel
+SectorsPerCluster db 0x04; 2kb clusters
+ReservedSectors   dw 200; reserved sectors for boot sector + kernel
 FATCopies         db 0x02
 RootDirEntries    dw 0x40
-NumSectors        dw 0x00
+NumSectors        dw 0x8000; 16mb disk image (32768 sectors)
 MediaType         db 0xF8
-SectorsPerFAT     dw 0x100
+SectorsPerFAT     dw 0x20
 SectorsPerTrack   dw 0x20
 NumberOfHeads     dw 0x40
 HiddenSectors     dd 0x00
-SectorsBig        dd 0x773594
+SectorsBig        dd 0x00; only used when NumSectors is 0
 DriveNumber       db 0x80; extended bpb
 WinNTBit          db 0x00
 Signature         db 0x29
