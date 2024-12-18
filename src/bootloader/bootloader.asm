@@ -153,7 +153,9 @@ _next_sector:
 res:
 	mov  dx, 0x1f7
 	in   al, dx
-	test al, 8
+	test al, 0x80; wait until drive is not busy
+	jnz  res
+	test al, 8; and has data ready
 	jz   res
 
 	;read 256 words at a time
