@@ -5,6 +5,10 @@ bits 16
 CODE_SEG equ _gdt_code - _gdt_start
 DATA_SEG equ _gdt_data - _gdt_start
 
+	;              kernel lives in the reserved sectors right after the boot sector.
+	;              must stay in sync with KERNEL_SECTORS in the makefile
+	KERNEL_SECTORS equ 199
+
 	jmp short boot_start2
 nop
 
@@ -105,8 +109,7 @@ _gdt_end:
 
 load_kernel:
 	mov  eax, 1; start from sector 1 cuz sector 0 is the bootloader itself
-	mov  ecx, 100; makefile appends 100 sector worth of space for kernel so read 100 sectors. if number is less kernel cant be fully loaded
-	;if  number is higher ud
+	mov  ecx, KERNEL_SECTORS; makefile pads kernel to exactly this many sectors
 	mov  edi, 0x0100000; address to load
 	call ata_lba_read
 	jmp  CODE_SEG:0x0100000; jump to kernel
