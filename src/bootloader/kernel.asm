@@ -13,11 +13,6 @@ _start:
 	mov ebp, 0x00200000
 	mov esp, ebp
 
-	;enable a20 line
-	in      al, 0x92
-	or      al, 2
-	out     0x92, al
-
 	;   remap the programmable interrupt controllers so irqs dont collide with
 	;   cpu exceptions. master irqs -> 0x20-0x27, slave irqs -> 0x28-0x2f
 	mov al, 00010001b; icw1: init, cascade mode, icw4 needed

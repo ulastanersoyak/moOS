@@ -42,6 +42,13 @@ step2:
 	mov sp, 0x7c00
 	sti
 
+	;  enable a20 line before touching memory above 1mb, otherwise address bit
+	;  20 is masked and the kernel load at 0x100000 wraps around to 0x0
+	in al, 0x92
+	or al, 2
+	and al, 0xFE; bit 0 resets the cpu
+	out 0x92, al
+
 	switch_to_pm: ;switch to protected mode
 
 	cli        ; clear interrupt. cpu will ignore any future interrupts that may interrupt mode switching.interrupt handling is different from real mode on
