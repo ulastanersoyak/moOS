@@ -23,9 +23,9 @@ disk_read (int32_t logical_block_addr, uint32_t total_block, void *buffer)
   for (size_t i = 0; i < total_block; i++)
     {
       uint8_t c = insb (0x1F7);
-      while (!(c & 0x08))
+      // wait until drive is not busy (0x80) and has data ready (0x08)
+      while ((c & 0x80) || !(c & 0x08))
         {
-          // wait until 0x08th bit is set
           c = insb (0x1F7);
         }
       // read 256 times since insw reads a word which is 2 byte.
