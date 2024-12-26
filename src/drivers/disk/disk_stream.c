@@ -21,27 +21,31 @@ get_disk_stream (uint32_t disk_id)
 int32_t
 disk_stream_read (struct disk_stream *stream, void *buffer, size_t len)
 {
-  int32_t sector_idx = stream->pos / MASTER_MAIN_DISK_SECTOR_SIZE;
-  int32_t offset_idx = stream->pos % MASTER_MAIN_DISK_SECTOR_SIZE;
   char local_buffer[MASTER_MAIN_DISK_SECTOR_SIZE];
-  int32_t rs = disk_read_block (stream->disk, sector_idx, 1, local_buffer);
-  if (rs < 0)
+  char *out = buffer;
+  while (len > 0)
     {
-      return rs;
+      int32_t sector_idx = stream->pos / MASTER_MAIN_DISK_SECTOR_SIZE;
+      int32_t offset_idx = stream->pos % MASTER_MAIN_DISK_SECTOR_SIZE;
+      int32_t rs = disk_read_block (stream->disk, sector_idx, 1, local_buffer);
+      if (rs < 0)
+        {
+          return rs;
+        }
+      // dont read past the end of the sector that is currently buffered
+      size_t total = MASTER_MAIN_DISK_SECTOR_SIZE - offset_idx;
+      if (total > len)
+        {
+          total = len;
+        }
+      for (size_t i = 0; i < total; i++)
+        {
+          *out++ = local_buffer[offset_idx + i];
+        }
+      stream->pos += total;
+      len -= total;
     }
-  size_t total = len > MASTER_MAIN_DISK_SECTOR_SIZE
-                     ? MASTER_MAIN_DISK_SECTOR_SIZE
-                     : len;
-  for (size_t i = 0; i < total; i++)
-    {
-      *(char *)buffer++ = local_buffer[offset_idx + i];
-    }
-  stream->pos += total;
-  if (total > MASTER_MAIN_DISK_SECTOR_SIZE)
-    {
-      disk_stream_read (stream, buffer, len - MASTER_MAIN_DISK_SECTOR_SIZE);
-    }
-  return rs;
+  return OK;
 }
 
 void
