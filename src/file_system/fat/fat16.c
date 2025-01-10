@@ -391,7 +391,7 @@ fat16_get_fat_entry (struct disk *disk, int cluster)
 
   uint32_t fat_table_position
       = fat16_get_first_fat_sector (private) * disk->sector_size;
-  stream_seek (stream, fat_table_position * (cluster * FAT16_FAT_ENTRY_SIZE));
+  stream_seek (stream, fat_table_position + (cluster * FAT16_FAT_ENTRY_SIZE));
 
   uint16_t result = 0;
   res = disk_stream_read (stream, &result, sizeof (result));
