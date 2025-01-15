@@ -372,7 +372,8 @@ fat16_clone_directory_item (struct fat_directory_item *item, int size)
 static uint32_t
 fat16_get_first_cluster (struct fat_directory_item *item)
 {
-  return (item->high_16_bits_first_cluster) | item->low_16_bits_first_cluster;
+  return ((uint32_t)item->high_16_bits_first_cluster << 16)
+         | item->low_16_bits_first_cluster;
 };
 
 static int
