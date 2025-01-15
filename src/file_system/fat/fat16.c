@@ -8,8 +8,19 @@
 
 #define FAT16_SIGNATURE 0x29
 #define FAT16_FAT_ENTRY_SIZE 0x02
-#define FAT16_BAD_SECTOR 0xFF7
+#define FAT16_BAD_SECTOR 0xFFF7
 #define FAT16_UNUSED 0x00
+// fat entries from 0xFFF8 up mark the last cluster of a chain
+#define FAT16_END_OF_CHAIN 0xFFF8
+#define FAT16_RESERVED_START 0xFFF0
+#define FAT16_RESERVED_END 0xFFF6
+
+// first byte of a directory item filename
+#define FAT_ENTRY_END 0x00
+#define FAT_ENTRY_DELETED 0xE5
+
+// attribute value used by vfat long filename entries
+#define FAT_FILE_LONG_NAME 0x0F
 
 typedef unsigned int FAT_ITEM_TYPE;
 #define FAT_ITEM_TYPE_DIRECTORY 0
@@ -420,7 +431,13 @@ fat16_get_cluster_for_offset (struct disk *disk, int starting_cluster,
   for (int i = 0; i < clusters_ahead; i++)
     {
       int entry = fat16_get_fat_entry (disk, cluster_to_use);
-      if (entry == 0xFF8 || entry == 0xFFF)
+      if (entry < 0)
+        {
+          res = entry;
+          goto out;
+        }
+
+      if (entry >= FAT16_END_OF_CHAIN)
         {
           // We are at the last entry in the file
           res = -IO_ERROR;
@@ -435,13 +452,13 @@ fat16_get_cluster_for_offset (struct disk *disk, int starting_cluster,
         }
 
       // Reserved sector?
-      if (entry == 0xFF0 || entry == 0xFF6)
+      if (entry >= FAT16_RESERVED_START && entry <= FAT16_RESERVED_END)
         {
           res = -IO_ERROR;
           goto out;
         }
 
-      if (entry == 0x00)
+      if (entry == FAT16_UNUSED)
         {
           res = -IO_ERROR;
           goto out;
