@@ -492,8 +492,13 @@ fat16_read_internal_from_stream (struct disk *disk, struct disk_stream *stream,
   int starting_sector = fat16_cluster_to_sector (private, cluster_to_use);
   int starting_pos
       = (starting_sector * disk->sector_size) + offset_from_cluster;
-  int total_to_read
-      = total > size_of_cluster_bytes ? size_of_cluster_bytes : total;
+  // clusters of a file arent necessarily adjacent so never read past the
+  // end of the current cluster
+  int total_to_read = size_of_cluster_bytes - offset_from_cluster;
+  if (total_to_read > total)
+    {
+      total_to_read = total;
+    }
   stream_seek (stream, starting_pos);
   res = disk_stream_read (stream, out, total_to_read);
   if (res != OK)
