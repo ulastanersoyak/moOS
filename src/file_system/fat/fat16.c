@@ -551,6 +551,26 @@ fat16_fat_item_free (struct fat_item *item)
   free (item);
 }
 
+// counts items of a subdirectory by following its cluster chain
+static int
+fat16_get_total_items_for_subdirectory (struct disk *disk, int cluster)
+{
+  struct fat_directory_item item;
+  int i = 0;
+  while (1)
+    {
+      int res = fat16_read_internal (disk, cluster, i * sizeof (item),
+                                     sizeof (item), &item);
+      // running off the end of the cluster chain also ends the directory
+      if (res < 0 || item.filename[0] == FAT_ENTRY_END)
+        {
+          break;
+        }
+      i++;
+    }
+  return i;
+}
+
 struct fat_directory *
 fat16_load_fat_directory (struct disk *disk, struct fat_directory_item *item)
 {
@@ -572,11 +592,12 @@ fat16_load_fat_directory (struct disk *disk, struct fat_directory_item *item)
 
   int cluster = fat16_get_first_cluster (item);
   int cluster_sector = fat16_cluster_to_sector (fat_private, cluster);
-  int total_items = fat16_get_total_items_for_directory (
-      disk, cluster_sector,
-      fat_private->header.primary_header.sectors_per_cluster
-          * disk->sector_size / sizeof (struct fat_directory_item));
-  directory->total = total_items;
+  directory->total = fat16_get_total_items_for_subdirectory (disk, cluster);
+  directory->sector_pos = cluster_sector;
+  if (directory->total == 0)
+    {
+      goto out;
+    }
   int directory_size = directory->total * sizeof (struct fat_directory_item);
   directory->item = calloc (directory_size);
   if (!directory->item)
@@ -587,18 +608,16 @@ fat16_load_fat_directory (struct disk *disk, struct fat_directory_item *item)
 
   res = fat16_read_internal (disk, cluster, 0x00, directory_size,
                              directory->item);
-  if (res != OK)
-    {
-      goto out;
-    }
 
 out:
   if (res != OK)
     {
       fat16_free_directory (directory);
+      directory = 0;
     }
   return directory;
 }
+
 struct fat_item *
 fat16_new_fat_item_for_directory_item (struct disk *disk,
                                        struct fat_directory_item *item)
@@ -612,6 +631,11 @@ fat16_new_fat_item_for_directory_item (struct disk *disk,
   if (item->attribute & FAT_FILE_SUBDIRECTORY)
     {
       f_item->directory = fat16_load_fat_directory (disk, item);
+      if (!f_item->directory)
+        {
+          free (f_item);
+          return 0;
+        }
       f_item->type = FAT_ITEM_TYPE_DIRECTORY;
       return f_item;
     }
