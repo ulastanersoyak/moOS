@@ -8,7 +8,7 @@
 #include "fat/fat16.h"
 
 struct file_system *filesystems[MAX_FILE_SYSTEMS];
-struct file_descriptor *file_descriptors[MAX_FILE_SYSTEMS];
+struct file_descriptor *file_descriptors[MAX_FILE_DESCS];
 
 static struct file_system **
 fs_get_free_filesystem ()

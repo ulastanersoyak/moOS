@@ -11,7 +11,7 @@
 
 #include <stdarg.h>
 
-extern struct file_descriptor *file_descriptors[MAX_FILE_SYSTEMS];
+extern struct file_descriptor *file_descriptors[MAX_FILE_DESCS];
 
 void
 printf (const char *str, ...)
@@ -93,7 +93,7 @@ file_get_mode_by_string (const char *str)
 static struct file_descriptor *
 file_get_descriptor (int fd)
 {
-  if (fd <= 0 || fd >= MAX_FILE_DESCS)
+  if (fd <= 0 || fd > MAX_FILE_DESCS)
     {
       return 0;
     }
@@ -113,6 +113,10 @@ file_new_descriptor (struct file_descriptor **desc_out)
         {
           struct file_descriptor *desc
               = calloc (sizeof (struct file_descriptor));
+          if (!desc)
+            {
+              break;
+            }
           // Descriptors start at 1
           desc->index = i + 1;
           file_descriptors[i] = desc;
