@@ -812,26 +812,30 @@ int
 fat16_read (struct disk *disk, void *descriptor, uint32_t size, uint32_t nmemb,
             char *out_ptr)
 {
-  int res = 0;
   struct fat_file_descriptor *fat_desc = descriptor;
-  struct fat_directory_item *item = fat_desc->item->item;
-  int offset = fat_desc->pos;
-  for (uint32_t i = 0; i < nmemb; i++)
+  if (fat_desc->item->type != FAT_ITEM_TYPE_FILE)
     {
-      res = fat16_read_internal (disk, fat16_get_first_cluster (item), offset,
-                                 size, out_ptr);
-      if (res < 0)
-        {
-          goto out;
-        }
-
-      out_ptr += size;
-      offset += size;
+      return -INVALID_ARG_ERROR;
     }
-
-  res = nmemb;
-out:
-  return res;
+  struct fat_directory_item *item = fat_desc->item->item;
+  // only read whole members that fit before the end of the file
+  uint32_t members = (item->filesize - fat_desc->pos) / size;
+  if (members > nmemb)
+    {
+      members = nmemb;
+    }
+  if (members == 0)
+    {
+      return 0;
+    }
+  int res = fat16_read_internal (disk, fat16_get_first_cluster (item),
+                                 fat_desc->pos, members * size, out_ptr);
+  if (res < 0)
+    {
+      return res;
+    }
+  fat_desc->pos += members * size;
+  return members;
 }
 
 int
