@@ -166,48 +166,35 @@ fat16_sector_to_absolute (struct disk *disk, int sector)
   return sector * disk->sector_size;
 }
 
+// counts directory items up to the end marker. deleted items are counted too
+// since the items are later read as one raw array and indexed directly.
 int
 fat16_get_total_items_for_directory (struct disk *disk,
-                                     uint32_t directory_start_sector)
+                                     uint32_t directory_start_sector,
+                                     int max_items)
 {
   struct fat_directory_item item;
-  struct fat_directory_item empty_item;
-  memset (&empty_item, 0, sizeof (empty_item));
-
   struct fat_private *fat_private = disk->fs_private_data;
 
-  int res = 0;
   int i = 0;
   int directory_start_pos = directory_start_sector * disk->sector_size;
   struct disk_stream *stream = fat_private->directory_stream;
   stream_seek (stream, directory_start_pos);
 
-  while (1)
+  for (i = 0; i < max_items; i++)
     {
       if (disk_stream_read (stream, &item, sizeof (item)) != OK)
         {
-          res = -IO_ERROR;
-          goto out;
+          return -IO_ERROR;
         }
 
-      if (item.filename[0] == 0x00)
+      if (item.filename[0] == FAT_ENTRY_END)
         {
           break;
         }
-
-      // Is the item unused
-      if (item.filename[0] == 0xE5)
-        {
-          continue;
-        }
-
-      i++;
     }
 
-  res = i;
-
-out:
-  return res;
+  return i;
 }
 
 int
@@ -228,8 +215,13 @@ fat16_get_root_directory (struct disk *disk, struct fat_private *fat_private,
       total_sectors += 1;
     }
 
-  int total_items
-      = fat16_get_total_items_for_directory (disk, root_dir_sector_pos);
+  int total_items = fat16_get_total_items_for_directory (
+      disk, root_dir_sector_pos, root_dir_entries);
+  if (total_items < 0)
+    {
+      res = total_items;
+      goto err_out;
+    }
 
   dir = calloc (root_dir_size);
   if (!dir)
@@ -580,7 +572,10 @@ fat16_load_fat_directory (struct disk *disk, struct fat_directory_item *item)
 
   int cluster = fat16_get_first_cluster (item);
   int cluster_sector = fat16_cluster_to_sector (fat_private, cluster);
-  int total_items = fat16_get_total_items_for_directory (disk, cluster_sector);
+  int total_items = fat16_get_total_items_for_directory (
+      disk, cluster_sector,
+      fat_private->header.primary_header.sectors_per_cluster
+          * disk->sector_size / sizeof (struct fat_directory_item));
   directory->total = total_items;
   int directory_size = directory->total * sizeof (struct fat_directory_item);
   directory->item = calloc (directory_size);
