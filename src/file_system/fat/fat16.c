@@ -622,26 +622,42 @@ fat16_new_fat_item_for_directory_item (struct disk *disk,
   return f_item;
 }
 
+// returns the index of the item called name in directory or -1
+static int
+fat16_find_index (struct fat_directory *directory, const char *name)
+{
+  char tmp_filename[MAX_PATH_LEN];
+  for (int i = 0; i < directory->total; i++)
+    {
+      struct fat_directory_item *item = &directory->item[i];
+      if (item->filename[0] == FAT_ENTRY_DELETED
+          || item->attribute == FAT_FILE_LONG_NAME
+          || (item->attribute & FAT_FILE_VOLUME_LABEL))
+        {
+          continue;
+        }
+      fat16_get_full_relative_filename (item, tmp_filename,
+                                        sizeof (tmp_filename));
+      // 8.3 names are stored in uppercase so compare ignoring case
+      if (istrncmp (tmp_filename, name, sizeof (tmp_filename)) == 0)
+        {
+          return i;
+        }
+    }
+  return -1;
+}
+
 struct fat_item *
 fat16_find_item_in_directory (struct disk *disk,
                               struct fat_directory *directory,
                               const char *name)
 {
-  struct fat_item *f_item = 0;
-  char tmp_filename[MAX_PATH_LEN];
-  for (int i = 0; i < directory->total; i++)
+  int i = fat16_find_index (directory, name);
+  if (i < 0)
     {
-      fat16_get_full_relative_filename (&directory->item[i], tmp_filename,
-                                        sizeof (tmp_filename));
-      if (strncmp (tmp_filename, name, sizeof (tmp_filename)) == 0)
-        {
-          // found it let's create a new fat_item
-          f_item = fat16_new_fat_item_for_directory_item (disk,
-                                                          &directory->item[i]);
-        }
+      return 0;
     }
-
-  return f_item;
+  return fat16_new_fat_item_for_directory_item (disk, &directory->item[i]);
 }
 struct fat_item *
 fat16_get_directory_entry (struct disk *disk, struct path_part *path)
