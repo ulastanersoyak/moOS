@@ -152,12 +152,12 @@ fat16_init ()
 }
 
 static void
-fat16_init_private (struct disk *disk, struct fat_private *private)
+fat16_init_private (struct disk *disk, struct fat_private *fat_private)
 {
-  memset (private, 0, sizeof (struct fat_private));
-  private->cluster_read_stream = get_disk_stream (disk->id);
-  private->fat_read_stream = get_disk_stream (disk->id);
-  private->directory_stream = get_disk_stream (disk->id);
+  memset (fat_private, 0, sizeof (struct fat_private));
+  fat_private->cluster_read_stream = get_disk_stream (disk->id);
+  fat_private->fat_read_stream = get_disk_stream (disk->id);
+  fat_private->directory_stream = get_disk_stream (disk->id);
 }
 
 int
@@ -253,15 +253,32 @@ err_out:
 
   return res;
 }
+static void
+fat16_free_private (struct fat_private *private)
+{
+  if (private->root_directory.item)
+    {
+      free (private->root_directory.item);
+    }
+  stream_free (private->cluster_read_stream);
+  stream_free (private->fat_read_stream);
+  stream_free (private->directory_stream);
+  free (private);
+}
+
 int
 fat16_resolve (struct disk *disk)
 {
   int res = 0;
   struct fat_private *fat_private = calloc (sizeof (struct fat_private));
+  if (!fat_private)
+    {
+      return -NO_MEMORY_ERROR;
+    }
   fat16_init_private (disk, fat_private);
 
+  // helpers below read the private data through the disk
   disk->fs_private_data = fat_private;
-  disk->file_system = &fat16_fs;
 
   struct disk_stream *stream = get_disk_stream (disk->id);
   if (!stream)
@@ -278,7 +295,7 @@ fat16_resolve (struct disk *disk)
       goto out;
     }
 
-  if (fat_private->header.shared.extended_header.signature != 0x29)
+  if (fat_private->header.shared.extended_header.signature != FAT16_SIGNATURE)
     {
       res = -SIGNATURE_ERROR;
       goto out;
@@ -300,7 +317,7 @@ out:
 
   if (res < 0)
     {
-      free (fat_private);
+      fat16_free_private (fat_private);
       disk->fs_private_data = 0;
     }
   return res;
