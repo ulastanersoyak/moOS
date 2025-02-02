@@ -170,7 +170,7 @@ fopen (const char *filename, const char *mode_str)
 
   void *descriptor_priv_data
       = disk->file_system->open (disk, root_path->first, mode);
-  if (descriptor_priv_data < 0)
+  if (IS_ERR (descriptor_priv_data))
     {
       res = ERROR_I (descriptor_priv_data);
       goto out;
@@ -180,6 +180,7 @@ fopen (const char *filename, const char *mode_str)
   res = file_new_descriptor (&desc);
   if (res < 0)
     {
+      disk->file_system->close (descriptor_priv_data);
       goto out;
     }
   desc->file_system = disk->file_system;
@@ -188,6 +189,10 @@ fopen (const char *filename, const char *mode_str)
   res = desc->index;
 
 out:
+  if (root_path)
+    {
+      pathparser_free (root_path);
+    }
   // fopen shouldnt return negative values
   if (res < 0)
     {

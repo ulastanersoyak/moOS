@@ -3,7 +3,7 @@
 
 #define ERROR(val) (void *)(val)
 #define ERROR_I(val) (int)(val)
-#define IS_ERR(val) ((int)val < 0)
+#define IS_ERR(val) ((int)(val) < 0)
 
 #define TOTAL_INTERRUPTS 256
 
