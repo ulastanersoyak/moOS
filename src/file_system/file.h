@@ -77,6 +77,6 @@ struct file_descriptor
 
 void fs_init (int verbose);
 
-void fs_insert_file_system (struct file_system *file_system);
+void fs_insert_filesystem (struct file_system *filesystem);
 struct file_system *fs_resolve (struct disk *disk);
 #endif
