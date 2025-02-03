@@ -39,7 +39,8 @@ pathparser_create_root (int drive_number)
 static const char *
 pathparser_get_path_part (const char **path)
 {
-  char *result_path_part = calloc (MAX_PATH_LEN);
+  // +1 so a part of MAX_PATH_LEN chars still has a null terminator
+  char *result_path_part = calloc (MAX_PATH_LEN + 1);
   int i = 0;
   while (**path != '/' && **path != 0x00)
     {
