@@ -1,104 +1,88 @@
-CC := ~/opt/cross/bin/i686-elf-gcc
-LD := ~/opt/cross/bin/i686-elf-ld
+# clang cross compiles out of the box. the gcc cross compiler works too:
+#   make CC=~/opt/cross/bin/i686-elf-gcc LD=~/opt/cross/bin/i686-elf-ld
+CC := clang --target=i686-elf
+LD := ld -m elf_i386
+QEMU := qemu-system-i386
 
-FILES = ./build/kernel.asm.o ./build/kernel.o ./build/terminal.o ./build/libc.o ./build/idt.asm.o ./build/idt.o ./build/io.asm.o ./build/heap.o ./build/kheap.o ./build/ascii.o ./build/page.asm.o ./build/page.o ./build/disk.o ./build/stdlib.o ./build/ctype.o ./build/path_parser.o ./build/disk_stream.o ./build/stdio.o ./build/file.o ./build/fat16.o ./build/gdt.o ./build/gdt.asm.o ./build/tss.asm.o
+# kernel is stored in the fat16 reserved sectors right after the boot sector.
+# must stay in sync with KERNEL_SECTORS in bootloader.asm and ReservedSectors
+KERNEL_SECTORS := 199
+# 16mb disk image, must match NumSectors in bootloader.asm
+DISK_SECTORS := 32768
+FAT_START_SECTOR := 200
+SECTORS_PER_FAT := 32
 
-FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-labels -falign-loops -fstrength-reduce -fomit-frame-pointer -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
+# kernel.asm must be first so _start ends up at 0x100000
+ASM_SRCS := src/bootloader/kernel.asm \
+	src/kernel/idt/idt.asm \
+	src/kernel/io/io.asm \
+	src/kernel/memory/paging/page.asm \
+	src/kernel/gdt/gdt.asm \
+	src/kernel/task/tss.asm
 
-.PHONY: build_dirs
+C_SRCS := src/kernel/kernel.c \
+	src/drivers/screen/terminal.c \
+	src/libc/string/string.c \
+	src/kernel/idt/idt.c \
+	src/kernel/memory/heap/heap.c \
+	src/kernel/kmem/kheap.c \
+	src/kernel/ascii/ascii.c \
+	src/kernel/memory/paging/page.c \
+	src/drivers/disk/disk.c \
+	src/libc/stdlib/stdlib.c \
+	src/libc/ctype/ctype.c \
+	src/file_system/path_parser.c \
+	src/drivers/disk/disk_stream.c \
+	src/libc/stdio/stdio.c \
+	src/file_system/file.c \
+	src/file_system/fat/fat16.c \
+	src/kernel/gdt/gdt.c
 
-all: build_dirs ./bin/bootloader.bin ./bin/kernel.bin 
-	rm -rf ./bin/os.bin
-	dd if=./bin/bootloader.bin >> ./bin/os.bin
-	dd if=./bin/kernel.bin >> ./bin/os.bin
-	dd if=/dev/zero bs=1048576 count=16 >> ./bin/os.bin
-	# sudo mount -t vfat ./bin/os.bin /mnt/d
-	# sudo cp ./test/fs_test.txt /mnt/d
-	# sudo umount /mnt/d
+ASM_OBJS := $(patsubst src/%.asm,build/%.asm.o,$(ASM_SRCS))
+C_OBJS := $(patsubst src/%.c,build/%.o,$(C_SRCS))
+FILES := $(ASM_OBJS) $(C_OBJS)
 
-./bin/kernel.bin: $(FILES)
+FLAGS = -g -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector \
+	-fno-asynchronous-unwind-tables -fomit-frame-pointer -march=i686 \
+	-mno-mmx -mno-sse -mno-sse2 -nostdlib -Wall -Werror -Wno-unused-function \
+	-Wno-unused-label -Wno-unused-parameter -O0 -std=gnu99 -MMD -MP
+
+.PHONY: all run clean
+
+all: ./bin/os.bin
+
+./bin/os.bin: ./bin/bootloader.bin ./bin/kernel.bin
+	rm -f $@
+	dd if=/dev/zero of=$@ bs=512 count=$(DISK_SECTORS) status=none
+	dd if=./bin/bootloader.bin of=$@ conv=notrunc status=none
+	dd if=./bin/kernel.bin of=$@ bs=512 seek=1 conv=notrunc status=none
+
+./bin/kernel.bin: $(FILES) ./src/linker.ld
+	@mkdir -p $(dir $@)
 	$(LD) -g -relocatable $(FILES) -o ./build/kernelfull.o
-	$(CC) $(FLAGS) -T ./src/linker.ld -o ./bin/kernel.bin -ffreestanding -O0 -nostdlib ./build/kernelfull.o 
+	$(LD) -T ./src/linker.ld -o $@ ./build/kernelfull.o
+	@size=$$(stat -c %s $@); max=$$(($(KERNEL_SECTORS) * 512)); \
+	if [ $$size -gt $$max ]; then \
+		echo "kernel.bin is $$size bytes, bootloader only loads $$max"; rm -f $@; exit 1; \
+	fi
+	truncate -s $$(($(KERNEL_SECTORS) * 512)) $@
 
 ./bin/bootloader.bin: ./src/bootloader/bootloader.asm
-	nasm -f bin ./src/bootloader/bootloader.asm -o ./bin/bootloader.bin
+	@mkdir -p $(dir $@)
+	nasm -f bin $< -o $@
 
-./build/kernel.asm.o: ./src/bootloader/kernel.asm
-	nasm -f elf -g ./src/bootloader/kernel.asm -o ./build/kernel.asm.o
+build/%.asm.o: src/%.asm
+	@mkdir -p $(dir $@)
+	nasm -f elf -g $< -o $@
 
-./build/kernel.o: ./src/kernel/kernel.c
-	$(CC) -I./src/kernel $(FLAGS) -std=gnu99 -c ./src/kernel/kernel.c -o ./build/kernel.o
+build/%.o: src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(FLAGS) -c $< -o $@
 
-./build/terminal.o : ./src/drivers/screen/terminal.c
-	$(CC) -I./src/drivers/ $(FLAGS) -std=gnu99 -c ./src/drivers/screen/terminal.c -o ./build/terminal.o
-
-./build/libc.o: ./src/libc/string/string.c
-	$(CC) -I./src/libc/string/ $(FLAGS) -std=gnu99 -c ./src/libc/string/string.c -o ./build/libc.o
-
-./build/idt.asm.o: ./src/kernel/idt/idt.asm
-	nasm -f elf -g ./src/kernel/idt/idt.asm -o ./build/idt.asm.o
-
-./build/idt.o: ./src/kernel/idt/idt.c
-	$(CC) -I./src/kernel/idt/ $(FLAGS) -std=gnu99 -c ./src/kernel/idt/idt.c -o ./build/idt.o
-
-./build/io.asm.o : ./src/kernel/io/io.asm
-	nasm -f elf -g ./src/kernel/io/io.asm -o ./build/io.asm.o
-
-./build/heap.o : ./src/kernel/memory/heap/heap.c
-	$(CC) -I./src/memory/heap/ $(FLAGS) -std=gnu99 -c ./src/kernel/memory/heap/heap.c -o ./build/heap.o
-
-./build/kheap.o : ./src/kernel/kmem/kheap.c
-	$(CC) -I./src/kernel/kmem/ $(FLAGS) -std=gnu99 -c ./src/kernel/kmem/kheap.c -o ./build/kheap.o
-
-./build/ascii.o : ./src/kernel/ascii/ascii.c
-	$(CC) -I./src/kernel/ascii/ $(FLAGS) -std=gnu99 -c ./src/kernel/ascii/ascii.c -o ./build/ascii.o
-
-./build/page.asm.o : ./src/kernel/memory/paging/page.asm
-	nasm -f elf -g ./src/kernel/memory/paging/page.asm -o ./build/page.asm.o
-
-./build/page.o : ./src/kernel/memory/paging/page.c
-	$(CC) -I./src/memory/paging/ $(FLAGS) -std=gnu99 -c ./src/kernel/memory/paging/page.c -o ./build/page.o
-
-./build/disk.o : ./src/drivers/disk/disk.c
-	$(CC) -I./src/drivers/disk/ $(FLAGS) -std=gnu99 -c ./src/drivers/disk/disk.c -o ./build/disk.o
-
-./build/stdlib.o : ./src/libc/stdlib/stdlib.c 
-	$(CC) -I./src/libc/stdlib/ $(FLAGS) -std=gnu99 -c ./src/libc/stdlib/stdlib.c -o ./build/stdlib.o
-
-./build/ctype.o : ./src/libc/ctype/ctype.c
-	$(CC) -I./src/libc/ctype/ $(FLAGS) -std=gnu99 -c ./src/libc/ctype/ctype.c -o ./build/ctype.o
-
-./build/path_parser.o : ./src/file_system/path_parser.c
-	$(CC) -I./src/file_system/ $(FLAGS) ./src/file_system/path_parser.c -std=gnu99 -c -o ./build/path_parser.o
-	
-./build/disk_stream.o : ./src/drivers/disk/disk_stream.c
-	$(CC) -I./src/drivers/disk/ $(FLAGS) ./src/drivers/disk/disk_stream.c -std=gnu99 -c -o ./build/disk_stream.o
-
-./build/stdio.o : ./src/libc/stdio/stdio.c
-	$(CC) -I./src/libc/stdio/ $(FLAGS) -std=gnu99 -c ./src/libc/stdio/stdio.c -o ./build/stdio.o
-	
-./build/file.o : ./src/file_system/file.c
-	$(CC) -I./src/file_system/ $(FLAGS) ./src/file_system/file.c -std=gnu99 -c -o ./build/file.o
-
-./build/fat16.o : ./src/file_system/fat/fat16.c
-	$(CC) -I./src/file_system/fat/ $(FLAGS) ./src/file_system/fat/fat16.c -std=gnu99 -c -o ./build/fat16.o
-
-./build/gdt.asm.o: ./src/kernel/gdt/gdt.asm
-	nasm -f elf -g ./src/kernel/gdt/gdt.asm -o ./build/gdt.asm.o
-
-./build/gdt.o: ./src/kernel/gdt/gdt.c
-	$(CC) -I./src/kernel/gdt/ $(FLAGS) -std=gnu99 -c ./src/kernel/gdt/gdt.c -o ./build/gdt.o
-
-./build/tss.asm.o: ./src/kernel/task/tss.asm
-	nasm -f elf -g ./src/kernel/task/tss.asm -o ./build/tss.asm.o
-
-build_dirs:
-	if [ ! -d "bin" ]; then mkdir bin; fi
-	if [ ! -d "build" ]; then mkdir build; fi
+-include $(C_OBJS:.o=.d)
 
 clean:
 	rm -rf ./build/* ./bin/*
 
-run: all 
-	qemu-system-x86_64 -hda ./bin/os.bin
-
+run: all
+	$(QEMU) -drive file=./bin/os.bin,format=raw
