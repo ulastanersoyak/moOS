@@ -51,11 +51,22 @@ FLAGS = -g -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector \
 
 all: ./bin/os.bin
 
-./bin/os.bin: ./bin/bootloader.bin ./bin/kernel.bin
+./bin/os.bin: ./bin/bootloader.bin ./bin/kernel.bin ./test/fs_test.txt ./build/long.txt
 	rm -f $@
 	dd if=/dev/zero of=$@ bs=512 count=$(DISK_SECTORS) status=none
 	dd if=./bin/bootloader.bin of=$@ conv=notrunc status=none
 	dd if=./bin/kernel.bin of=$@ bs=512 seek=1 conv=notrunc status=none
+	# first two fat entries hold the media type and end of chain marker
+	printf '\370\377\377\377' | dd of=$@ bs=512 seek=$(FAT_START_SECTOR) conv=notrunc status=none
+	printf '\370\377\377\377' | dd of=$@ bs=512 seek=$$(($(FAT_START_SECTOR) + $(SECTORS_PER_FAT))) conv=notrunc status=none
+	MTOOLS_SKIP_CHECK=1 mcopy -i $@ ./test/fs_test.txt ::/
+	MTOOLS_SKIP_CHECK=1 mmd -i $@ ::/dir
+	MTOOLS_SKIP_CHECK=1 mcopy -i $@ ./build/long.txt ::/dir/
+
+# multi cluster test file: 600 lines of "line NNNN\n"
+./build/long.txt:
+	@mkdir -p $(dir $@)
+	seq -f 'line %04g' 1 600 > $@
 
 ./bin/kernel.bin: $(FILES) ./src/linker.ld
 	@mkdir -p $(dir $@)
