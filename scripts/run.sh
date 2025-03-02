@@ -1,6 +1,5 @@
 #!/bin/bash
 
-cd ..
+cd "$(dirname "$0")/.." || exit 1
 make clean
 make run
-
