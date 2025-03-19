@@ -1,6 +1,7 @@
 #include "../drivers/disk/disk.h"
 #include "../drivers/screen/terminal.h"
 #include "../libc/stdio/stdio.h"
+#include "../libc/stdlib/stdlib.h"
 #include "../libc/string/string.h"
 #include "./memory/paging/page.h"
 #include "config.h"
@@ -24,11 +25,72 @@
 
 #define IS_RTOS (0)
 
+// reads test files from the disk image at boot. see makefile for their content
+#define RUN_SELF_TESTS (1)
+
 // gdt and tss must outlive kernel_main. the cpu keeps reading them from memory
 // (e.g. iret reloads cs from the gdt) and interrupts reuse the stack once
 // kernel_main returns
 static struct tss tss;
 static struct gdt_raw gdt_real[TOTAL_GDT_SEGMENTS];
+
+#if (RUN_SELF_TESTS == 1 && IS_RTOS != 1)
+// reads a whole file and checks it against expected content.
+// expected == 0 checks lines of the form "line NNNN\n" instead
+static void
+fs_test_file (const char *path, const char *expected)
+{
+  printf ("fs test %s", path);
+  int fd = fopen (path, "r");
+  if (!fd)
+    {
+      printf (" (open failed)");
+      init_ER ();
+      return;
+    }
+  struct file_stat stat;
+  if (fstat (fd, &stat) != OK)
+    {
+      printf (" (stat failed)");
+      init_ER ();
+      fclose (fd);
+      return;
+    }
+  char *buf = calloc (stat.filesize + 1);
+  if (fread (buf, stat.filesize, 1, fd) != 1)
+    {
+      printf (" (read failed)");
+      init_ER ();
+      free (buf);
+      fclose (fd);
+      return;
+    }
+  int ok = 1;
+  if (expected)
+    {
+      ok = strlen (expected) == stat.filesize
+           && memcmp (buf, expected, stat.filesize) == 0;
+    }
+  else
+    {
+      char line[11];
+      for (uint32_t i = 0; i * 10 < stat.filesize && ok; i++)
+        {
+          uint32_t n = i + 1;
+          memcpy (line, "line 0000\n", 11);
+          for (int d = 8; d >= 5; d--, n /= 10)
+            {
+              line[d] = '0' + (n % 10);
+            }
+          ok = memcmp (buf + i * 10, line, 10) == 0;
+        }
+    }
+  printf (" <%d bytes>", stat.filesize);
+  ok ? init_OK () : init_ER ();
+  free (buf);
+  fclose (fd);
+}
+#endif
 
 void
 kernel_main (void)
@@ -82,6 +144,10 @@ kernel_main (void)
   // initializes paging for virtual memory and full system memory coverage
   enable_system_paging (verbose);
   init_main_master_disk (verbose);
+#if (RUN_SELF_TESTS == 1)
+  fs_test_file ("0:/fs_test.txt", "file sys text\n");
+  fs_test_file ("0:/dir/long.txt", 0);
+#endif
 #endif
   enable_interrupts (verbose);
 }
