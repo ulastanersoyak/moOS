@@ -56,6 +56,29 @@ terminal_putentryat (const unsigned char c, uint8_t colour, size_t x, size_t y)
   terminal_buffer[idx] = vga_entry (c, colour);
 }
 
+// moves every row one line up and clears the last row
+static void
+terminal_scroll (void)
+{
+  memmove (terminal_buffer, terminal_buffer + VGA_WIDTH,
+           (VGA_HEIGHT - 1) * VGA_WIDTH * sizeof (uint16_t));
+  for (size_t x = 0; x < VGA_WIDTH; x++)
+    {
+      terminal_putentryat (' ', terminal_colour, x, VGA_HEIGHT - 1);
+    }
+  terminal_row = VGA_HEIGHT - 1;
+}
+
+static void
+terminal_newline (void)
+{
+  terminal_column = 0;
+  if (++terminal_row == VGA_HEIGHT)
+    {
+      terminal_scroll ();
+    }
+}
+
 // wrapper of terminal_putentryat function.
 void
 terminal_putchar (char c)
@@ -63,23 +86,22 @@ terminal_putchar (char c)
   unsigned char uc = c;
   if (uc == '\n')
     {
-      terminal_column = 0;
-      terminal_row += 1;
+      terminal_newline ();
       return;
     }
   else if (uc == '\t')
     {
       terminal_column += 4;
+      if (terminal_column >= VGA_WIDTH)
+        {
+          terminal_newline ();
+        }
       return;
     }
   terminal_putentryat (uc, terminal_colour, terminal_column, terminal_row);
   if (++terminal_column == VGA_WIDTH)
     {
-      terminal_column = 0;
-      if (++terminal_row == VGA_HEIGHT)
-        {
-          terminal_row = 0;
-        }
+      terminal_newline ();
     }
 }
 
