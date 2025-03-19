@@ -2,6 +2,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "../../kernel/config.h"
+#include "../../kernel/io/io.h"
 #include "../../libc/stdio/stdio.h"
 #include "../../libc/string/string.h"
 #include "terminal.h"
@@ -84,6 +86,10 @@ void
 terminal_putchar (char c)
 {
   unsigned char uc = c;
+#if DEBUG_CONSOLE
+  // mirror output to qemu's debug console (-debugcon)
+  outb (DEBUG_CONSOLE_PORT, uc);
+#endif
   if (uc == '\n')
     {
       terminal_newline ();

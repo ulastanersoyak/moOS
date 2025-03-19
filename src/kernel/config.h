@@ -78,4 +78,9 @@
 
 #define TOTAL_GDT_SEGMENTS 6
 
+// mirror terminal output to qemu's debug console port (qemu -debugcon)
+#define DEBUG_CONSOLE 1
+
+#define DEBUG_CONSOLE_PORT 0xE9
+
 #endif // !CONFIG_H
