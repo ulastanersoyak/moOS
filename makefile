@@ -47,7 +47,7 @@ FLAGS = -g -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector \
 	-mno-mmx -mno-sse -mno-sse2 -nostdlib -Wall -Werror -Wno-unused-function \
 	-Wno-unused-label -Wno-unused-parameter -O0 -std=gnu99 -MMD -MP
 
-.PHONY: all run clean
+.PHONY: all run test clean
 
 all: ./bin/os.bin
 
@@ -97,3 +97,13 @@ clean:
 
 run: all
 	$(QEMU) -drive file=./bin/os.bin,format=raw
+
+# boots headless for a few seconds and checks the kernel log written to the
+# qemu debug console
+test: all
+	-timeout 5 $(QEMU) -drive file=./bin/os.bin,format=raw -display none \
+		-debugcon file:./build/debugcon.log
+	@cat ./build/debugcon.log
+	@! grep -q 'ER\]\|panic\|exception' ./build/debugcon.log
+	@grep -q 'enable interrupts' ./build/debugcon.log
+	@echo "boot test passed"
