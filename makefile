@@ -36,7 +36,8 @@ C_SRCS := src/kernel/kernel.c \
 	src/libc/stdio/stdio.c \
 	src/file_system/file.c \
 	src/file_system/fat/fat16.c \
-	src/kernel/gdt/gdt.c
+	src/kernel/gdt/gdt.c \
+	src/drivers/serial/serial.c
 
 ASM_OBJS := $(patsubst src/%.asm,build/%.asm.o,$(ASM_SRCS))
 C_OBJS := $(patsubst src/%.c,build/%.o,$(C_SRCS))
@@ -95,6 +96,7 @@ build/%.o: src/%.c
 clean:
 	rm -rf ./build/* ./bin/*
 
+# kernel log also goes to the serial port, shown in qemu's serial0 view
 run: all
 	$(QEMU) -drive file=./bin/os.bin,format=raw
 

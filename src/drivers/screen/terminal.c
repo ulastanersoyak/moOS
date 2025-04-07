@@ -6,6 +6,7 @@
 #include "../../kernel/io/io.h"
 #include "../../libc/stdio/stdio.h"
 #include "../../libc/string/string.h"
+#include "../serial/serial.h"
 #include "terminal.h"
 #include "vga.h"
 
@@ -36,6 +37,9 @@ terminal_init (uint8_t verbose)
 {
   terminal_colour = vga_entry_colour (white, black);
   terminal_buffer = VGA_MEMORY;
+#if SERIAL_CONSOLE
+  serial_init ();
+#endif
   terminal_clean ();
   if (verbose)
     {
@@ -89,6 +93,9 @@ terminal_putchar (char c)
 #if DEBUG_CONSOLE
   // mirror output to qemu's debug console (-debugcon)
   outb (DEBUG_CONSOLE_PORT, uc);
+#endif
+#if SERIAL_CONSOLE
+  serial_putchar (uc);
 #endif
   if (uc == '\n')
     {

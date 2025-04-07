@@ -83,4 +83,7 @@
 
 #define DEBUG_CONSOLE_PORT 0xE9
 
+// mirror terminal output to com1
+#define SERIAL_CONSOLE 1
+
 #endif // !CONFIG_H
