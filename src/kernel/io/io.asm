@@ -4,6 +4,7 @@ global insb
 global insw
 global outb
 global outw
+global cpu_wait
 
 insb:
 	push ebp
@@ -47,4 +48,9 @@ outw:
 	out dx, ax
 
 	pop ebp
+	ret
+
+cpu_wait:
+	sti
+	hlt
 	ret
