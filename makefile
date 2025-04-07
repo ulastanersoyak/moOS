@@ -37,7 +37,8 @@ C_SRCS := src/kernel/kernel.c \
 	src/file_system/file.c \
 	src/file_system/fat/fat16.c \
 	src/kernel/gdt/gdt.c \
-	src/drivers/serial/serial.c
+	src/drivers/serial/serial.c \
+	src/drivers/keyboard/keyboard.c
 
 ASM_OBJS := $(patsubst src/%.asm,build/%.asm.o,$(ASM_SRCS))
 C_OBJS := $(patsubst src/%.c,build/%.o,$(C_SRCS))

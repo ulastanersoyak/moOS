@@ -1,4 +1,5 @@
 #include "idt.h"
+#include "../../drivers/keyboard/keyboard.h"
 #include "../../drivers/screen/terminal.h"
 #include "../../libc/stdio/stdio.h"
 #include "../../libc/string/string.h"
@@ -51,18 +52,6 @@ static const char *exception_names[32] = {
   "reserved",
 };
 
-static void
-keyboard_handler (void)
-{
-  // scancode has to be read or the keyboard controller wont send new ones
-  uint8_t scancode = insb (0x60);
-  // highest bit is set when key is released
-  if (!(scancode & 0x80))
-    {
-      printf ("keyboard pressed\n");
-    }
-}
-
 void
 interrupt_handler (struct interrupt_frame *frame)
 {
@@ -77,7 +66,7 @@ interrupt_handler (struct interrupt_frame *frame)
   uint32_t irq = frame->vector - PIC_MASTER_OFFSET;
   if (irq == 1)
     {
-      keyboard_handler ();
+      keyboard_handle_interrupt ();
     }
 
   // acknowledge interrupt. irqs coming from slave pic need both pics acked
