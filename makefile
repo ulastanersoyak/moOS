@@ -38,6 +38,7 @@ C_SRCS := src/kernel/kernel.c \
 	src/file_system/fat/fat16.c \
 	src/kernel/gdt/gdt.c \
 	src/drivers/serial/serial.c \
+	src/drivers/rtc/rtc.c \
 	src/drivers/timer/pit.c \
 	src/drivers/keyboard/keyboard.c
 
