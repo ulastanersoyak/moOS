@@ -1,5 +1,6 @@
 #include "../drivers/disk/disk.h"
 #include "../drivers/screen/terminal.h"
+#include "../drivers/timer/pit.h"
 #include "../libc/stdio/stdio.h"
 #include "../libc/stdlib/stdlib.h"
 #include "../libc/string/string.h"
@@ -149,5 +150,6 @@ kernel_main (void)
   fs_test_file ("0:/dir/long.txt", 0);
 #endif
 #endif
+  pit_init (verbose);
   enable_interrupts (verbose);
 }

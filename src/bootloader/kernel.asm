@@ -33,8 +33,9 @@ _start:
 	out 0x21, al
 	out 0xA1, al
 
-	;   mask every irq except keyboard (irq1) and the slave cascade (irq2)
-	mov al, 11111001b
+	;   mask every irq except timer (irq0), keyboard (irq1) and the slave
+	;   cascade (irq2)
+	mov al, 11111000b
 	out 0x21, al
 	mov al, 11111111b
 	out 0xA1, al

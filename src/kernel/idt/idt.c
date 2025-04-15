@@ -1,6 +1,7 @@
 #include "idt.h"
 #include "../../drivers/keyboard/keyboard.h"
 #include "../../drivers/screen/terminal.h"
+#include "../../drivers/timer/pit.h"
 #include "../../libc/stdio/stdio.h"
 #include "../../libc/string/string.h"
 #include "../config.h"
@@ -64,7 +65,11 @@ interrupt_handler (struct interrupt_frame *frame)
     }
 
   uint32_t irq = frame->vector - PIC_MASTER_OFFSET;
-  if (irq == 1)
+  if (irq == 0)
+    {
+      pit_tick ();
+    }
+  else if (irq == 1)
     {
       keyboard_handle_interrupt ();
     }

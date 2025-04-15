@@ -86,4 +86,6 @@
 // mirror terminal output to com1
 #define SERIAL_CONSOLE 1
 
+#define PIT_FREQUENCY_HZ 100
+
 #endif // !CONFIG_H
