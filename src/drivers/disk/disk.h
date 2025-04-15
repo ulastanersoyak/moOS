@@ -24,6 +24,10 @@ struct disk
 int32_t disk_read (int32_t logical_block_addr, uint32_t total_block,
                    void *buffer);
 
+// writes total_block blocks from buffer starting at logical_block_addr
+int32_t disk_write (int32_t logical_block_addr, uint32_t total_block,
+                    const void *buffer);
+
 // returns disk handler of given idx. currently only returns
 // main master disk.
 struct disk *get_disk (uint32_t idx);
@@ -31,6 +35,10 @@ struct disk *get_disk (uint32_t idx);
 // reads the given disk
 int32_t disk_read_block (struct disk *disk, int32_t logical_block_addr,
                          uint32_t total_block, void *buffer);
+
+// writes to the given disk
+int32_t disk_write_block (struct disk *disk, int32_t logical_block_addr,
+                          uint32_t total_block, const void *buffer);
 
 // searches and initializes all disks available. currently only main master
 // disk

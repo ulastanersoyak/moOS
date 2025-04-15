@@ -39,6 +39,45 @@ disk_read (int32_t logical_block_addr, uint32_t total_block, void *buffer)
   return OK;
 }
 
+static void
+disk_wait_ready (void)
+{
+  // wait until drive is not busy (0x80) and ready for data (0x08)
+  uint8_t c = insb (0x1F7);
+  while ((c & 0x80) || !(c & 0x08))
+    {
+      c = insb (0x1F7);
+    }
+}
+
+int32_t
+disk_write (int32_t logical_block_addr, uint32_t total_block,
+            const void *buffer)
+{
+  outb (0x1F6, (logical_block_addr >> 24) | 0xE0);
+  outb (0x1F2, total_block);
+  outb (0x1F3, (uint8_t)(logical_block_addr & 0xFF));
+  outb (0x1F4, (uint8_t)(logical_block_addr >> 8));
+  outb (0x1F5, (uint8_t)(logical_block_addr >> 16));
+  outb (0x1F7, 0x30); // write sectors
+  const uint16_t *buff = (const uint16_t *)buffer;
+  for (size_t i = 0; i < total_block; i++)
+    {
+      disk_wait_ready ();
+      for (size_t j = 0; j < 256; j++)
+        {
+          outw (0x1F0, *buff);
+          buff++;
+        }
+    }
+  // make sure the data reached the disk, not just the drive cache
+  outb (0x1F7, 0xE7);
+  while (insb (0x1F7) & 0x80)
+    {
+    }
+  return OK;
+}
+
 // just works on disk 0 (main mastar disk)
 //  TODO: maybe add more disks
 struct disk *
@@ -84,4 +123,15 @@ disk_read_block (struct disk *disk, int32_t logical_block_addr,
       return -IO_ERROR;
     }
   return disk_read (logical_block_addr, total_block, buffer);
+}
+
+int32_t
+disk_write_block (struct disk *disk, int32_t logical_block_addr,
+                  uint32_t total_block, const void *buffer)
+{
+  if (disk != &main_master_disk)
+    {
+      return -IO_ERROR;
+    }
+  return disk_write (logical_block_addr, total_block, buffer);
 }
