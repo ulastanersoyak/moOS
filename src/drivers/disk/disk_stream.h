@@ -17,6 +17,10 @@ struct disk_stream *get_disk_stream (uint32_t disk_id);
 int32_t disk_stream_read (struct disk_stream *stream, void *buffer,
                           size_t len);
 
+// writes len bytes at the stream position, reading back partial sectors
+int32_t disk_stream_write (struct disk_stream *stream, const void *buffer,
+                           size_t len);
+
 void stream_seek (struct disk_stream *stream, int32_t pos);
 
 void stream_free (struct disk_stream *stream);

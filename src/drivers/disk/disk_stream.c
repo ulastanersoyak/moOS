@@ -48,6 +48,45 @@ disk_stream_read (struct disk_stream *stream, void *buffer, size_t len)
   return OK;
 }
 
+int32_t
+disk_stream_write (struct disk_stream *stream, const void *buffer, size_t len)
+{
+  char local_buffer[MASTER_MAIN_DISK_SECTOR_SIZE];
+  const char *in = buffer;
+  while (len > 0)
+    {
+      int32_t sector_idx = stream->pos / MASTER_MAIN_DISK_SECTOR_SIZE;
+      int32_t offset_idx = stream->pos % MASTER_MAIN_DISK_SECTOR_SIZE;
+      size_t total = MASTER_MAIN_DISK_SECTOR_SIZE - offset_idx;
+      if (total > len)
+        {
+          total = len;
+        }
+      // partial sectors keep the bytes around the written range
+      int32_t rs = OK;
+      if (total != MASTER_MAIN_DISK_SECTOR_SIZE)
+        {
+          rs = disk_read_block (stream->disk, sector_idx, 1, local_buffer);
+        }
+      if (rs < 0)
+        {
+          return rs;
+        }
+      for (size_t i = 0; i < total; i++)
+        {
+          local_buffer[offset_idx + i] = *in++;
+        }
+      rs = disk_write_block (stream->disk, sector_idx, 1, local_buffer);
+      if (rs < 0)
+        {
+          return rs;
+        }
+      stream->pos += total;
+      len -= total;
+    }
+  return OK;
+}
+
 void
 stream_seek (struct disk_stream *stream, int32_t pos)
 {
