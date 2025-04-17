@@ -140,3 +140,87 @@ pathparser_parse (const char *path, const char *current_directory_path)
 out:
   return path_root;
 }
+
+int
+pathparser_resolve (const char *cwd, const char *path, char *out, int max)
+{
+  // joined path before normalizing, at most cwd + / + path
+  char joined[2 * MAX_PATH_LEN + 2];
+  int cwd_len = strlen (cwd);
+  int path_len = strlen (path);
+  if (cwd_len > MAX_PATH_LEN || path_len > MAX_PATH_LEN || cwd_len < 3)
+    {
+      return 0;
+    }
+  if (isdigit (path[0]) && path[1] == ':')
+    {
+      strcpy (joined, path);
+    }
+  else if (path[0] == '/')
+    {
+      // keep the drive of the working directory
+      memcpy (joined, cwd, 2);
+      strcpy (joined + 2, path);
+    }
+  else
+    {
+      strcpy (joined, cwd);
+      strcat (joined, "/");
+      strcat (joined, path);
+    }
+
+  // drive prefix "N:" is kept, then every part is copied unless it is empty,
+  // "." or "..", which removes the previous part
+  if (max < 4 || joined[2] != '/')
+    {
+      return 0;
+    }
+  int len = 2;
+  memcpy (out, joined, 2);
+  const char *part = joined + 2;
+  while (*part)
+    {
+      while (*part == '/')
+        {
+          part++;
+        }
+      const char *end = part;
+      while (*end && *end != '/')
+        {
+          end++;
+        }
+      int part_len = end - part;
+      if (part_len == 1 && part[0] == '.')
+        {
+          // current directory, nothing to add
+        }
+      else if (part_len == 2 && part[0] == '.' && part[1] == '.')
+        {
+          while (len > 2 && out[len - 1] != '/')
+            {
+              len--;
+            }
+          if (len > 2)
+            {
+              len--; // drop the slash too
+            }
+        }
+      else if (part_len > 0)
+        {
+          if (len + 1 + part_len >= max || len + 1 + part_len > MAX_PATH_LEN)
+            {
+              return 0;
+            }
+          out[len++] = '/';
+          memcpy (out + len, part, part_len);
+          len += part_len;
+        }
+      part = end;
+    }
+  if (len == 2)
+    {
+      out[len++] = '/'; // root directory
+    }
+  out[len] = '\0';
+  return 1;
+}
