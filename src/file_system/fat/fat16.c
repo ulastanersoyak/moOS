@@ -136,13 +136,16 @@ int fat16_read (struct disk *disk, void *descriptor, uint32_t size,
 int fat16_seek (void *private, uint32_t offset, FILE_SEEK_MODE seek_mode);
 int fat16_stat (struct disk *disk, void *private, struct file_stat *stat);
 int fat16_close (void *private);
+int fat16_listdir (struct disk *disk, struct path_part *path,
+                   struct file_dirent *out, int max);
 
 struct file_system fat16_fs = { .resolve = fat16_resolve,
                                 .open = fat16_open,
                                 .read = fat16_read,
                                 .seek = fat16_seek,
                                 .stat = fat16_stat,
-                                .close = fat16_close };
+                                .close = fat16_close,
+                                .listdir = fat16_listdir };
 
 struct file_system *
 fat16_init ()
@@ -878,3 +881,50 @@ fat16_seek (void *private, uint32_t offset, FILE_SEEK_MODE seek_mode)
 out:
   return res;
 }
+int
+fat16_listdir (struct disk *disk, struct path_part *path,
+               struct file_dirent *out, int max)
+{
+  struct fat_private *fat_private = disk->fs_private_data;
+  struct fat_directory *directory = &fat_private->root_directory;
+  struct fat_item *dir_item = 0;
+  if (path)
+    {
+      dir_item = fat16_get_directory_entry (disk, path);
+      if (!dir_item)
+        {
+          return -NOT_FOUND_ERROR;
+        }
+      if (dir_item->type != FAT_ITEM_TYPE_DIRECTORY)
+        {
+          fat16_fat_item_free (dir_item);
+          return -NOT_DIRECTORY_ERROR;
+        }
+      directory = dir_item->directory;
+    }
+
+  int total = 0;
+  for (int i = 0; i < directory->total && total < max; i++)
+    {
+      struct fat_directory_item *item = &directory->item[i];
+      if (item->filename[0] == FAT_ENTRY_DELETED
+          || item->attribute == FAT_FILE_LONG_NAME
+          || (item->attribute & FAT_FILE_VOLUME_LABEL)
+          || item->filename[0] == '.')
+        {
+          continue;
+        }
+      fat16_get_full_relative_filename (item, out[total].name,
+                                        sizeof (out[total].name));
+      out[total].size = item->filesize;
+      out[total].is_dir = (item->attribute & FAT_FILE_SUBDIRECTORY) != 0;
+      total++;
+    }
+
+  if (dir_item)
+    {
+      fat16_fat_item_free (dir_item);
+    }
+  return total;
+}
+

@@ -62,6 +62,10 @@
 
 #define UNIMPLEMENTED_FEATURE_ERROR 9
 
+#define NOT_DIRECTORY_ERROR 10
+
+#define NOT_FOUND_ERROR 11
+
 // printf max format string char
 #define MAX_STRING_FORMAT_CHAR 100
 

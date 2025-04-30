@@ -260,6 +260,50 @@ fseek (int fd, int offset, FILE_SEEK_MODE whence)
 out:
   return res;
 }
+// parses path and runs op with the disk and path parts it refers to
+static int
+file_path_op (const char *path,
+              int (*op) (struct file_system *fs, struct disk *disk,
+                         struct path_part *part, void *ctx),
+              void *ctx)
+{
+  struct path_root *root_path = pathparser_parse (path, NULL);
+  if (!root_path)
+    {
+      return -INVALID_PATH_ERROR;
+    }
+  int res = -IO_ERROR;
+  struct disk *disk = get_disk (root_path->drive_no);
+  if (disk && disk->file_system)
+    {
+      res = op (disk->file_system, disk, root_path->first, ctx);
+    }
+  pathparser_free (root_path);
+  return res;
+}
+
+struct listdir_args
+{
+  struct file_dirent *out;
+  int max;
+};
+
+static int
+listdir_op (struct file_system *fs, struct disk *disk, struct path_part *part,
+            void *ctx)
+{
+  struct listdir_args *args = ctx;
+  return fs->listdir ? fs->listdir (disk, part, args->out, args->max)
+                     : -IO_ERROR;
+}
+
+int
+listdir (const char *path, struct file_dirent *out, int max)
+{
+  struct listdir_args args = { .out = out, .max = max };
+  return file_path_op (path, listdir_op, &args);
+}
+
 int
 fread (void *ptr, uint32_t size, uint32_t nmemb, int fd)
 {

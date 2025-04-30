@@ -40,6 +40,21 @@ typedef int (*FS_CLOSE_FUNCTION) (void *priv);
 typedef int (*FS_SEEK_FUNCTION) (void *priv, uint32_t offset,
                                  FILE_SEEK_MODE seek_mode);
 
+// 8.3 name, dot and null terminator
+#define MAX_FILENAME_LEN 13
+
+struct file_dirent
+{
+  char name[MAX_FILENAME_LEN];
+  uint32_t size;
+  uint8_t is_dir;
+};
+
+// fills out with up to max entries of the directory at path. path is 0 for
+// the root directory. returns number of entries or a negative error
+typedef int (*FS_LISTDIR_FUNCTION) (struct disk *disk, struct path_part *path,
+                                    struct file_dirent *out, int max);
+
 struct file_stat
 {
   FILE_STAT_FLAGS flags;
@@ -59,6 +74,7 @@ struct file_system
   FS_SEEK_FUNCTION seek;
   FS_STAT_FUNCTION stat;
   FS_CLOSE_FUNCTION close;
+  FS_LISTDIR_FUNCTION listdir;
   char name[20];
 };
 

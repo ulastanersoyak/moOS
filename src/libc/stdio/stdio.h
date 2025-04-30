@@ -15,4 +15,8 @@ int fread (void *ptr, uint32_t size, uint32_t nmemb, int fd);
 int fstat (int fd, struct file_stat *stat);
 int fclose (int fd);
 
+// lists the directory at path (e.g. 0:/ or 0:/dir). returns number of entries
+// written to out or a negative error
+int listdir (const char *path, struct file_dirent *out, int max);
+
 #endif // !STDIO_H
