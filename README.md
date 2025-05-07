@@ -2,6 +2,8 @@
 
 a 32-bit operating system written in c and assembly. it implements basic os features like memory management, device drivers, and system initialization.
 
+![Screenshot from 2023-11-05 17-51-21](https://github.com/ulastanersoyak/moOS/assets/92662728/c7377806-eaa6-427b-b570-86b314c03937)
+
 ## features
 
 currently working:
