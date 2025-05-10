@@ -133,7 +133,7 @@ int fat16_resolve (struct disk *disk);
 void *fat16_open (struct disk *disk, struct path_part *path, FILE_MODE mode);
 int fat16_read (struct disk *disk, void *descriptor, uint32_t size,
                 uint32_t nmemb, char *out_ptr);
-int fat16_seek (void *private, uint32_t offset, FILE_SEEK_MODE seek_mode);
+int fat16_seek (void *private, int32_t offset, FILE_SEEK_MODE seek_mode);
 int fat16_stat (struct disk *disk, void *private, struct file_stat *stat);
 int fat16_close (void *private);
 int fat16_listdir (struct disk *disk, struct path_part *path,
@@ -842,45 +842,44 @@ fat16_read (struct disk *disk, void *descriptor, uint32_t size, uint32_t nmemb,
 }
 
 int
-fat16_seek (void *private, uint32_t offset, FILE_SEEK_MODE seek_mode)
+fat16_seek (void *private, int32_t offset, FILE_SEEK_MODE seek_mode)
 {
-  int res = 0;
   struct fat_file_descriptor *desc = private;
   struct fat_item *desc_item = desc->item;
   if (desc_item->type != FAT_ITEM_TYPE_FILE)
     {
-      res = -INVALID_ARG_ERROR;
-      goto out;
+      return -INVALID_ARG_ERROR;
     }
 
   struct fat_directory_item *ritem = desc_item->item;
-  if (offset >= ritem->filesize)
-    {
-      res = -IO_ERROR;
-      goto out;
-    }
-
+  int32_t new_pos = 0;
   switch (seek_mode)
     {
     case SEEK_SET:
-      desc->pos = offset;
+      new_pos = offset;
       break;
 
     case SEEK_END:
-      res = -UNIMPLEMENTED_FEATURE_ERROR;
+      new_pos = (int32_t)ritem->filesize + offset;
       break;
 
     case SEEK_CUR:
-      desc->pos += offset;
+      new_pos = (int32_t)desc->pos + offset;
       break;
 
     default:
-      res = -INVALID_ARG_ERROR;
-      break;
+      return -INVALID_ARG_ERROR;
     }
-out:
-  return res;
+
+  // seeking to the end of the file is allowed, past it is not
+  if (new_pos < 0 || (uint32_t)new_pos > ritem->filesize)
+    {
+      return -IO_ERROR;
+    }
+  desc->pos = new_pos;
+  return OK;
 }
+
 int
 fat16_listdir (struct disk *disk, struct path_part *path,
                struct file_dirent *out, int max)

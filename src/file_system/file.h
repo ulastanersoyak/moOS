@@ -37,7 +37,7 @@ typedef int (*FS_RESOLVE_FUNCTION) (struct disk *disk);
 
 typedef int (*FS_CLOSE_FUNCTION) (void *priv);
 
-typedef int (*FS_SEEK_FUNCTION) (void *priv, uint32_t offset,
+typedef int (*FS_SEEK_FUNCTION) (void *priv, int32_t offset,
                                  FILE_SEEK_MODE seek_mode);
 
 // 8.3 name, dot and null terminator
