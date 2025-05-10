@@ -33,6 +33,8 @@ typedef void *(*FS_OPEN_FUNCTION) (struct disk *disk, struct path_part *path,
                                    FILE_MODE mode);
 typedef int (*FS_READ_FUNCTION) (struct disk *disk, void *priv, uint32_t size,
                                  uint32_t nmemb, char *out);
+typedef int (*FS_WRITE_FUNCTION) (struct disk *disk, void *priv, uint32_t size,
+                                  uint32_t nmemb, const char *in);
 typedef int (*FS_RESOLVE_FUNCTION) (struct disk *disk);
 
 typedef int (*FS_CLOSE_FUNCTION) (void *priv);
@@ -55,6 +57,11 @@ struct file_dirent
 typedef int (*FS_LISTDIR_FUNCTION) (struct disk *disk, struct path_part *path,
                                     struct file_dirent *out, int max);
 
+// removes a file or an empty directory
+typedef int (*FS_REMOVE_FUNCTION) (struct disk *disk, struct path_part *path);
+
+typedef int (*FS_MKDIR_FUNCTION) (struct disk *disk, struct path_part *path);
+
 struct file_stat
 {
   FILE_STAT_FLAGS flags;
@@ -75,6 +82,9 @@ struct file_system
   FS_STAT_FUNCTION stat;
   FS_CLOSE_FUNCTION close;
   FS_LISTDIR_FUNCTION listdir;
+  FS_WRITE_FUNCTION write;
+  FS_REMOVE_FUNCTION remove;
+  FS_MKDIR_FUNCTION mkdir;
   char name[20];
 };
 

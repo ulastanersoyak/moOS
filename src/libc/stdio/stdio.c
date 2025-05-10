@@ -297,11 +297,53 @@ listdir_op (struct file_system *fs, struct disk *disk, struct path_part *part,
                      : -IO_ERROR;
 }
 
+static int
+remove_op (struct file_system *fs, struct disk *disk, struct path_part *part,
+           void *ctx)
+{
+  return fs->remove ? fs->remove (disk, part) : -IO_ERROR;
+}
+
+static int
+mkdir_op (struct file_system *fs, struct disk *disk, struct path_part *part,
+          void *ctx)
+{
+  return fs->mkdir ? fs->mkdir (disk, part) : -IO_ERROR;
+}
+
 int
 listdir (const char *path, struct file_dirent *out, int max)
 {
   struct listdir_args args = { .out = out, .max = max };
   return file_path_op (path, listdir_op, &args);
+}
+
+int
+remove (const char *path)
+{
+  return file_path_op (path, remove_op, 0);
+}
+
+int
+mkdir (const char *path)
+{
+  return file_path_op (path, mkdir_op, 0);
+}
+
+int
+fwrite (const void *ptr, uint32_t size, uint32_t nmemb, int fd)
+{
+  if (size == 0 || nmemb == 0)
+    {
+      return 0;
+    }
+  struct file_descriptor *desc = file_get_descriptor (fd);
+  if (!desc || !desc->file_system->write)
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  return desc->file_system->write (desc->disk, desc->priv, size, nmemb,
+                                   (const char *)ptr);
 }
 
 int

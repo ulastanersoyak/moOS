@@ -19,4 +19,13 @@ int fclose (int fd);
 // written to out or a negative error
 int listdir (const char *path, struct file_dirent *out, int max);
 
+// writes nmemb members of size bytes. files must be opened with "w" (create
+// or truncate) or "a" (create or append). returns members written
+int fwrite (const void *ptr, uint32_t size, uint32_t nmemb, int fd);
+
+// removes a file or an empty directory
+int remove (const char *path);
+
+int mkdir (const char *path);
+
 #endif // !STDIO_H
