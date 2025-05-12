@@ -2,6 +2,7 @@
 #include "../../drivers/disk/disk.h"
 #include "../../drivers/disk/disk_stream.h"
 #include "../../kernel/config.h"
+#include "../../libc/ctype/ctype.h"
 #include "../../libc/stdlib/stdlib.h"
 #include "../../libc/string/string.h"
 #include <stdint.h>
@@ -96,6 +97,7 @@ struct fat_directory
   int total;
   int sector_pos;
   int ending_sector_pos;
+  uint32_t first_cluster; // 0 for the root directory
 };
 
 struct fat_item
@@ -113,6 +115,10 @@ struct fat_file_descriptor
 {
   struct fat_item *item;
   uint32_t pos;
+  FILE_MODE mode;
+  // where the directory item of the file is stored on disk, written back
+  // after every write so size and first cluster stay up to date
+  uint32_t dir_entry_pos;
 };
 
 struct fat_private
@@ -127,6 +133,9 @@ struct fat_private
 
   // Used in situations where we stream the directory
   struct disk_stream *directory_stream;
+
+  // where the search for a free cluster starts
+  uint32_t next_free_cluster;
 };
 
 int fat16_resolve (struct disk *disk);
@@ -138,6 +147,8 @@ int fat16_stat (struct disk *disk, void *private, struct file_stat *stat);
 int fat16_close (void *private);
 int fat16_listdir (struct disk *disk, struct path_part *path,
                    struct file_dirent *out, int max);
+int fat16_write (struct disk *disk, void *descriptor, uint32_t size,
+                 uint32_t nmemb, const char *in);
 
 struct file_system fat16_fs = { .resolve = fat16_resolve,
                                 .open = fat16_open,
@@ -145,7 +156,8 @@ struct file_system fat16_fs = { .resolve = fat16_resolve,
                                 .seek = fat16_seek,
                                 .stat = fat16_stat,
                                 .close = fat16_close,
-                                .listdir = fat16_listdir };
+                                .listdir = fat16_listdir,
+                                .write = fat16_write };
 
 struct file_system *
 fat16_init ()
@@ -614,6 +626,7 @@ fat16_load_fat_directory (struct disk *disk, struct fat_directory_item *item)
   int cluster_sector = fat16_cluster_to_sector (fat_private, cluster);
   directory->total = fat16_get_total_items_for_subdirectory (disk, cluster);
   directory->sector_pos = cluster_sector;
+  directory->first_cluster = cluster;
   if (directory->total == 0)
     {
       goto out;
@@ -735,6 +748,9 @@ out:
   return current_item;
 }
 
+static void *fat16_open_for_write (struct disk *disk, struct path_part *path,
+                                   FILE_MODE mode);
+
 void *
 fat16_open (struct disk *disk, struct path_part *path, FILE_MODE mode)
 {
@@ -742,8 +758,7 @@ fat16_open (struct disk *disk, struct path_part *path, FILE_MODE mode)
   int err_code = 0;
   if (mode != FILE_MODE_READ)
     {
-      err_code = -NON_PERMITTED_READ_ERROR;
-      goto err_out;
+      return fat16_open_for_write (disk, path, mode);
     }
 
   descriptor = calloc (sizeof (struct fat_file_descriptor));
@@ -925,5 +940,518 @@ fat16_listdir (struct disk *disk, struct path_part *path,
       fat16_fat_item_free (dir_item);
     }
   return total;
+}
+
+// --- write support ---
+
+static uint32_t
+fat16_cluster_bytes (struct disk *disk)
+{
+  struct fat_private *private = disk->fs_private_data;
+  return private->header.primary_header.sectors_per_cluster
+         * disk->sector_size;
+}
+
+// number of the last data cluster + 1
+static uint32_t
+fat16_cluster_limit (struct disk *disk)
+{
+  struct fat_private *private = disk->fs_private_data;
+  struct fat_header *header = &private->header.primary_header;
+  uint32_t sectors = header->number_of_sectors ? header->number_of_sectors
+                                               : header->sectors_big;
+  uint32_t data_start = private->root_directory.ending_sector_pos;
+  return (sectors - data_start) / header->sectors_per_cluster + 2;
+}
+
+// writes the entry of cluster to every copy of the fat
+static int
+fat16_set_fat_entry (struct disk *disk, uint32_t cluster, uint16_t value)
+{
+  struct fat_private *private = disk->fs_private_data;
+  struct fat_header *header = &private->header.primary_header;
+  for (uint32_t copy = 0; copy < header->fat_copies; copy++)
+    {
+      uint32_t fat_sector
+          = header->reserved_sectors + copy * header->sectors_per_fat;
+      stream_seek (private->fat_read_stream,
+                   fat_sector * disk->sector_size
+                       + cluster * FAT16_FAT_ENTRY_SIZE);
+      int res = disk_stream_write (private->fat_read_stream, &value,
+                                   sizeof (value));
+      if (res < 0)
+        {
+          return res;
+        }
+    }
+  return OK;
+}
+
+// finds a free cluster, marks it as the end of a chain and zeroes it.
+// returns the cluster or a negative error when the disk is full
+static int
+fat16_alloc_cluster (struct disk *disk)
+{
+  struct fat_private *private = disk->fs_private_data;
+  uint32_t limit = fat16_cluster_limit (disk);
+  uint32_t start = private->next_free_cluster;
+  if (start < 2 || start >= limit)
+    {
+      start = 2;
+    }
+  for (uint32_t n = 0; n < limit - 2; n++)
+    {
+      uint32_t cluster = start + n;
+      if (cluster >= limit)
+        {
+          cluster -= limit - 2;
+        }
+      int entry = fat16_get_fat_entry (disk, cluster);
+      if (entry < 0)
+        {
+          return entry;
+        }
+      if (entry != FAT16_UNUSED)
+        {
+          continue;
+        }
+      int res = fat16_set_fat_entry (disk, cluster, 0xFFFF);
+      if (res < 0)
+        {
+          return res;
+        }
+      // directories rely on zeroed clusters, the end marker is a zero byte
+      char zero[512];
+      memset (zero, 0, sizeof (zero));
+      stream_seek (private->cluster_read_stream,
+                   fat16_cluster_to_sector (private, cluster)
+                       * disk->sector_size);
+      for (uint32_t done = 0; done < fat16_cluster_bytes (disk);
+           done += sizeof (zero))
+        {
+          disk_stream_write (private->cluster_read_stream, zero,
+                             sizeof (zero));
+        }
+    private
+      ->next_free_cluster = cluster + 1;
+      return cluster;
+    }
+  return -NO_MEMORY_ERROR;
+}
+
+static void
+fat16_free_chain (struct disk *disk, uint32_t cluster)
+{
+  while (cluster >= 2 && cluster < FAT16_RESERVED_START)
+    {
+      int next = fat16_get_fat_entry (disk, cluster);
+      fat16_set_fat_entry (disk, cluster, FAT16_UNUSED);
+      if (next < 0)
+        {
+          return;
+        }
+      cluster = next;
+    }
+}
+
+// returns the index-th cluster of the chain starting at *first. with allocate
+// set, missing clusters are appended and an empty chain gets a first cluster
+static int
+fat16_cluster_at (struct disk *disk, uint32_t *first, uint32_t index,
+                  uint8_t allocate)
+{
+  if (*first == 0)
+    {
+      if (!allocate)
+        {
+          return -IO_ERROR;
+        }
+      int cluster = fat16_alloc_cluster (disk);
+      if (cluster < 0)
+        {
+          return cluster;
+        }
+      *first = cluster;
+    }
+  uint32_t cluster = *first;
+  for (uint32_t i = 0; i < index; i++)
+    {
+      int next = fat16_get_fat_entry (disk, cluster);
+      if (next < 0)
+        {
+          return next;
+        }
+      if (next >= FAT16_END_OF_CHAIN)
+        {
+          if (!allocate)
+            {
+              return -IO_ERROR;
+            }
+          next = fat16_alloc_cluster (disk);
+          if (next < 0)
+            {
+              return next;
+            }
+          fat16_set_fat_entry (disk, cluster, next);
+        }
+      else if (next < 2 || next >= FAT16_RESERVED_START)
+        {
+          return -IO_ERROR;
+        }
+      cluster = next;
+    }
+  return cluster;
+}
+
+static void
+fat16_set_first_cluster (struct fat_directory_item *item, uint32_t cluster)
+{
+  item->low_16_bits_first_cluster = cluster & 0xFFFF;
+  item->high_16_bits_first_cluster = cluster >> 16;
+}
+
+// absolute byte position of item idx of directory on disk
+static int
+fat16_dir_entry_pos (struct disk *disk, struct fat_directory *directory,
+                     int idx)
+{
+  struct fat_private *private = disk->fs_private_data;
+  uint32_t offset = idx * sizeof (struct fat_directory_item);
+  if (directory->first_cluster == 0)
+    {
+      return directory->sector_pos * disk->sector_size + offset;
+    }
+  int cluster
+      = fat16_get_cluster_for_offset (disk, directory->first_cluster, offset);
+  if (cluster < 0)
+    {
+      return cluster;
+    }
+  return fat16_cluster_to_sector (private, cluster) * disk->sector_size
+         + offset % fat16_cluster_bytes (disk);
+}
+
+// writes a directory item to disk and keeps the cached root directory in sync
+static int
+fat16_write_dir_entry (struct disk *disk, uint32_t pos,
+                       struct fat_directory_item *item)
+{
+  struct fat_private *private = disk->fs_private_data;
+  stream_seek (private->directory_stream, pos);
+  int res = disk_stream_write (private->directory_stream, item,
+                               sizeof (struct fat_directory_item));
+  if (res < 0)
+    {
+      return res;
+    }
+  struct fat_directory *root = &private->root_directory;
+  uint32_t root_start = root->sector_pos * disk->sector_size;
+  uint32_t root_entries = private->header.primary_header.root_dir_entries;
+  if (pos >= root_start
+      && pos < root_start + root_entries * sizeof (struct fat_directory_item))
+    {
+      int idx = (pos - root_start) / sizeof (struct fat_directory_item);
+      root->item[idx] = *item;
+      if (item->filename[0] != FAT_ENTRY_END && idx >= root->total)
+        {
+          root->total = idx + 1;
+        }
+    }
+  return OK;
+}
+
+// returns an index where a new item can be stored in directory. full
+// subdirectories grow by a cluster, the root directory has a fixed size
+static int
+fat16_find_free_slot (struct disk *disk, struct fat_directory *directory)
+{
+  struct fat_private *private = disk->fs_private_data;
+  for (int i = 0; i < directory->total; i++)
+    {
+      if (directory->item[i].filename[0] == FAT_ENTRY_DELETED)
+        {
+          return i;
+        }
+    }
+  int idx = directory->total;
+  if (directory->first_cluster == 0)
+    {
+      // keep one end marker after the last item
+      return idx + 1 < private->header.primary_header.root_dir_entries
+                 ? idx
+                 : -NO_MEMORY_ERROR;
+    }
+  // appends a cluster to the directory if idx (or the end marker after it)
+  // is past its last cluster. new clusters are zeroed, so they end the list
+  uint32_t per_cluster
+      = fat16_cluster_bytes (disk) / sizeof (struct fat_directory_item);
+  uint32_t first = directory->first_cluster;
+  int res = fat16_cluster_at (disk, &first, (idx + 1) / per_cluster, 1);
+  return res < 0 ? res : idx;
+}
+
+// there is no real time clock driver yet, new items get 1980-01-01 00:00
+#define FAT16_DEFAULT_DATE ((0 << 9) | (1 << 5) | 1)
+
+static void
+fat16_stamp_item (struct fat_directory_item *item)
+{
+  item->creation_date = FAT16_DEFAULT_DATE;
+  item->last_mod_date = FAT16_DEFAULT_DATE;
+  item->last_access = FAT16_DEFAULT_DATE;
+}
+
+// converts "notes.txt" to the padded uppercase 8.3 form "NOTES   TXT"
+static int
+fat16_make_short_name (const char *name, uint8_t *out)
+{
+  const char *allowed = "!#$%&'()-@^_`{}~";
+  memset (out, ' ', 11);
+  const char *dot = 0;
+  for (const char *c = name; *c; c++)
+    {
+      if (*c == '.')
+        {
+          dot = c;
+        }
+    }
+  uint32_t base_len = dot ? (uint32_t)(dot - name) : strlen (name);
+  uint32_t ext_len = dot ? strlen (dot + 1) : 0;
+  if (base_len == 0 || base_len > 8 || ext_len > 3 || (dot && ext_len == 0))
+    {
+      return -INVALID_PATH_ERROR;
+    }
+  for (uint32_t i = 0; i < base_len + (dot ? ext_len + 1 : 0); i++)
+    {
+      char c = name[i];
+      if (name + i == dot)
+        {
+          continue;
+        }
+      if (!isalnum (c) && !strchr (allowed, c))
+        {
+          return -INVALID_PATH_ERROR;
+        }
+      uint32_t pos = (dot && name + i > dot) ? 8 + (name + i - dot - 1) : i;
+      out[pos] = toupper (c);
+    }
+  return OK;
+}
+
+// splits path into its parent directory and last part. the parent must be
+// released with fat16_release_parent
+struct fat16_parent
+{
+  struct fat_directory *directory;
+  struct fat_item *owner; // loaded subdirectory, 0 for the root directory
+  const char *name;
+};
+
+static int
+fat16_get_parent (struct disk *disk, struct path_part *path,
+                  struct fat16_parent *out)
+{
+  struct fat_private *private = disk->fs_private_data;
+  if (!path)
+    {
+      return -INVALID_PATH_ERROR;
+    }
+  out->owner = 0;
+  if (!path->next)
+    {
+      out->directory = &private->root_directory;
+      out->name = path->part;
+      return OK;
+    }
+  struct path_part *before_last = path;
+  while (before_last->next->next)
+    {
+      before_last = before_last->next;
+    }
+  struct path_part *last = before_last->next;
+  // look up the path without its last part
+  before_last->next = 0;
+  struct fat_item *item = fat16_get_directory_entry (disk, path);
+  before_last->next = last;
+  if (!item)
+    {
+      return -NOT_FOUND_ERROR;
+    }
+  if (item->type != FAT_ITEM_TYPE_DIRECTORY)
+    {
+      fat16_fat_item_free (item);
+      return -NOT_DIRECTORY_ERROR;
+    }
+  out->directory = item->directory;
+  out->owner = item;
+  out->name = last->part;
+  return OK;
+}
+
+static void
+fat16_release_parent (struct fat16_parent *parent)
+{
+  if (parent->owner)
+    {
+      fat16_fat_item_free (parent->owner);
+    }
+}
+
+// adds a new item to the parent directory and returns its disk position
+static int
+fat16_create_item (struct disk *disk, struct fat16_parent *parent,
+                   struct fat_directory_item *item)
+{
+  int slot = fat16_find_free_slot (disk, parent->directory);
+  if (slot < 0)
+    {
+      return slot;
+    }
+  int pos = fat16_dir_entry_pos (disk, parent->directory, slot);
+  if (pos < 0)
+    {
+      return pos;
+    }
+  int res = fat16_write_dir_entry (disk, pos, item);
+  return res < 0 ? res : pos;
+}
+
+static void *
+fat16_open_for_write (struct disk *disk, struct path_part *path,
+                      FILE_MODE mode)
+{
+  struct fat16_parent parent;
+  int res = fat16_get_parent (disk, path, &parent);
+  if (res < 0)
+    {
+      return ERROR (res);
+    }
+
+  struct fat_directory_item entry;
+  int pos = 0;
+  int idx = fat16_find_index (parent.directory, parent.name);
+  if (idx >= 0)
+    {
+      entry = parent.directory->item[idx];
+      if (entry.attribute & FAT_FILE_SUBDIRECTORY)
+        {
+          res = -INVALID_ARG_ERROR;
+          goto out;
+        }
+      pos = fat16_dir_entry_pos (disk, parent.directory, idx);
+    }
+  else
+    {
+      memset (&entry, 0, sizeof (entry));
+      res = fat16_make_short_name (parent.name, entry.filename);
+      if (res < 0)
+        {
+          goto out;
+        }
+      entry.attribute = FAT_FILE_ARCHIVED;
+      fat16_stamp_item (&entry);
+      pos = fat16_create_item (disk, &parent, &entry);
+    }
+  if (pos < 0)
+    {
+      res = pos;
+      goto out;
+    }
+
+  // "w" starts with an empty file
+  if (mode == FILE_MODE_WRITE && fat16_get_first_cluster (&entry))
+    {
+      fat16_free_chain (disk, fat16_get_first_cluster (&entry));
+      fat16_set_first_cluster (&entry, 0);
+      entry.filesize = 0;
+      res = fat16_write_dir_entry (disk, pos, &entry);
+      if (res < 0)
+        {
+          goto out;
+        }
+    }
+
+  struct fat_file_descriptor *descriptor
+      = calloc (sizeof (struct fat_file_descriptor));
+  struct fat_item *f_item = calloc (sizeof (struct fat_item));
+  struct fat_directory_item *item_copy
+      = fat16_clone_directory_item (&entry, sizeof (entry));
+  if (!descriptor || !f_item || !item_copy)
+    {
+      free (descriptor);
+      free (f_item);
+      free (item_copy);
+      res = -NO_MEMORY_ERROR;
+      goto out;
+    }
+  f_item->type = FAT_ITEM_TYPE_FILE;
+  f_item->item = item_copy;
+  descriptor->item = f_item;
+  descriptor->mode = mode;
+  descriptor->dir_entry_pos = pos;
+  descriptor->pos = mode == FILE_MODE_APPEND ? entry.filesize : 0;
+  fat16_release_parent (&parent);
+  return descriptor;
+
+out:
+  fat16_release_parent (&parent);
+  return ERROR (res);
+}
+
+int
+fat16_write (struct disk *disk, void *descriptor, uint32_t size,
+             uint32_t nmemb, const char *in)
+{
+  struct fat_private *private = disk->fs_private_data;
+  struct fat_file_descriptor *desc = descriptor;
+  if (desc->mode == FILE_MODE_READ || desc->item->type != FAT_ITEM_TYPE_FILE)
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  struct fat_directory_item *item = desc->item->item;
+  uint32_t cluster_bytes = fat16_cluster_bytes (disk);
+  uint32_t total = size * nmemb;
+  uint32_t written = 0;
+  int res = OK;
+  while (written < total)
+    {
+      uint32_t first = fat16_get_first_cluster (item);
+      int cluster
+          = fat16_cluster_at (disk, &first, desc->pos / cluster_bytes, 1);
+      fat16_set_first_cluster (item, first);
+      if (cluster < 0)
+        {
+          res = cluster;
+          break;
+        }
+      uint32_t offset = desc->pos % cluster_bytes;
+      uint32_t chunk = cluster_bytes - offset;
+      if (chunk > total - written)
+        {
+          chunk = total - written;
+        }
+      stream_seek (private->cluster_read_stream,
+                   fat16_cluster_to_sector (private, cluster)
+                           * disk->sector_size
+                       + offset);
+      res = disk_stream_write (private->cluster_read_stream, in + written,
+                               chunk);
+      if (res < 0)
+        {
+          break;
+        }
+      written += chunk;
+      desc->pos += chunk;
+    }
+  if (desc->pos > item->filesize)
+    {
+      item->filesize = desc->pos;
+    }
+  int dir_res = fat16_write_dir_entry (disk, desc->dir_entry_pos, item);
+  if (res < 0 || dir_res < 0)
+    {
+      return res < 0 ? res : dir_res;
+    }
+  return nmemb;
 }
 
