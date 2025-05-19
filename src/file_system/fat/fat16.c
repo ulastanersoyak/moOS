@@ -149,6 +149,7 @@ int fat16_listdir (struct disk *disk, struct path_part *path,
                    struct file_dirent *out, int max);
 int fat16_write (struct disk *disk, void *descriptor, uint32_t size,
                  uint32_t nmemb, const char *in);
+int fat16_remove (struct disk *disk, struct path_part *path);
 
 struct file_system fat16_fs = { .resolve = fat16_resolve,
                                 .open = fat16_open,
@@ -157,7 +158,8 @@ struct file_system fat16_fs = { .resolve = fat16_resolve,
                                 .stat = fat16_stat,
                                 .close = fat16_close,
                                 .listdir = fat16_listdir,
-                                .write = fat16_write };
+                                .write = fat16_write,
+                                .remove = fat16_remove };
 
 struct file_system *
 fat16_init ()
@@ -1453,5 +1455,64 @@ fat16_write (struct disk *disk, void *descriptor, uint32_t size,
       return res < 0 ? res : dir_res;
     }
   return nmemb;
+}
+
+static int
+fat16_directory_is_empty (struct disk *disk, struct fat_directory_item *item)
+{
+  struct fat_directory *directory = fat16_load_fat_directory (disk, item);
+  if (!directory)
+    {
+      // a directory without any items can fail to load
+      return 1;
+    }
+  int empty = 1;
+  for (int i = 0; i < directory->total; i++)
+    {
+      uint8_t first = directory->item[i].filename[0];
+      if (first != FAT_ENTRY_DELETED && first != '.'
+          && directory->item[i].attribute != FAT_FILE_LONG_NAME)
+        {
+          empty = 0;
+        }
+    }
+  fat16_free_directory (directory);
+  return empty;
+}
+
+int
+fat16_remove (struct disk *disk, struct path_part *path)
+{
+  struct fat16_parent parent;
+  int res = fat16_get_parent (disk, path, &parent);
+  if (res < 0)
+    {
+      return res;
+    }
+  int idx = fat16_find_index (parent.directory, parent.name);
+  if (idx < 0)
+    {
+      res = -NOT_FOUND_ERROR;
+      goto out;
+    }
+  struct fat_directory_item item = parent.directory->item[idx];
+  if ((item.attribute & FAT_FILE_SUBDIRECTORY)
+      && !fat16_directory_is_empty (disk, &item))
+    {
+      res = -DIR_NOT_EMPTY_ERROR;
+      goto out;
+    }
+  int pos = fat16_dir_entry_pos (disk, parent.directory, idx);
+  if (pos < 0)
+    {
+      res = pos;
+      goto out;
+    }
+  fat16_free_chain (disk, fat16_get_first_cluster (&item));
+  item.filename[0] = FAT_ENTRY_DELETED;
+  res = fat16_write_dir_entry (disk, pos, &item);
+out:
+  fat16_release_parent (&parent);
+  return res;
 }
 
