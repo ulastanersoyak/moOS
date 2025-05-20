@@ -150,6 +150,7 @@ int fat16_listdir (struct disk *disk, struct path_part *path,
 int fat16_write (struct disk *disk, void *descriptor, uint32_t size,
                  uint32_t nmemb, const char *in);
 int fat16_remove (struct disk *disk, struct path_part *path);
+int fat16_mkdir (struct disk *disk, struct path_part *path);
 
 struct file_system fat16_fs = { .resolve = fat16_resolve,
                                 .open = fat16_open,
@@ -159,7 +160,8 @@ struct file_system fat16_fs = { .resolve = fat16_resolve,
                                 .close = fat16_close,
                                 .listdir = fat16_listdir,
                                 .write = fat16_write,
-                                .remove = fat16_remove };
+                                .remove = fat16_remove,
+                                .mkdir = fat16_mkdir };
 
 struct file_system *
 fat16_init ()
@@ -1516,3 +1518,70 @@ out:
   return res;
 }
 
+int
+fat16_mkdir (struct disk *disk, struct path_part *path)
+{
+  struct fat_private *private = disk->fs_private_data;
+  struct fat16_parent parent;
+  int res = fat16_get_parent (disk, path, &parent);
+  if (res < 0)
+    {
+      return res;
+    }
+  struct fat_directory_item entry;
+  memset (&entry, 0, sizeof (entry));
+  if (fat16_find_index (parent.directory, parent.name) >= 0)
+    {
+      res = -FILE_EXISTS_ERROR;
+      goto out;
+    }
+  res = fat16_make_short_name (parent.name, entry.filename);
+  if (res < 0)
+    {
+      goto out;
+    }
+  int cluster = fat16_alloc_cluster (disk);
+  if (cluster < 0)
+    {
+      res = cluster;
+      goto out;
+    }
+  entry.attribute = FAT_FILE_SUBDIRECTORY;
+  fat16_set_first_cluster (&entry, cluster);
+  fat16_stamp_item (&entry);
+
+  // every directory starts with "." (itself) and ".." (its parent, 0 for
+  // the root directory)
+  struct fat_directory_item dots[2];
+  memset (dots, 0, sizeof (dots));
+  memset (dots[0].filename, ' ', 11);
+  memset (dots[1].filename, ' ', 11);
+  dots[0].filename[0] = '.';
+  dots[1].filename[0] = '.';
+  dots[1].filename[1] = '.';
+  dots[0].attribute = FAT_FILE_SUBDIRECTORY;
+  dots[1].attribute = FAT_FILE_SUBDIRECTORY;
+  fat16_stamp_item (&dots[0]);
+  fat16_stamp_item (&dots[1]);
+  fat16_set_first_cluster (&dots[0], cluster);
+  fat16_set_first_cluster (&dots[1], parent.directory->first_cluster);
+  stream_seek (private->cluster_read_stream,
+               fat16_cluster_to_sector (private, cluster) * disk->sector_size);
+  res = disk_stream_write (private->cluster_read_stream, dots, sizeof (dots));
+  if (res < 0)
+    {
+      goto out;
+    }
+  res = fat16_create_item (disk, &parent, &entry);
+  if (res < 0)
+    {
+      fat16_free_chain (disk, cluster);
+    }
+  else
+    {
+      res = OK;
+    }
+out:
+  fat16_release_parent (&parent);
+  return res;
+}

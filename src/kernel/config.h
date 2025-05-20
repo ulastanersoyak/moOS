@@ -68,6 +68,8 @@
 
 #define DIR_NOT_EMPTY_ERROR 12
 
+#define FILE_EXISTS_ERROR 13
+
 // printf max format string char
 #define MAX_STRING_FORMAT_CHAR 100
 
