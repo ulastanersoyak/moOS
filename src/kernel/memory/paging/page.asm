@@ -5,6 +5,7 @@ section .asm
 global load_page_dir
 global enable_paging
 global flush_tlb_entry
+global read_cr2
 
 load_page_dir:
 	push ebp
@@ -31,4 +32,8 @@ enable_paging:
 flush_tlb_entry:
 	mov    eax, [esp+4]
 	invlpg [eax]
+	ret
+
+read_cr2:
+	mov eax, cr2
 	ret

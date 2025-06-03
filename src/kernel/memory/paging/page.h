@@ -14,6 +14,8 @@
 struct page_dir
 {
   uint32_t *dir_entry;
+  // table owned by a user page directory, 0 for the kernel directory
+  uint32_t *user_table;
 };
 
 // holds a virtual addresses directory and page indexes to locate it
@@ -26,6 +28,17 @@ struct page_location
 // returns a page directory with 4 gb virtual address space
 // with tables and pages that are initialized with given flags
 struct page_dir *page_dir_init (uint32_t flags);
+
+// returns a page directory sharing every kernel table, plus an empty private
+// table covering the 4mb region that contains user_addr
+struct page_dir *page_dir_new_user (struct page_dir *kernel_dir,
+                                    void *user_addr);
+
+// frees a directory made by page_dir_new_user. mapped pages are not freed
+void page_dir_free_user (struct page_dir *dir);
+
+// address that caused the last page fault (cr2)
+uint32_t page_fault_address (void);
 
 // sets given virtual memory addresses dir and page indexes
 // returns 0 if successful

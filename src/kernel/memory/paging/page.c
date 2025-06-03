@@ -18,6 +18,9 @@ void enable_paging (void);
 // invalidates the tlb entry of the given virtual address
 void flush_tlb_entry (void *vir_addr);
 
+// returns the address that caused the last page fault
+uint32_t read_cr2 (void);
+
 static uint32_t *current_dir_entry = 0;
 
 struct page_dir *
@@ -49,6 +52,48 @@ page_dir_init (uint32_t flags)
   struct page_dir *dir = calloc (sizeof (struct page_dir));
   dir->dir_entry = dir_entry;
   return dir;
+}
+
+struct page_dir *
+page_dir_new_user (struct page_dir *kernel_dir, void *user_addr)
+{
+  struct page_dir *dir = calloc (sizeof (struct page_dir));
+  uint32_t *dir_entry
+      = calloc (sizeof (uint32_t) * TOTAL_ENTRIES_PER_DIRECTORY);
+  uint32_t *table = calloc (sizeof (uint32_t) * TOTAL_ENTRIES_PER_TABLE);
+  if (!dir || !dir_entry || !table)
+    {
+      free (dir);
+      free (dir_entry);
+      free (table);
+      return 0;
+    }
+  // kernel tables are shared. they are supervisor only so ring 3 code
+  // can't touch them, but the kernel stays mapped during syscalls
+  memcpy (dir_entry, kernel_dir->dir_entry,
+          sizeof (uint32_t) * TOTAL_ENTRIES_PER_DIRECTORY);
+  // the user table starts empty, every page in it is not present
+  uint32_t user_idx
+      = (uint32_t)user_addr / (TOTAL_ENTRIES_PER_TABLE * PAGE_SIZE);
+  dir_entry[user_idx]
+      = (uint32_t)table | IS_PRESENT | IS_WRITABLE | ACCESS_ALL;
+  dir->dir_entry = dir_entry;
+  dir->user_table = table;
+  return dir;
+}
+
+void
+page_dir_free_user (struct page_dir *dir)
+{
+  free (dir->user_table);
+  free (dir->dir_entry);
+  free (dir);
+}
+
+uint32_t
+page_fault_address (void)
+{
+  return read_cr2 ();
 }
 
 void
