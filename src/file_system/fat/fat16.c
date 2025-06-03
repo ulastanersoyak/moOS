@@ -1,6 +1,7 @@
 #include "fat16.h"
 #include "../../drivers/disk/disk.h"
 #include "../../drivers/disk/disk_stream.h"
+#include "../../drivers/rtc/rtc.h"
 #include "../../kernel/config.h"
 #include "../../libc/ctype/ctype.h"
 #include "../../libc/stdlib/stdlib.h"
@@ -936,6 +937,8 @@ fat16_listdir (struct disk *disk, struct path_part *path,
                                         sizeof (out[total].name));
       out[total].size = item->filesize;
       out[total].is_dir = (item->attribute & FAT_FILE_SUBDIRECTORY) != 0;
+      out[total].date = item->last_mod_date;
+      out[total].time = item->last_mod_time;
       total++;
     }
 
@@ -1194,15 +1197,15 @@ fat16_find_free_slot (struct disk *disk, struct fat_directory *directory)
   return res < 0 ? res : idx;
 }
 
-// there is no real time clock driver yet, new items get 1980-01-01 00:00
-#define FAT16_DEFAULT_DATE ((0 << 9) | (1 << 5) | 1)
-
+// sets the creation and modification time of a new item to now
 static void
 fat16_stamp_item (struct fat_directory_item *item)
 {
-  item->creation_date = FAT16_DEFAULT_DATE;
-  item->last_mod_date = FAT16_DEFAULT_DATE;
-  item->last_access = FAT16_DEFAULT_DATE;
+  item->creation_date = rtc_fat_date ();
+  item->creation_time = rtc_fat_time ();
+  item->last_mod_date = item->creation_date;
+  item->last_mod_time = item->creation_time;
+  item->last_access = item->creation_date;
 }
 
 // converts "notes.txt" to the padded uppercase 8.3 form "NOTES   TXT"
@@ -1451,6 +1454,9 @@ fat16_write (struct disk *disk, void *descriptor, uint32_t size,
     {
       item->filesize = desc->pos;
     }
+  item->last_mod_date = rtc_fat_date ();
+  item->last_mod_time = rtc_fat_time ();
+  item->last_access = item->last_mod_date;
   int dir_res = fat16_write_dir_entry (disk, desc->dir_entry_pos, item);
   if (res < 0 || dir_res < 0)
     {

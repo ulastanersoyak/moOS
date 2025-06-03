@@ -50,6 +50,8 @@ struct file_dirent
   char name[MAX_FILENAME_LEN];
   uint32_t size;
   uint8_t is_dir;
+  uint16_t date; // last modification, fat format (see rtc_fat_date)
+  uint16_t time;
 };
 
 // fills out with up to max entries of the directory at path. path is 0 for
