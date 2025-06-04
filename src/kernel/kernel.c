@@ -139,7 +139,8 @@ kernel_main (void)
 #if (IS_RTOS != 1)
   fs_init (verbose);
   struct page_dir *system_page_dir = 0;
-  system_page_dir = page_dir_init (IS_WRITABLE | IS_PRESENT | ACCESS_ALL);
+  // kernel pages are supervisor only, user tasks get their own pages
+  system_page_dir = page_dir_init (IS_WRITABLE | IS_PRESENT);
   // makes processor find entry of system page directory
   switch_page_dir (system_page_dir->dir_entry);
   // initializes paging for virtual memory and full system memory coverage
