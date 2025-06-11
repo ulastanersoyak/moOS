@@ -18,7 +18,8 @@ ASM_SRCS := src/bootloader/kernel.asm \
 	src/kernel/io/io.asm \
 	src/kernel/memory/paging/page.asm \
 	src/kernel/gdt/gdt.asm \
-	src/kernel/task/tss.asm
+	src/kernel/task/tss.asm \
+	src/kernel/task/task.asm
 
 C_SRCS := src/kernel/kernel.c \
 	src/drivers/screen/terminal.c \
