@@ -32,7 +32,7 @@
 // gdt and tss must outlive kernel_main. the cpu keeps reading them from memory
 // (e.g. iret reloads cs from the gdt) and interrupts reuse the stack once
 // kernel_main returns
-static struct tss tss;
+struct tss tss;
 static struct gdt_raw gdt_real[TOTAL_GDT_SEGMENTS];
 
 #if (RUN_SELF_TESTS == 1 && IS_RTOS != 1)
@@ -124,7 +124,7 @@ kernel_main (void)
   idt_init (verbose);
 
   memset (&tss, 0x00, sizeof (tss));
-  tss.esp0 = 0x600000; // kernels stack
+  // esp0 is set to the kernel stack of each user task when it is scheduled
   tss.ss0 = KERNEL_DATA_SEG;
   tss.iopb = sizeof (tss); // no io permission bitmap
   tss_load (TSS_SEG);

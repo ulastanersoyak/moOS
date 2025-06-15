@@ -39,4 +39,8 @@ struct tss
 
 void tss_load (uint32_t tss_segment);
 
+// the single tss of the system. the scheduler points esp0 at the kernel stack
+// of the task that is about to run
+extern struct tss tss;
+
 #endif // !TSS_H
