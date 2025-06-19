@@ -96,4 +96,11 @@
 
 #define PIT_FREQUENCY_HZ 100
 
+// tasks
+#define MAX_TASKS 16
+#define TASK_KERNEL_STACK_SIZE (16 * 1024)
+#define TASK_NAME_LEN 16
+// round robin time slice
+#define SCHED_QUANTUM_TICKS 5
+
 #endif // !CONFIG_H
