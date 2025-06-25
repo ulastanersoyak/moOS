@@ -6,7 +6,28 @@
 // asm functions
 void context_switch (uint32_t *old_esp, uint32_t new_esp);
 
+static enum sched_policy current_policy = SCHED_ROUND_ROBIN;
 static volatile uint8_t need_resched = 0;
+
+void
+sched_set_policy (enum sched_policy policy)
+{
+  current_policy = policy;
+  need_resched = 1;
+}
+
+enum sched_policy
+sched_get_policy (void)
+{
+  return current_policy;
+}
+
+const char *
+sched_policy_name (enum sched_policy policy)
+{
+  return policy == SCHED_REAL_TIME ? "real time (fixed priority preemptive)"
+                                   : "round robin";
+}
 
 static uint8_t
 task_runnable (struct task *task)
@@ -16,20 +37,29 @@ task_runnable (struct task *task)
 }
 
 // scans the task table in circular order starting after the running task,
-// so the running task is the last candidate and every task takes its turn
+// so the running task is the last candidate and equal tasks take turns
 static struct task *
 sched_pick_next (void)
 {
   uint32_t current = task_running - task_table;
+  struct task *best = 0;
   for (uint32_t n = 1; n <= MAX_TASKS; n++)
     {
       struct task *task = &task_table[(current + n) % MAX_TASKS];
-      if (task != task_idle && task_runnable (task))
+      if (task == task_idle || !task_runnable (task))
+        {
+          continue;
+        }
+      if (current_policy == SCHED_ROUND_ROBIN)
         {
           return task;
         }
+      if (!best || task->priority > best->priority)
+        {
+          best = task;
+        }
     }
-  return task_idle;
+  return best ? best : task_idle;
 }
 
 void
@@ -70,7 +100,9 @@ void
 sched_wake (struct task *task)
 {
   task->state = TASK_READY;
-  if (task_running == task_idle)
+  if (task_running == task_idle
+      || (current_policy == SCHED_REAL_TIME
+          && task->priority > task_running->priority))
     {
       need_resched = 1;
     }

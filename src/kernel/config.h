@@ -102,5 +102,12 @@
 #define TASK_NAME_LEN 16
 // round robin time slice
 #define SCHED_QUANTUM_TICKS 5
+// real time priorities, higher runs first. idle always has the lowest. the
+// shell sits above every user task so a runaway high priority program cant
+// lock out the console, killed tasks get the max so they can exit
+#define TASK_PRIORITY_MAX 31
+#define TASK_PRIORITY_SHELL 30
+#define TASK_PRIORITY_USER_MAX 29
+#define TASK_PRIORITY_DEFAULT 10
 
 #endif // !CONFIG_H

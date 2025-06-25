@@ -4,7 +4,22 @@
 #include "task.h"
 #include <stdint.h>
 
-// switches to the next ready task in turn. interrupts must be disabled and
+enum sched_policy
+{
+  // every ready task runs for SCHED_QUANTUM_TICKS in turn, priorities are
+  // ignored
+  SCHED_ROUND_ROBIN,
+  // fixed priority preemptive: the highest priority ready task always runs
+  // and preempts lower priority tasks as soon as it becomes ready. tasks
+  // with equal priority share the cpu round robin
+  SCHED_REAL_TIME,
+};
+
+void sched_set_policy (enum sched_policy policy);
+enum sched_policy sched_get_policy (void);
+const char *sched_policy_name (enum sched_policy policy);
+
+// switches to the task picked by the policy. interrupts must be disabled and
 // the running task must already be in its new state (e.g. TASK_SLEEPING)
 void schedule (void);
 
