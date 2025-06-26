@@ -98,6 +98,15 @@
 
 #define PIT_FREQUENCY_HZ 100
 
+// user tasks. programs are elf executables linked at USER_CODE_ADDR. the whole
+// user address space is the single page table at USER_CODE_ADDR (4mb)
+#define USER_CODE_SEG 0x1B // gdt entry 3 with rpl 3
+#define USER_DATA_SEG 0x23 // gdt entry 4 with rpl 3
+#define USER_CODE_ADDR 0x40000000
+#define USER_STACK_SIZE (16 * 1024)
+#define USER_SPACE_SIZE (TOTAL_ENTRIES_PER_TABLE * PAGE_SIZE)
+#define USER_STACK_TOP (USER_CODE_ADDR + USER_SPACE_SIZE)
+
 // tasks
 #define MAX_TASKS 16
 #define TASK_KERNEL_STACK_SIZE (16 * 1024)
@@ -111,5 +120,16 @@
 #define TASK_PRIORITY_SHELL 30
 #define TASK_PRIORITY_USER_MAX 29
 #define TASK_PRIORITY_DEFAULT 10
+// file descriptors of a task: 0 stdin, 1 stdout, 2 stderr, then open files
+// and pipes
+#define TASK_MAX_FDS 16
+// programs typed without a path are looked up here
+#define TASK_BIN_DIR "0:/bin/"
+#define TASK_BIN_EXT ".elf"
+// program arguments copied to the top of the user stack
+#define TASK_MAX_ARGS 16
+#define TASK_MAX_ARGS_BYTES 1024
+// user heap grows from the end of the program up to the stack guard page
+#define USER_HEAP_LIMIT (USER_STACK_TOP - USER_STACK_SIZE - PAGE_SIZE)
 
 #endif // !CONFIG_H

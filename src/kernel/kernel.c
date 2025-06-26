@@ -9,6 +9,7 @@
 #include "gdt/gdt.h"
 #include "idt/idt.h"
 #include "kmem/kheap.h"
+#include "task/task.h"
 #include "task/tss.h"
 #include <stdint.h>
 
@@ -150,6 +151,7 @@ kernel_main (void)
   fs_test_file ("0:/fs_test.txt", "file sys text\n");
   fs_test_file ("0:/dir/long.txt", 0);
 #endif
+  task_init (system_page_dir, verbose);
 #endif
   pit_init (verbose);
   enable_interrupts (verbose);

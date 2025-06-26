@@ -41,7 +41,12 @@ C_SRCS := src/kernel/kernel.c \
 	src/drivers/serial/serial.c \
 	src/drivers/rtc/rtc.c \
 	src/drivers/timer/pit.c \
-	src/drivers/keyboard/keyboard.c
+	src/drivers/keyboard/keyboard.c \
+	src/kernel/task/task.c \
+	src/kernel/task/sched.c \
+	src/kernel/task/elf.c \
+	src/kernel/task/handle.c \
+	src/kernel/task/pipe.c
 
 ASM_OBJS := $(patsubst src/%.asm,build/%.asm.o,$(ASM_SRCS))
 C_OBJS := $(patsubst src/%.c,build/%.o,$(C_SRCS))
