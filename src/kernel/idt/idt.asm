@@ -5,6 +5,7 @@ global no_intr
 global enable_intr
 global disable_intr
 global isr_stub_table
+global isr128
 
 extern interrupt_handler
 
@@ -83,13 +84,32 @@ isr%1:
 	%assign i i+1
 	%endrep
 
+	;         system call gate
+	ISR_NOERR 128
+
 isr_common:
 	pushad
+	;   save the interrupted data segment (user segments when coming from
+	;   ring 3) and switch to kernel data segments
+	mov ax, ds
+	push eax
+	mov ax, 0x10
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
+
 	push esp; pointer to struct interrupt_frame
 	call interrupt_handler
 	add  esp, 4
+
+	pop eax
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
 	popad
-	add  esp, 8; pop vector number and error code
+	add esp, 8; pop vector number and error code
 	iret
 
 	;   software interrupts without a handler

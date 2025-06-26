@@ -22,6 +22,8 @@ struct idtr_desc
 // stack layout built by isr_common in idt.asm, lowest address first
 struct interrupt_frame
 {
+  // data segment of the interrupted code
+  uint32_t ds;
   // pushed by pushad
   uint32_t edi;
   uint32_t esi;
@@ -38,7 +40,13 @@ struct interrupt_frame
   uint32_t eip;
   uint32_t cs;
   uint32_t eflags;
+  // pushed by the cpu only when interrupting ring 3
+  uint32_t user_esp;
+  uint32_t user_ss;
 } __attribute__ ((packed));
+
+// true when the interrupt arrived while running ring 3 code
+#define FRAME_FROM_USER(frame) (((frame)->cs & 3) == 3)
 
 // common c handler called by every exception and irq stub
 void interrupt_handler (struct interrupt_frame *frame);
@@ -46,8 +54,11 @@ void interrupt_handler (struct interrupt_frame *frame);
 // initialize interrupt descriptor table
 void idt_init (uint8_t verbose);
 
-// add a new interrupt to given index.
+// add a new ring 0 interrupt gate to given index.
 void idt_set (uint32_t interrupt_num, void *adr);
+
+// add a new interrupt gate with given type and attributes to given index.
+void idt_set_gate (uint32_t interrupt_num, void *addr, uint8_t type_attr);
 
 // asm wrapper functions
 void enable_interrupts (uint8_t verbose);
