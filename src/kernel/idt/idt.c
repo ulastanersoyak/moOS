@@ -7,6 +7,10 @@
 #include "../config.h"
 #include "../io/io.h"
 #include "../kpanic.h"
+#include "../memory/paging/page.h"
+#include "../syscall/syscall.h"
+#include "../task/sched.h"
+#include "../task/task.h"
 
 // idt table array
 struct idt_entry idt[TOTAL_INTERRUPTS];
@@ -17,6 +21,7 @@ struct idtr_desc idtr_descriptor;
 // addresses of the asm stubs for exceptions and pic irqs
 extern uint32_t isr_stub_table[TOTAL_ISR_STUBS];
 extern void no_intr ();
+extern void isr128 ();
 
 static const char *exception_names[32] = {
   "divide by zero",
@@ -56,30 +61,60 @@ static const char *exception_names[32] = {
 void
 interrupt_handler (struct interrupt_frame *frame)
 {
-  if (frame->vector < 32)
+  if (frame->vector == SYSCALL_INTERRUPT)
     {
-      printf ("%Cexception: %s\nvector: %d error code: %x eip: %x\n", red,
+      syscall_handler (frame);
+    }
+  else if (frame->vector < 32)
+    {
+      printf ("%Cexception: %s\nvector: %d error code: %x eip: %x", red,
               exception_names[frame->vector], frame->vector, frame->error_code,
               frame->eip);
+      if (frame->vector == 14)
+        {
+          printf (" address: %x", page_fault_address ());
+        }
+      printf ("\n%C", white);
+      // a faulting user task is killed, the kernel keeps running
+      if (FRAME_FROM_USER (frame))
+        {
+          task_exit (TASK_KILLED);
+        }
       panic ("unhandled cpu exception\n");
     }
+  else
+    {
+      uint32_t irq = frame->vector - PIC_MASTER_OFFSET;
+      // acknowledge first, the handlers below may switch to another task.
+      // irqs coming from slave pic need both pics acked
+      if (irq >= 8)
+        {
+          outb (PIC_SLAVE_COMMAND, PIC_EOI);
+        }
+      outb (PIC_MASTER_COMMAND, PIC_EOI);
 
-  uint32_t irq = frame->vector - PIC_MASTER_OFFSET;
-  if (irq == 0)
-    {
-      pit_tick ();
-    }
-  else if (irq == 1)
-    {
-      keyboard_handle_interrupt ();
+      if (irq == 0)
+        {
+          pit_tick ();
+          sched_tick ();
+        }
+      else if (irq == 1)
+        {
+          keyboard_handle_interrupt ();
+          if (keyboard_take_ctrl_c ())
+            {
+              task_kill_foreground ();
+            }
+          task_on_keyboard_input ();
+        }
     }
 
-  // acknowledge interrupt. irqs coming from slave pic need both pics acked
-  if (irq >= 8)
+  // the kernel is not preemptive, tasks only switch on the way back to ring 3
+  // or when they block
+  if (FRAME_FROM_USER (frame))
     {
-      outb (PIC_SLAVE_COMMAND, PIC_EOI);
+      task_return_to_user ();
     }
-  outb (PIC_MASTER_COMMAND, PIC_EOI);
 }
 
 void
@@ -96,6 +131,8 @@ idt_init (uint8_t verbose)
     {
       idt_set (i, (void *)isr_stub_table[i]);
     }
+  // present, ring 3, 32 bit interrupt gate so user code can do int 0x80
+  idt_set_gate (SYSCALL_INTERRUPT, isr128, 0xee);
   idt_load (&idtr_descriptor);
   if (verbose)
     {
@@ -121,13 +158,19 @@ disable_interrupts (void)
 }
 
 void
-idt_set (uint32_t interrupt_num, void *addr)
+idt_set_gate (uint32_t interrupt_num, void *addr, uint8_t type_attr)
 {
   struct idt_entry *desc = &idt[interrupt_num];
   desc->isr_low = (uint32_t)addr & 0x0000ffff;
   desc->kernel_cs = KERNEL_CODE_SEG;
   desc->zero = 0x00;
-  // present, ring 0, 32 bit interrupt gate
-  desc->type_attr = 0x8e;
+  desc->type_attr = type_attr;
   desc->isr_high = (uint32_t)addr >> 16;
+}
+
+void
+idt_set (uint32_t interrupt_num, void *addr)
+{
+  // present, ring 0, 32 bit interrupt gate
+  idt_set_gate (interrupt_num, addr, 0x8e);
 }

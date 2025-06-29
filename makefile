@@ -46,7 +46,8 @@ C_SRCS := src/kernel/kernel.c \
 	src/kernel/task/sched.c \
 	src/kernel/task/elf.c \
 	src/kernel/task/handle.c \
-	src/kernel/task/pipe.c
+	src/kernel/task/pipe.c \
+	src/kernel/syscall/syscall.c
 
 ASM_OBJS := $(patsubst src/%.asm,build/%.asm.o,$(ASM_SRCS))
 C_OBJS := $(patsubst src/%.c,build/%.o,$(C_SRCS))

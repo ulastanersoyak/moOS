@@ -132,4 +132,6 @@
 // user heap grows from the end of the program up to the stack guard page
 #define USER_HEAP_LIMIT (USER_STACK_TOP - USER_STACK_SIZE - PAGE_SIZE)
 
+#define SYSCALL_INTERRUPT 0x80
+
 #endif // !CONFIG_H
