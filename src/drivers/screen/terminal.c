@@ -14,6 +14,18 @@ static size_t terminal_row;
 static size_t terminal_column;
 static uint8_t terminal_colour;
 static uint16_t *terminal_buffer;
+static uint32_t terminal_scrolls = 0;
+
+// moves the blinking vga cursor to current position
+static void
+terminal_update_cursor (void)
+{
+  uint16_t pos = terminal_row * VGA_WIDTH + terminal_column;
+  outb (0x3D4, 0x0F);
+  outb (0x3D5, pos & 0xFF);
+  outb (0x3D4, 0x0E);
+  outb (0x3D5, (pos >> 8) & 0xFF);
+}
 
 // puts empty char on whole screen
 void
@@ -29,6 +41,7 @@ terminal_clean (void)
           terminal_buffer[idx] = vga_entry (' ', terminal_colour);
         }
     }
+  terminal_update_cursor ();
 }
 
 // initializes terminal attributes and cleans the screen
@@ -73,6 +86,7 @@ terminal_scroll (void)
       terminal_putentryat (' ', terminal_colour, x, VGA_HEIGHT - 1);
     }
   terminal_row = VGA_HEIGHT - 1;
+  terminal_scrolls++;
 }
 
 static void
@@ -100,6 +114,24 @@ terminal_putchar (char c)
   if (uc == '\n')
     {
       terminal_newline ();
+      terminal_update_cursor ();
+      return;
+    }
+  else if (uc == '\b')
+    {
+      // erase previous char, wrapping back to the end of the previous row
+      if (terminal_column > 0)
+        {
+          terminal_column--;
+        }
+      else if (terminal_row > 0)
+        {
+          terminal_row--;
+          terminal_column = VGA_WIDTH - 1;
+        }
+      terminal_putentryat (' ', terminal_colour, terminal_column,
+                           terminal_row);
+      terminal_update_cursor ();
       return;
     }
   else if (uc == '\t')
@@ -109,6 +141,7 @@ terminal_putchar (char c)
         {
           terminal_newline ();
         }
+      terminal_update_cursor ();
       return;
     }
   terminal_putentryat (uc, terminal_colour, terminal_column, terminal_row);
@@ -116,6 +149,7 @@ terminal_putchar (char c)
     {
       terminal_newline ();
     }
+  terminal_update_cursor ();
 }
 
 // wrapper of terminal_putchar function
@@ -195,6 +229,27 @@ terminal_writehex (uint32_t num)
     {
       terminal_putchar (map[(num >> shift) & 0xF]);
     }
+}
+
+void
+terminal_get_cursor (size_t *row, size_t *column)
+{
+  *row = terminal_row;
+  *column = terminal_column;
+}
+
+void
+terminal_set_cursor (size_t row, size_t column)
+{
+  terminal_row = row < VGA_HEIGHT ? row : VGA_HEIGHT - 1;
+  terminal_column = column < VGA_WIDTH ? column : VGA_WIDTH - 1;
+  terminal_update_cursor ();
+}
+
+uint32_t
+terminal_scroll_count (void)
+{
+  return terminal_scrolls;
 }
 
 void
