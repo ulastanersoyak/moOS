@@ -9,6 +9,7 @@
 #include "gdt/gdt.h"
 #include "idt/idt.h"
 #include "kmem/kheap.h"
+#include "shell/shell.h"
 #include "task/task.h"
 #include "task/tss.h"
 #include <stdint.h>
@@ -18,12 +19,14 @@
 // TODO: heap allocator         [x]
 // TODO: paging                 [x]
 // TODO: disk io                [x]
-// TODO: full idt               [ ]
-// TODO: keyboard driver        [ ]
-// TODO: vfs                    [ ]
-// TODO: file system            [ ]
+// TODO: full idt               [x]
+// TODO: keyboard driver        [x]
+// TODO: vfs                    [x]
+// TODO: file system            [x]
+// TODO: shell                  [x]
+// TODO: userland               [x]
+// TODO: scheduler              [x]
 // TODO: rtos                   [ ]
-// TODO: userland               [ ]
 
 #define IS_RTOS (0)
 
@@ -155,4 +158,7 @@ kernel_main (void)
 #endif
   pit_init (verbose);
   enable_interrupts (verbose);
+#if (IS_RTOS != 1)
+  shell_run ();
+#endif
 }
