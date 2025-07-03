@@ -55,6 +55,14 @@ ASM_OBJS := $(patsubst src/%.asm,build/%.asm.o,$(ASM_SRCS))
 C_OBJS := $(patsubst src/%.c,build/%.o,$(C_SRCS))
 FILES := $(ASM_OBJS) $(C_OBJS)
 
+# user programs, elf executables copied to 0:/bin on the disk image
+USER_PROGS := echo
+USER_LIB_OBJS := build/user/lib/crt0.asm.o build/user/lib/syscall.asm.o \
+	build/user/lib/moos.o
+USER_BINS := $(patsubst %,build/user/%.elf,$(USER_PROGS))
+# keep user objects, make would delete them as intermediate files
+.SECONDARY: $(USER_BINS:.elf=.o)
+
 FLAGS = -g -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector \
 	-fno-asynchronous-unwind-tables -fomit-frame-pointer -march=i686 \
 	-mno-mmx -mno-sse -mno-sse2 -nostdlib -Wall -Werror -Wno-unused-function \
@@ -64,7 +72,7 @@ FLAGS = -g -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector \
 
 all: ./bin/os.bin
 
-./bin/os.bin: ./bin/bootloader.bin ./bin/kernel.bin ./test/fs_test.txt ./build/long.txt
+./bin/os.bin: ./bin/bootloader.bin ./bin/kernel.bin ./test/fs_test.txt ./build/long.txt $(USER_BINS)
 	rm -f $@
 	dd if=/dev/zero of=$@ bs=512 count=$(DISK_SECTORS) status=none
 	dd if=./bin/bootloader.bin of=$@ conv=notrunc status=none
@@ -75,6 +83,11 @@ all: ./bin/os.bin
 	MTOOLS_SKIP_CHECK=1 mcopy -i $@ ./test/fs_test.txt ::/
 	MTOOLS_SKIP_CHECK=1 mmd -i $@ ::/dir
 	MTOOLS_SKIP_CHECK=1 mcopy -i $@ ./build/long.txt ::/dir/
+	MTOOLS_SKIP_CHECK=1 mmd -i $@ ::/bin
+	MTOOLS_SKIP_CHECK=1 mcopy -i $@ $(USER_BINS) ::/bin/
+
+build/user/%.elf: build/user/%.o $(USER_LIB_OBJS) ./src/user/linker.ld
+	$(LD) -s -z noexecstack -T ./src/user/linker.ld -o $@ $< $(USER_LIB_OBJS)
 
 # multi cluster test file: 600 lines of "line NNNN\n"
 ./build/long.txt:
@@ -103,7 +116,7 @@ build/%.o: src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(FLAGS) -c $< -o $@
 
--include $(C_OBJS:.o=.d)
+-include $(C_OBJS:.o=.d) $(USER_BINS:.elf=.d) build/user/lib/moos.d
 
 clean:
 	rm -rf ./build/* ./bin/*
