@@ -56,7 +56,7 @@ C_OBJS := $(patsubst src/%.c,build/%.o,$(C_SRCS))
 FILES := $(ASM_OBJS) $(C_OBJS)
 
 # user programs, elf executables copied to 0:/bin on the disk image
-USER_PROGS := cat echo
+USER_PROGS := cat echo ls
 USER_LIB_OBJS := build/user/lib/crt0.asm.o build/user/lib/syscall.asm.o \
 	build/user/lib/moos.o
 USER_BINS := $(patsubst %,build/user/%.elf,$(USER_PROGS))
