@@ -56,7 +56,8 @@ C_OBJS := $(patsubst src/%.c,build/%.o,$(C_SRCS))
 FILES := $(ASM_OBJS) $(C_OBJS)
 
 # user programs, elf executables copied to 0:/bin on the disk image
-USER_PROGS := hello count crash spin rtdemo memtest cat wc sort cp echo ls grep
+USER_PROGS := hello count crash spin rtdemo memtest cat wc sort cp echo ls grep \
+	date
 USER_LIB_OBJS := build/user/lib/crt0.asm.o build/user/lib/syscall.asm.o \
 	build/user/lib/moos.o
 USER_BINS := $(patsubst %,build/user/%.elf,$(USER_PROGS))
