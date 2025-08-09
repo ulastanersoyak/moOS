@@ -2,6 +2,7 @@
 #   make CC=~/opt/cross/bin/i686-elf-gcc LD=~/opt/cross/bin/i686-elf-ld
 CC := clang --target=i686-elf
 LD := ld -m elf_i386
+OBJCOPY := objcopy
 QEMU := qemu-system-i386
 
 # kernel is stored in the fat16 reserved sectors right after the boot sector.
@@ -12,7 +13,7 @@ DISK_SECTORS := 32768
 FAT_START_SECTOR := 200
 SECTORS_PER_FAT := 32
 
-# kernel.asm must be first so _start ends up at 0x100000
+# kernel.asm holds the entry stub, the linker script places it first
 ASM_SRCS := src/bootloader/kernel.asm \
 	src/kernel/idt/idt.asm \
 	src/kernel/io/io.asm \
@@ -95,10 +96,14 @@ build/user/%.elf: build/user/%.o $(USER_LIB_OBJS) ./src/user/linker.ld
 	@mkdir -p $(dir $@)
 	seq -f 'line %04g' 1 600 > $@
 
-./bin/kernel.bin: $(FILES) ./src/linker.ld
+# kernel elf, loaded by multiboot loaders and used for debug symbols
+./bin/kernel.elf: $(FILES) ./src/linker.ld
 	@mkdir -p $(dir $@)
-	$(LD) -g -relocatable $(FILES) -o ./build/kernelfull.o
-	$(LD) -T ./src/linker.ld -o $@ ./build/kernelfull.o
+	$(LD) -T ./src/linker.ld -o $@ $(FILES)
+
+# flat image for the moOS bootloader, padded to the sectors it loads
+./bin/kernel.bin: ./bin/kernel.elf
+	$(OBJCOPY) -O binary $< $@
 	@size=$$(stat -c %s $@); max=$$(($(KERNEL_SECTORS) * 512)); \
 	if [ $$size -gt $$max ]; then \
 		echo "kernel.bin is $$size bytes, bootloader only loads $$max"; rm -f $@; exit 1; \
