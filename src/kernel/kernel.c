@@ -9,6 +9,7 @@
 #include "gdt/gdt.h"
 #include "idt/idt.h"
 #include "kmem/kheap.h"
+#include "multiboot.h"
 #include "shell/shell.h"
 #include "task/task.h"
 #include "task/tss.h"
@@ -97,12 +98,48 @@ fs_test_file (const char *path, const char *expected)
 }
 #endif
 
+// name of the bootloader, copied out of the multiboot info before the
+// memory it lives in gets reused
+static char boot_loader_name[48] = "moOS bootloader";
+
+static void
+read_boot_info (uint32_t boot_magic, uint32_t boot_info)
+{
+  if (boot_magic != MULTIBOOT_BOOTLOADER_MAGIC)
+    {
+      return;
+    }
+  struct multiboot_info *info = (struct multiboot_info *)boot_info;
+  if (info->flags & MULTIBOOT_INFO_BOOT_LOADER_NAME)
+    {
+      const char *name = (const char *)info->boot_loader_name;
+      uint32_t i = 0;
+      for (; name[i] && i < sizeof (boot_loader_name) - 1; i++)
+        {
+          boot_loader_name[i] = name[i];
+        }
+      boot_loader_name[i] = '\0';
+    }
+  else
+    {
+      strcpy (boot_loader_name, "unknown multiboot loader");
+    }
+}
+
+// boot_magic and boot_info come from a multiboot loader (eax and ebx), both
+// are 0 when booted by the moOS bootloader
 void
-kernel_main (void)
+kernel_main (uint32_t boot_magic, uint32_t boot_info)
 {
   uint8_t verbose = 1;
 
+  read_boot_info (boot_magic, boot_info);
   terminal_init (verbose);
+  if (verbose)
+    {
+      printf ("booted by %s", boot_loader_name);
+      init_OK ();
+    }
 
   // segments specified in bootloader written in c
   struct gdt gdt[TOTAL_GDT_SEGMENTS] = {

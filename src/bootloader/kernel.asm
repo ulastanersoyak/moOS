@@ -1,17 +1,74 @@
 [bits 32]
 
+	;   kernel entry for both bootloaders. the moOS bootloader loads the flat
+	;   kernel.bin to 0x100000 and jumps to its first byte (_start). multiboot
+	;   loaders like limine load kernel.elf and jump to its elf entry point
+	;   (multiboot_entry) with eax = MULTIBOOT_BOOTLOADER_MAGIC and ebx pointing
+	;   to the multiboot info structure
+
 global _start
+global multiboot_entry
 extern kernel_main
+extern __bss_start
+extern __bss_end
+
+MULTIBOOT_HEADER_MAGIC equ 0x1BADB002
+MULTIBOOT_HEADER_FLAGS equ 0x00000000; elf kernel, no extra requests
+
+KERNEL_CODE_SEG equ 0x08
+KERNEL_DATA_SEG equ 0x10
+KERNEL_STACK    equ 0x00200000
+
+	;       placed first in the kernel image by the linker script
+	section .boot
 
 _start:
-	mov ax, 0x10; now in pm old segments are meaningless so change segments to the ones defined in gdt
-	mov ds, ax
-	mov ss, ax
-	mov es, ax
-	mov fs, ax
-	mov gs, ax
-	mov ebp, 0x00200000
+	jmp own_bootloader_entry
+
+	;     must be 4 byte aligned and within the first 8 kb of kernel.elf
+	align 4
+
+multiboot_header:
+	dd MULTIBOOT_HEADER_MAGIC
+	dd MULTIBOOT_HEADER_FLAGS
+	dd -(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_HEADER_FLAGS)
+
+own_bootloader_entry:
+	;   the moOS bootloader already loaded a flat gdt and passes no boot info
+	xor eax, eax
+	xor ebx, ebx
+	jmp common_entry
+
+multiboot_entry:
+	;    the multiboot spec leaves the gdt undefined, load one before touching
+	;    segment registers. kernel_main replaces it with the gdt built in c
+	lgdt [boot_gdt_descriptor]
+	jmp  KERNEL_CODE_SEG:common_entry
+
+common_entry:
+	mov cx, KERNEL_DATA_SEG
+	mov ds, cx
+	mov ss, cx
+	mov es, cx
+	mov fs, cx
+	mov gs, cx
+	mov ebp, KERNEL_STACK
 	mov esp, ebp
+
+	;    zero the bss. multiboot loaders do it already, but the flat kernel.bin
+	;    doesnt contain the bss at all
+	mov  edx, eax
+	cld
+	mov  edi, __bss_start
+	mov  ecx, __bss_end
+	sub  ecx, edi
+	xor  eax, eax
+	rep  stosb
+	mov  eax, edx
+
+	;    kernel_main (boot magic, boot info)
+	push ebx
+	push eax
 
 	;   remap the programmable interrupt controllers so irqs dont collide with
 	;   cpu exceptions. master irqs -> 0x20-0x27, slave irqs -> 0x28-0x2f
@@ -44,4 +101,14 @@ _start:
 
 	jmp $
 
-times 512 - ($ - $$) db 0; align with c code
+	;     flat 4 gb code and data segments, same as the moOS bootloader gdt
+	align 8
+
+boot_gdt:
+	dq 0x0000000000000000; null
+	dq 0x00CF9A000000FFFF; code: base 0, limit 4 gb, ring 0, 32 bit
+	dq 0x00CF92000000FFFF; data: base 0, limit 4 gb, ring 0, 32 bit
+
+boot_gdt_descriptor:
+	dw $ - boot_gdt - 1
+	dd boot_gdt
