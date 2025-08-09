@@ -6,3 +6,4 @@ bin/
 build/
 .gdb_history
 .gdbinit
+__pycache__/

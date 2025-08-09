@@ -1,0 +1,298 @@
+#!/usr/bin/env python3
+"""boots moOS headless, types commands into the shell through the qemu
+monitor and checks the kernel log written to the debug console.
+
+usage: qemu_test.py [disk image], defaults to bin/os-moos.img"""
+
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+
+# the shell tests write to the disk, so they run on a copy of the image
+SOURCE_IMAGE = sys.argv[1] if len(sys.argv) > 1 else "./bin/os-moos.img"
+IMAGE = "./build/test.img"
+PARTITION_COPY = "./build/test-part.img"
+LOG = "./build/debugcon.log"
+
+# chars that need a qemu sendkey name
+KEY_NAMES = {
+    " ": "spc", "\n": "ret", ".": "dot", "/": "slash", "-": "minus",
+    ":": "shift-semicolon", "_": "shift-minus", ",": "comma", "&": "shift-7",
+    ">": "shift-dot", "<": "shift-comma", "|": "shift-backslash",
+    '"': "shift-apostrophe",
+}
+
+
+def key_name(c):
+    if c in KEY_NAMES:
+        return KEY_NAMES[c]
+    if c.isupper():
+        return "shift-" + c.lower()
+    return c
+
+
+# (text to type or special key, seconds to wait afterwards)
+STEPS = [
+    ("mem\n", 0.5),
+    ("help\n", 0.5),
+    ("echo hi there\n", 0.3),
+    ("ls\n", 0.5),
+    ("ls dir\n", 0.5),
+    ("ls nosuch\n", 0.5),
+    ("cat fs_test.txt\n", 0.5),
+    ("cat /dir/long.txt\n", 2.5),
+    ("uptime\n", 0.3),
+    ("sleep 300\n", 0.6),
+    ("hello\n", 0.5),
+    ("Tan\n", 0.5),
+    ("count\n", 1.3),
+    ("<ctrl-c>", 0.5),
+    ("crash\n", 0.8),
+    ("run 0:/bin/count.elf\n", 6.0),
+    ("hello\n", 0.5),
+    ("<ctrl-c>", 0.5),
+    ("spin\n", 1.0),
+    ("<ctrl-c>", 0.5),
+    ("foo\n", 0.3),
+    # scheduler: two cpu hogs in the background, then a periodic task under
+    # both policies
+    ("spin &\n", 0.3),
+    ("spin &\n", 0.3),
+    ("ps\n", 0.8),
+    ("rtdemo\n", 3.5),
+    ("sched rt\n", 0.3),
+    ("prio 25 rtdemo\n", 3.0),
+    # a hog above everything else still cant lock out the shell
+    ("prio 29 spin &\n", 0.5),
+    ("ps\n", 0.5),
+    # background tasks dont get keyboard input, kill has to wake them up
+    ("hello &\n", 0.5),
+    ("kill spin\n", 0.5),
+    ("kill hello\n", 0.5),
+    ("sched rr\n", 0.3),
+    ("ps\n", 0.5),
+    # elf programs with arguments, heap, file syscalls and redirection
+    ("hello Tan Bob\n", 0.5),
+    ("<up>", 0.3),
+    ("\n", 0.5),
+    ("memtest\n", 1.0),
+    ("crash code\n", 0.6),
+    ("echo banana > fruit.txt\n", 0.4),
+    ("echo apple >> fruit.txt\n", 0.4),
+    ("cat fr", 0.2),
+    ("<tab>", 0.3),
+    ("\n", 0.5),
+    ("sort fruit.txt > sorted.txt\n", 0.6),
+    ("mkdir notes\n", 0.4),
+    ("cd notes\n", 0.3),
+    ("cp ../fruit.txt f.txt\n", 0.6),
+    ("wc f.txt\n", 0.5),
+    ("pwd\n", 0.3),
+    ("cd ..\n", 0.3),
+    ("rm notes\n", 0.4),
+    ("rm nothere\n", 0.4),
+    ("cat dir/long.txt > copy.txt\n", 1.5),
+    ("ls\n", 0.5),
+    # pipes, < redirection, programs starting programs
+    ("cat fruit.txt|sort\n", 0.6),
+    ('echo "two  spaces" | wc\n', 0.6),
+    ("ls bin | grep E | sort | wc\n", 1.0),
+    ("cat dir/long.txt | sort | grep 600 | wc\n", 1.5),
+    ("wc < fruit.txt\n", 0.5),
+    ("cat nosuch | wc\n", 0.6),
+    ("pipetest\n", 0.8),
+    ("time sort fruit.txt\n", 0.6),
+    ("spin | wc\n", 0.6),
+    ("<ctrl-c>", 0.6),
+    ("count | wc &\n", 6.5),
+    ("wc\n", 0.4),
+    ("typed line\n", 0.3),
+    ("<ctrl-d>", 0.5),
+    ("cd | sort\n", 0.3),
+    ("date\n", 0.4),
+    ("ps\n", 0.5),
+    ("mem\n", 0.5),
+]
+
+EXPECTED = [
+    "system paging [OK]",
+    "pit timer init <100 hz> [OK]",
+    "welcome to moOS!",
+    "cd [dir]",                       # help
+    "hi there",                       # echo
+    "FS_TEST.TXT   14 bytes",         # ls
+    "DIR/          <dir>",
+    "LONG.TXT      6000 bytes",       # ls dir
+    "nosuch: not found",
+    "file sys text",                  # cat
+    "line 0600",
+    "ticks)",                         # uptime
+    "hello from ring 3!",             # hello reads input via syscall
+    "nice to meet you, Tan",
+    "counting to 10",                 # count gets killed with ctrl+c
+    "exception: page fault",          # crash writes to kernel memory
+    "[killed]",
+    "1 2 3 4 5 6 7 8 9 10\n[exit code 10]",
+    "spinning forever, press ctrl+c to stop\n^C\n[killed]",
+    "foo: unknown command",
+    "scheduler: real time (fixed priority preemptive)",
+    "scheduler: round robin",
+    "spin killed",
+    "hello killed",
+    "nice to meet you, Tan\nnice to meet you, Bob",
+    "memtest: ok",
+    "writing to my own code...\nexception: page fault",
+    "moos 0:/> cat fruit.txt \nbanana\napple",   # tab completion
+    "2 2 13 f.txt",
+    "0:/notes",
+    "notes: directory not empty",
+    "nothere: not found",
+    "SORTED.TXT    13 bytes",
+    "COPY.TXT      6000 bytes",
+    "moos 0:/> cat fruit.txt|sort\napple\nbanana\n",
+    "1 2 12\n",                    # quotes keep both spaces
+    "16 80 720\n",                 # 16 programs through a 4 stage pipeline
+    "1 2 10\n",                    # 6000 bytes through pipes larger than 4 kb
+    "2 2 13\n",
+    "nosuch: not found\n0 0 0",
+    "apple\nbanana\nfig\npear\npipetest: sort exited with 0",
+    "time: ",
+    "moos 0:/> spin | wc\n^C\n[killed]",
+    "count done",
+    "wc done",
+    "typed line\n1 2 11",          # terminal input ended with ctrl+d
+    "cd: pipes, redirection and & only work with programs",
+]
+
+FORBIDDEN = ["kernel panic", "still alive", "[ER]", "kfree: invalid"]
+
+
+# byte offset of the first fat16 partition, 0 for an unpartitioned disk (the
+# moOS bootloader layout). same check as disk_find_fat_partition in disk.c
+def fat_offset():
+    sector = open(IMAGE, "rb").read(512)
+    if sector[510:512] != b"\x55\xaa":
+        return 0
+    for i in range(4):
+        entry = sector[0x1BE + i * 16:0x1BE + (i + 1) * 16]
+        lba = int.from_bytes(entry[8:12], "little")
+        if entry[0] in (0x00, 0x80) and entry[4] in (0x04, 0x06, 0x0E) and lba:
+            return lba * 512
+    return 0
+
+
+def mtools(*args):
+    return subprocess.run(["mtype", "-i", f"{IMAGE}@@{fat_offset()}", *args],
+                          capture_output=True,
+                          env={"MTOOLS_SKIP_CHECK": "1", "PATH": "/usr/bin:/bin"})
+
+
+# the image written by moOS must be a valid fat16 file system that other
+# tools can read
+def check_disk():
+    failed = []
+    # fsck.fat cant start at an offset, check a copy of the partition
+    with open(IMAGE, "rb") as disk, open(PARTITION_COPY, "wb") as part:
+        disk.seek(fat_offset())
+        part.write(disk.read())
+    fsck = subprocess.run(["fsck.fat", "-n", PARTITION_COPY],
+                          capture_output=True, text=True)
+    if fsck.returncode != 0:
+        failed.append("fsck.fat found errors:\n" + fsck.stdout)
+    if mtools("::/sorted.txt").stdout != b"apple\nbanana\n":
+        failed.append("sorted.txt has wrong content")
+    if mtools("::/copy.txt").stdout != open("./build/long.txt", "rb").read():
+        failed.append("copy.txt differs from long.txt")
+    return failed
+
+
+# boot time depends on the bootloader (limine shows its menu for a second)
+def wait_for_shell(timeout=30):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            if "welcome to moOS" in open(LOG, encoding="latin-1").read():
+                time.sleep(0.3)
+                return
+        except FileNotFoundError:
+            pass
+        time.sleep(0.2)
+    raise RuntimeError("moOS did not reach the shell")
+
+
+def main():
+    shutil.copyfile(SOURCE_IMAGE, IMAGE)
+    # a log left from the last run would look like a finished boot
+    if os.path.exists(LOG):
+        os.remove(LOG)
+    qemu = subprocess.Popen(
+        ["qemu-system-i386", "-drive", f"file={IMAGE},format=raw",
+         "-rtc", "base=localtime",
+         "-display", "none", "-debugcon", f"file:{LOG}", "-monitor", "stdio",
+         "-no-reboot"],
+        stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, text=True)
+    try:
+        wait_for_shell()
+        for text, wait in STEPS:
+            keys = [text[1:-1]] if text.startswith("<") else map(key_name, text)
+            for key in keys:
+                qemu.stdin.write(f"sendkey {key}\n")
+                qemu.stdin.flush()
+                time.sleep(0.05)
+            time.sleep(wait)
+        qemu.stdin.write("quit\n")
+        qemu.stdin.flush()
+        qemu.wait(timeout=5)
+    finally:
+        if qemu.poll() is None:
+            qemu.kill()
+
+    log = open(LOG, encoding="latin-1").read()
+    print(log)
+    failed = [e for e in EXPECTED if e not in log]
+    failed += [f"forbidden: {f}" for f in FORBIDDEN if f in log]
+    # ctrl+c has to stop count while it sleeps, before it reaches 10
+    if not re.search(r"press ctrl\+c to stop\n(\d )*\d ?\^C\n\[killed\]", log):
+        failed.append("count was not killed by ctrl+c")
+    if log.count("[exit code 10]") != 1:
+        failed.append("count should exit normally exactly once")
+    if "what's your name? ^C\n[killed]" not in log:
+        failed.append("hello was not killed by ctrl+c while reading input")
+    # under round robin the periodic task waits for the hogs' time slices,
+    # under the real time policy it preempts them as soon as it wakes up
+    late = [int(x) for x in re.findall(r"rtdemo: max lateness (\d+) ms", log)]
+    if len(late) != 2 or late[0] < 40 or late[1] > 10:
+        failed.append(f"unexpected rtdemo lateness (rr, rt): {late}")
+    # both hogs must have shared the cpu while the shell was idle
+    hogs = re.findall(r"\n(\d+) +spin +(?:ready|running) +10 +(\d+)\.(\d)(\d) s &", log)
+    if len(hogs) < 4:
+        failed.append(f"spin tasks missing from ps: {hogs}")
+    # after kill only kernel threads may be left
+    last_ps = log[log.rfind("pid  name"):]
+    if "spin" in last_ps or "rtdemo" in last_ps:
+        failed.append("tasks left over after kill")
+    # running and killing programs must not leak heap blocks
+    mem = re.findall(r"heap: \d+ kb used / \d+ kb total \((\d+) of", log)
+    if len(mem) != 2 or mem[0] != mem[1]:
+        failed.append(f"heap usage changed across programs: {mem}")
+    # files written by moOS carry the date of the real time clock
+    today = time.strftime("%Y-%m-%d")
+    if not re.search(rf"FRUIT\.TXT +13 bytes +{today} ", log):
+        failed.append(f"new files are not dated {today}")
+    if log.count("nice to meet you, Bob") != 2:
+        failed.append("history did not repeat the last command")
+    failed += check_disk()
+    if failed:
+        print("FAILED:")
+        for f in failed:
+            print("  " + repr(f))
+        return 1
+    print("all shell tests passed")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

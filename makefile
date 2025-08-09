@@ -131,12 +131,7 @@ clean:
 run: all
 	$(QEMU) -drive file=./bin/os.bin,format=raw
 
-# boots headless for a few seconds and checks the kernel log written to the
-# qemu debug console
+# boots headless, types commands into the shell through the qemu monitor and
+# checks the kernel log written to the qemu debug console
 test: all
-	-timeout 5 $(QEMU) -drive file=./bin/os.bin,format=raw -display none \
-		-debugcon file:./build/debugcon.log
-	@cat ./build/debugcon.log
-	@! grep -q 'ER\]\|panic\|exception' ./build/debugcon.log
-	@grep -q 'enable interrupts' ./build/debugcon.log
-	@echo "boot test passed"
+	python3 ./scripts/qemu_test.py ./bin/os.bin
