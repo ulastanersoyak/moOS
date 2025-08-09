@@ -17,6 +17,9 @@ struct disk
   int32_t id;
   struct file_system *file_system;
   void *fs_private_data;
+  // first sector of the partition the file system is on, 0 for a disk
+  // without a partition table (the moOS bootloader layout)
+  uint32_t lba_offset;
 };
 
 // starting from logical_block_addr, reads total_block amount of blocks into
