@@ -30,7 +30,7 @@ DriveNumber       db 0x80; extended bpb
 WinNTBit          db 0x00
 Signature         db 0x29
 VolumeID          dd 0xD105
-VolumeIDString    db 'VOLUMEIDSTR'; 11 byte
+VolumeIDString    db 'NO NAME    '; 11 byte, fat convention for no label
 SystemIDString    db 'SYSIDSTR'; 8 byte
 
 boot_start2:
