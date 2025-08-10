@@ -1,0 +1,4 @@
+[submodule "external/limine"]
+	path = external/limine
+	url = https://codeberg.org/Limine/Limine.git
+	branch = v11.x-binary

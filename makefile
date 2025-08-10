@@ -3,15 +3,35 @@
 CC := clang --target=i686-elf
 LD := ld -m elf_i386
 OBJCOPY := objcopy
+HOST_CC := cc
 QEMU := qemu-system-i386
 
-# kernel is stored in the fat16 reserved sectors right after the boot sector.
-# must stay in sync with KERNEL_SECTORS in bootloader.asm and ReservedSectors
-KERNEL_SECTORS := 199
-# 16mb disk image, must match NumSectors in bootloader.asm
+# which bootloader the disk image boots with:
+#   moos   - the moOS boot sector, fat16 without a partition table, kernel in
+#            the reserved sectors
+#   limine - limine (external/limine submodule) in the mbr, fat16 partition
+#            with the kernel elf in /boot, booted through multiboot 1
+BOOTLOADER ?= moos
+ifeq ($(filter $(BOOTLOADER),moos limine),)
+$(error BOOTLOADER must be moos or limine, not $(BOOTLOADER))
+endif
+IMAGE := ./bin/os-$(BOOTLOADER).img
+
+# 16mb disk images
 DISK_SECTORS := 32768
+
+# moos layout: kernel is stored in the fat16 reserved sectors right after the
+# boot sector. must stay in sync with KERNEL_SECTORS, ReservedSectors and
+# NumSectors in bootloader.asm
+KERNEL_SECTORS := 199
 FAT_START_SECTOR := 200
 SECTORS_PER_FAT := 32
+
+# limine layout: the fat16 partition starts at 1 mb, limine's stage 2 goes in
+# the gap after the mbr
+LIMINE_DIR := ./external/limine
+LIMINE_TOOL := ./build/limine/limine
+PARTITION_START := 2048
 
 # kernel.asm holds the entry stub, the linker script places it first
 ASM_SRCS := src/bootloader/kernel.asm \
@@ -70,11 +90,23 @@ FLAGS = -g -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector \
 	-mno-mmx -mno-sse -mno-sse2 -nostdlib -Wall -Werror -Wno-unused-function \
 	-Wno-unused-label -Wno-unused-parameter -O0 -std=gnu99 -MMD -MP
 
-.PHONY: all run test clean
+.PHONY: all run test test-all clean
 
-all: ./bin/os.bin
+all: $(IMAGE)
 
-./bin/os.bin: ./bin/bootloader.bin ./bin/kernel.bin ./test/fs_test.txt ./build/long.txt $(USER_BINS)
+# copies the test files and user programs into the fat16 file system at the
+# mtools image spec $(1)
+define populate_fs
+	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) ./test/fs_test.txt ::/
+	MTOOLS_SKIP_CHECK=1 mmd -i $(1) ::/dir
+	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) ./build/long.txt ::/dir/
+	MTOOLS_SKIP_CHECK=1 mmd -i $(1) ::/bin
+	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) $(USER_BINS) ::/bin/
+endef
+
+FS_FILES := ./test/fs_test.txt ./build/long.txt $(USER_BINS)
+
+./bin/os-moos.img: ./bin/bootloader.bin ./bin/kernel.bin $(FS_FILES)
 	rm -f $@
 	dd if=/dev/zero of=$@ bs=512 count=$(DISK_SECTORS) status=none
 	dd if=./bin/bootloader.bin of=$@ conv=notrunc status=none
@@ -82,11 +114,29 @@ all: ./bin/os.bin
 	# first two fat entries hold the media type and end of chain marker
 	printf '\370\377\377\377' | dd of=$@ bs=512 seek=$(FAT_START_SECTOR) conv=notrunc status=none
 	printf '\370\377\377\377' | dd of=$@ bs=512 seek=$$(($(FAT_START_SECTOR) + $(SECTORS_PER_FAT))) conv=notrunc status=none
-	MTOOLS_SKIP_CHECK=1 mcopy -i $@ ./test/fs_test.txt ::/
-	MTOOLS_SKIP_CHECK=1 mmd -i $@ ::/dir
-	MTOOLS_SKIP_CHECK=1 mcopy -i $@ ./build/long.txt ::/dir/
-	MTOOLS_SKIP_CHECK=1 mmd -i $@ ::/bin
-	MTOOLS_SKIP_CHECK=1 mcopy -i $@ $(USER_BINS) ::/bin/
+	$(call populate_fs,$@)
+
+./bin/os-limine.img: ./bin/kernel.elf ./src/bootloader/limine.conf $(LIMINE_TOOL) $(FS_FILES)
+	rm -f $@
+	dd if=/dev/zero of=$@ bs=512 count=$(DISK_SECTORS) status=none
+	# mbr partition table with one bootable fat16 partition
+	echo 'start=$(PARTITION_START), type=06, bootable' | sfdisk --quiet $@
+	mkfs.fat -F 16 -n MOOS --offset $(PARTITION_START) $@ \
+		$$((($(DISK_SECTORS) - $(PARTITION_START)) / 2)) > /dev/null
+	MTOOLS_SKIP_CHECK=1 mmd -i $@@@$(PARTITION_START)S ::/boot ::/boot/limine
+	MTOOLS_SKIP_CHECK=1 mcopy -i $@@@$(PARTITION_START)S $(LIMINE_DIR)/limine-bios.sys ./src/bootloader/limine.conf ::/boot/limine/
+	MTOOLS_SKIP_CHECK=1 mcopy -i $@@@$(PARTITION_START)S ./bin/kernel.elf ::/boot/moos.elf
+	$(call populate_fs,$@@@$(PARTITION_START)S)
+	$(LIMINE_TOOL) bios-install $@ > /dev/null
+
+# limine's installer, built from the submodule into build/ so the submodule
+# checkout stays clean
+$(LIMINE_TOOL): $(LIMINE_DIR)/limine.c
+	@mkdir -p $(dir $@)
+	$(HOST_CC) -g -O2 -pipe -std=c99 $< -o $@
+
+$(LIMINE_DIR)/limine.c:
+	@echo "limine submodule missing, run: git submodule update --init" && exit 1
 
 build/user/%.elf: build/user/%.o $(USER_LIB_OBJS) ./src/user/linker.ld
 	$(LD) -s -z noexecstack -T ./src/user/linker.ld -o $@ $< $(USER_LIB_OBJS)
@@ -129,9 +179,14 @@ clean:
 
 # kernel log also goes to the serial port, shown in qemu's serial0 view
 run: all
-	$(QEMU) -drive file=./bin/os.bin,format=raw
+	$(QEMU) -drive file=$(IMAGE),format=raw -rtc base=localtime
 
 # boots headless, types commands into the shell through the qemu monitor and
 # checks the kernel log written to the qemu debug console
 test: all
-	python3 ./scripts/qemu_test.py ./bin/os.bin
+	python3 ./scripts/qemu_test.py $(IMAGE)
+
+# runs the tests with both bootloaders
+test-all:
+	$(MAKE) test BOOTLOADER=moos
+	$(MAKE) test BOOTLOADER=limine
