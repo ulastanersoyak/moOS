@@ -5,7 +5,7 @@ bootloader or with limine, runs preemptively scheduled ring 3 programs from a
 fat16 disk and comes with a shell that has pipes, redirection, job control,
 history and tab completion.
 
-![screenshot from 2023-11-05](https://github.com/ulastanersoyak/moos/assets/92662728/c7377806-eaa6-427b-b570-86b314c03937)
+![moOS booting into the shell](images/boot.png)
 
 ## features
 
@@ -58,6 +58,22 @@ shell
 planned
 - long file names (vfat)
 - a shell running in user space
+
+## screenshots
+
+files, redirection and pipelines
+
+![files and pipelines](images/files.png)
+
+background tasks, the real time scheduler and a program killed by a page fault
+
+![tasks and scheduling](images/tasks.png)
+
+the shell builtins
+
+![help](images/help.png)
+
+![cowsay and moose](images/moose.png)
 
 ## getting started
 
