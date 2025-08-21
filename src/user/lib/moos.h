@@ -30,9 +30,11 @@ void *sbrk (int32_t increment); // grows the heap, returns 0 when out of memory
 #define STDOUT 1
 #define STDERR 2
 
+#define NAME_MAX 63
+
 struct dirent
 {
-  char name[13];
+  char name[NAME_MAX + 1]; // long file names up to NAME_MAX chars
   uint32_t size;
   uint8_t is_dir;
   uint16_t date; // fat format: bits 15-9 year - 1980, 8-5 month, 4-0 day

@@ -34,10 +34,17 @@ list (const char *path)
       print_error (path[0] ? path : ".", total);
       return 1;
     }
+  // the name column fits the longest (long file) name
+  uint32_t width = 14;
+  for (int i = 0; i < total; i++)
+    {
+      uint32_t len = strlen (entries[i].name) + entries[i].is_dir + 2;
+      width = len > width ? len : width;
+    }
   for (int i = 0; i < total; i++)
     {
       struct dirent *entry = &entries[i];
-      char name[16];
+      char name[NAME_MAX + 2];
       uint32_t len = strlen (entry->name);
       memcpy (name, entry->name, len);
       if (entry->is_dir)
@@ -45,7 +52,7 @@ list (const char *path)
           name[len++] = '/';
         }
       name[len] = '\0';
-      print_padded (name, 14);
+      print_padded (name, width);
       if (entry->is_dir)
         {
           print_padded ("<dir>", 14);

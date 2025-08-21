@@ -42,8 +42,9 @@ typedef int (*FS_CLOSE_FUNCTION) (void *priv);
 typedef int (*FS_SEEK_FUNCTION) (void *priv, int32_t offset,
                                  FILE_SEEK_MODE seek_mode);
 
-// 8.3 name, dot and null terminator
-#define MAX_FILENAME_LEN 13
+// long (vfat) names up to 63 chars plus the null terminator. must match
+// struct dirent in src/user/lib/moos.h
+#define MAX_FILENAME_LEN 64
 
 struct file_dirent
 {

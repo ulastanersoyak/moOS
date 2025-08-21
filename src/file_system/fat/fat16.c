@@ -23,6 +23,20 @@
 
 // attribute value used by vfat long filename entries
 #define FAT_FILE_LONG_NAME 0x0F
+// the first long name entry of a name (stored first, holds its end) has this
+// bit set in its sequence number
+#define FAT_LFN_LAST 0x40
+#define FAT_LFN_SEQ_MASK 0x1F
+#define FAT_LFN_CHARS 13
+// longest name we create, the dirent can hold one more char for the null
+#define FAT_LFN_MAX (MAX_FILENAME_LEN - 1)
+#define FAT_LFN_MAX_ENTRIES                                                   \
+  ((FAT_LFN_MAX + FAT_LFN_CHARS - 1) / FAT_LFN_CHARS)
+
+// windows nt keeps the case of 8.3 names in the reserved byte instead of
+// writing a long name for "readme.txt"
+#define FAT_NAME_LOWER_BASE 0x08
+#define FAT_NAME_LOWER_EXT 0x10
 
 typedef unsigned int FAT_ITEM_TYPE;
 #define FAT_ITEM_TYPE_DIRECTORY 0
@@ -90,6 +104,20 @@ struct fat_directory_item
   uint16_t last_mod_date;
   uint16_t low_16_bits_first_cluster;
   uint32_t filesize;
+} __attribute__ ((packed));
+
+// vfat long name entry. a long name is stored as a run of these right before
+// the 8.3 entry of the file, last part first. each holds 13 ucs-2 chars
+struct fat_lfn_entry
+{
+  uint8_t seq;
+  uint16_t name1[5];
+  uint8_t attribute; // FAT_FILE_LONG_NAME
+  uint8_t type;
+  uint8_t checksum; // of the 8.3 name it belongs to
+  uint16_t name2[6];
+  uint16_t first_cluster; // always 0
+  uint16_t name3[2];
 } __attribute__ ((packed));
 
 struct fat_directory
@@ -377,6 +405,104 @@ fat16_get_full_relative_filename (struct fat_directory_item *item, char *out,
       fat16_to_proper_string (&out_tmp, (const char *)item->ext,
                               sizeof (item->ext));
     }
+}
+
+// 8.3 name with the case bits of the reserved byte applied, "readme.txt"
+// instead of "README.TXT"
+static void
+fat16_get_short_name (struct fat_directory_item *item, char *out, int max_len)
+{
+  fat16_get_full_relative_filename (item, out, max_len);
+  uint8_t lower = item->reserved & FAT_NAME_LOWER_BASE;
+  for (char *c = out; *c; c++)
+    {
+      if (*c == '.')
+        {
+          lower = item->reserved & FAT_NAME_LOWER_EXT;
+        }
+      else if (lower)
+        {
+          *c = tolower (*c);
+        }
+    }
+}
+
+static uint8_t
+fat16_short_name_checksum (const uint8_t *short_name)
+{
+  uint8_t sum = 0;
+  for (int i = 0; i < 11; i++)
+    {
+      sum = ((sum & 1) << 7) + (sum >> 1) + short_name[i];
+    }
+  return sum;
+}
+
+static uint16_t *
+fat16_lfn_char (struct fat_lfn_entry *entry, int i)
+{
+  if (i < 5)
+    {
+      return &entry->name1[i];
+    }
+  return i < 11 ? &entry->name2[i - 5] : &entry->name3[i - 11];
+}
+
+// number of long name entries in front of the 8.3 item idx of directory
+// that belong to it, 0 if it has no (valid) long name
+static int
+fat16_lfn_count (struct fat_directory *directory, int idx)
+{
+  uint8_t checksum
+      = fat16_short_name_checksum (directory->item[idx].filename);
+  for (int n = 1; n <= idx && n <= FAT_LFN_SEQ_MASK; n++)
+    {
+      struct fat_lfn_entry *entry
+          = (struct fat_lfn_entry *)&directory->item[idx - n];
+      if (entry->attribute != FAT_FILE_LONG_NAME
+          || entry->seq == FAT_ENTRY_DELETED
+          || (entry->seq & FAT_LFN_SEQ_MASK) != n
+          || entry->checksum != checksum)
+        {
+          return 0;
+        }
+      if (entry->seq & FAT_LFN_LAST)
+        {
+          return n;
+        }
+    }
+  return 0;
+}
+
+// display name of item idx: its long name if it has one, else the 8.3 name.
+// chars outside ascii become '?', names longer than max_len are cut
+static void
+fat16_get_item_name (struct fat_directory *directory, int idx, char *out,
+                     int max_len)
+{
+  int count = fat16_lfn_count (directory, idx);
+  if (count == 0)
+    {
+      fat16_get_short_name (&directory->item[idx], out, max_len);
+      return;
+    }
+  int len = 0;
+  for (int n = 1; n <= count; n++)
+    {
+      struct fat_lfn_entry *entry
+          = (struct fat_lfn_entry *)&directory->item[idx - n];
+      for (int i = 0; i < FAT_LFN_CHARS; i++)
+        {
+          uint16_t c = *fat16_lfn_char (entry, i);
+          if (c == 0x0000 || c == 0xFFFF || len == max_len - 1)
+            {
+              goto done;
+            }
+          out[len++] = c < 0x80 ? c : '?';
+        }
+    }
+done:
+  out[len] = '\0';
 }
 
 struct fat_directory_item *
@@ -684,11 +810,13 @@ fat16_new_fat_item_for_directory_item (struct disk *disk,
   return f_item;
 }
 
-// returns the index of the item called name in directory or -1
+// returns the index of the 8.3 item called name in directory or -1. name
+// can be the long name or the 8.3 alias ("long file name.txt" or
+// "LONGFI~1.TXT"), case is ignored like on windows
 static int
 fat16_find_index (struct fat_directory *directory, const char *name)
 {
-  char tmp_filename[MAX_PATH_LEN];
+  char tmp_filename[MAX_PATH_LEN + 1];
   for (int i = 0; i < directory->total; i++)
     {
       struct fat_directory_item *item = &directory->item[i];
@@ -698,9 +826,13 @@ fat16_find_index (struct fat_directory *directory, const char *name)
         {
           continue;
         }
+      fat16_get_item_name (directory, i, tmp_filename, sizeof (tmp_filename));
+      if (istrncmp (tmp_filename, name, sizeof (tmp_filename)) == 0)
+        {
+          return i;
+        }
       fat16_get_full_relative_filename (item, tmp_filename,
                                         sizeof (tmp_filename));
-      // 8.3 names are stored in uppercase so compare ignoring case
       if (istrncmp (tmp_filename, name, sizeof (tmp_filename)) == 0)
         {
           return i;
@@ -933,8 +1065,8 @@ fat16_listdir (struct disk *disk, struct path_part *path,
         {
           continue;
         }
-      fat16_get_full_relative_filename (item, out[total].name,
-                                        sizeof (out[total].name));
+      fat16_get_item_name (directory, i, out[total].name,
+                           sizeof (out[total].name));
       out[total].size = item->filesize;
       out[total].is_dir = (item->attribute & FAT_FILE_SUBDIRECTORY) != 0;
       out[total].date = item->last_mod_date;
