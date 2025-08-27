@@ -1826,6 +1826,20 @@ fat16_remove (struct disk *disk, struct path_part *path)
       res = pos;
       goto out;
     }
+  // the long name entries in front of the item go too, fsck.fat complains
+  // about orphaned ones
+  int lfn_count = fat16_lfn_count (parent.directory, idx);
+  for (int i = idx - lfn_count; i < idx; i++)
+    {
+      struct fat_directory_item lfn = parent.directory->item[i];
+      int lfn_pos = fat16_dir_entry_pos (disk, parent.directory, i);
+      lfn.filename[0] = FAT_ENTRY_DELETED;
+      if (lfn_pos < 0
+          || (res = fat16_write_dir_entry (disk, lfn_pos, &lfn)) < 0)
+        {
+          goto out;
+        }
+    }
   fat16_free_chain (disk, fat16_get_first_cluster (&item));
   item.filename[0] = FAT_ENTRY_DELETED;
   res = fat16_write_dir_entry (disk, pos, &item);
