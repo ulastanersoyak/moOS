@@ -1299,33 +1299,38 @@ fat16_write_dir_entry (struct disk *disk, uint32_t pos,
   return OK;
 }
 
-// returns an index where a new item can be stored in directory. full
-// subdirectories grow by a cluster, the root directory has a fixed size
+// returns the index of count free items in a row where new items can be
+// stored in directory (a long name takes several). full subdirectories grow
+// by a cluster, the root directory has a fixed size
 static int
-fat16_find_free_slot (struct disk *disk, struct fat_directory *directory)
+fat16_find_free_slot (struct disk *disk, struct fat_directory *directory,
+                      int count)
 {
   struct fat_private *private = disk->fs_private_data;
+  int run = 0;
   for (int i = 0; i < directory->total; i++)
     {
-      if (directory->item[i].filename[0] == FAT_ENTRY_DELETED)
+      run = directory->item[i].filename[0] == FAT_ENTRY_DELETED ? run + 1 : 0;
+      if (run == count)
         {
-          return i;
+          return i - count + 1;
         }
     }
   int idx = directory->total;
   if (directory->first_cluster == 0)
     {
       // keep one end marker after the last item
-      return idx + 1 < private->header.primary_header.root_dir_entries
+      return idx + count < private->header.primary_header.root_dir_entries
                  ? idx
                  : -NO_MEMORY_ERROR;
     }
-  // appends a cluster to the directory if idx (or the end marker after it)
-  // is past its last cluster. new clusters are zeroed, so they end the list
+  // appends a cluster to the directory if the new items (or the end marker
+  // after them) are past its last cluster. new clusters are zeroed, so they
+  // end the list
   uint32_t per_cluster
       = fat16_cluster_bytes (disk) / sizeof (struct fat_directory_item);
   uint32_t first = directory->first_cluster;
-  int res = fat16_cluster_at (disk, &first, (idx + 1) / per_cluster, 1);
+  int res = fat16_cluster_at (disk, &first, (idx + count) / per_cluster, 1);
   return res < 0 ? res : idx;
 }
 
@@ -1340,9 +1345,11 @@ fat16_stamp_item (struct fat_directory_item *item)
   item->last_access = item->creation_date;
 }
 
-// converts "notes.txt" to the padded uppercase 8.3 form "NOTES   TXT"
+// converts "notes.txt" to the padded uppercase 8.3 form "NOTES   TXT".
+// case sets the reserved byte bits that bring back an all lowercase base or
+// extension, names with mixed case parts need a long name
 static int
-fat16_make_short_name (const char *name, uint8_t *out)
+fat16_make_short_name (const char *name, uint8_t *out, uint8_t *case_bits)
 {
   const char *allowed = "!#$%&'()-@^_`{}~";
   memset (out, ' ', 11);
@@ -1374,7 +1381,132 @@ fat16_make_short_name (const char *name, uint8_t *out)
       uint32_t pos = (dot && name + i > dot) ? 8 + (name + i - dot - 1) : i;
       out[pos] = toupper (c);
     }
+  // per part: 1 has lowercase, 2 has uppercase
+  uint8_t cases[2] = { 0, 0 };
+  for (uint32_t i = 0; name[i]; i++)
+    {
+      uint8_t part = dot && name + i > dot;
+      cases[part] |= islower (name[i]) ? 1 : isupper (name[i]) ? 2 : 0;
+    }
+  if (cases[0] == 3 || cases[1] == 3)
+    {
+      return -INVALID_PATH_ERROR;
+    }
+  *case_bits = (cases[0] == 1 ? FAT_NAME_LOWER_BASE : 0)
+               | (cases[1] == 1 ? FAT_NAME_LOWER_EXT : 0);
   return OK;
+}
+
+// true if the padded 8.3 name is already used in directory
+static int
+fat16_short_name_taken (struct fat_directory *directory,
+                        const uint8_t *short_name)
+{
+  for (int i = 0; i < directory->total; i++)
+    {
+      struct fat_directory_item *item = &directory->item[i];
+      if (item->filename[0] != FAT_ENTRY_DELETED
+          && item->attribute != FAT_FILE_LONG_NAME
+          && memcmp (item->filename, short_name, 11) == 0)
+        {
+          return 1;
+        }
+    }
+  return 0;
+}
+
+// makes the 8.3 alias of a long name like windows does: "Long File
+// Name.text" becomes "LONGFI~1.TEX", the number counts up until the alias is
+// unique in directory
+static int
+fat16_make_alias (struct fat_directory *directory, const char *name,
+                  uint8_t *out)
+{
+  const char *allowed = "!#$%&'()-@^_`{}~";
+  const char *dot = 0;
+  for (const char *c = name; *c; c++)
+    {
+      if (*c == '.')
+        {
+          dot = c;
+        }
+    }
+  // a leading dot ("..hidden") isnt an extension
+  if (dot == name)
+    {
+      dot = 0;
+    }
+  char base[9];
+  char ext[4];
+  uint32_t base_len = 0;
+  uint32_t ext_len = 0;
+  for (const char *c = name; *c && c != dot && base_len < 8; c++)
+    {
+      if (*c == ' ' || *c == '.')
+        {
+          continue;
+        }
+      base[base_len++]
+          = isalnum (*c) || strchr (allowed, *c) ? toupper (*c) : '_';
+    }
+  for (const char *c = dot ? dot + 1 : ""; *c && ext_len < 3; c++)
+    {
+      if (*c == ' ')
+        {
+          continue;
+        }
+      ext[ext_len++]
+          = isalnum (*c) || strchr (allowed, *c) ? toupper (*c) : '_';
+    }
+  if (base_len == 0)
+    {
+      base[base_len++] = '_';
+    }
+  for (int n = 1; n < 1000; n++)
+    {
+      char suffix[5];
+      int suffix_len = 0;
+      suffix[suffix_len++] = '~';
+      if (n >= 100)
+        {
+          suffix[suffix_len++] = '0' + n / 100;
+        }
+      if (n >= 10)
+        {
+          suffix[suffix_len++] = '0' + (n / 10) % 10;
+        }
+      suffix[suffix_len++] = '0' + n % 10;
+      uint32_t keep = base_len < 8 - suffix_len ? base_len : 8 - suffix_len;
+      memset (out, ' ', 11);
+      memcpy (out, base, keep);
+      memcpy (out + keep, suffix, suffix_len);
+      memcpy (out + 8, ext, ext_len);
+      if (!fat16_short_name_taken (directory, out))
+        {
+          return OK;
+        }
+    }
+  return -FILE_EXISTS_ERROR;
+}
+
+// checks a long name: printable ascii without the chars windows forbids
+static int
+fat16_valid_long_name (const char *name)
+{
+  uint32_t len = strlen (name);
+  if (len == 0 || len > FAT_LFN_MAX || name[len - 1] == '.'
+      || name[len - 1] == ' ')
+    {
+      return 0;
+    }
+  for (const char *c = name; *c; c++)
+    {
+      if (*c < 0x20 || *c > 0x7E || strchr ("\"*/:<>?\\|", *c))
+        {
+          return 0;
+        }
+    }
+  return 1;
 }
 
 // splits path into its parent directory and last part. the parent must be
@@ -1436,23 +1568,74 @@ fat16_release_parent (struct fat16_parent *parent)
     }
 }
 
-// adds a new item to the parent directory and returns its disk position
+// adds a new item called parent->name to the parent directory and returns
+// the disk position of its 8.3 entry. names that dont fit 8.3 get a long
+// name in front of an alias like "LONGFI~1.TXT"
 static int
 fat16_create_item (struct disk *disk, struct fat16_parent *parent,
                    struct fat_directory_item *item)
 {
-  int slot = fat16_find_free_slot (disk, parent->directory);
+  struct fat_lfn_entry lfn[FAT_LFN_MAX_ENTRIES];
+  int lfn_count = 0;
+  const char *name = parent->name;
+  if (fat16_make_short_name (name, item->filename, &item->reserved) < 0)
+    {
+      if (!fat16_valid_long_name (name))
+        {
+          return -INVALID_PATH_ERROR;
+        }
+      item->reserved = 0;
+      int res = fat16_make_alias (parent->directory, name, item->filename);
+      if (res < 0)
+        {
+          return res;
+        }
+      uint32_t len = strlen (name);
+      lfn_count = (len + FAT_LFN_CHARS - 1) / FAT_LFN_CHARS;
+      uint8_t checksum = fat16_short_name_checksum (item->filename);
+      // lfn[0] is stored first and holds the end of the name
+      for (int n = 1; n <= lfn_count; n++)
+        {
+          struct fat_lfn_entry *entry = &lfn[lfn_count - n];
+          memset (entry, 0, sizeof (*entry));
+          entry->seq = n | (n == lfn_count ? FAT_LFN_LAST : 0);
+          entry->attribute = FAT_FILE_LONG_NAME;
+          entry->checksum = checksum;
+          for (int i = 0; i < FAT_LFN_CHARS; i++)
+            {
+              uint32_t at = (n - 1) * FAT_LFN_CHARS + i;
+              // the name ends with a null char, the rest is padded
+              *fat16_lfn_char (entry, i)
+                  = at < len ? name[at] : at == len ? 0x0000 : 0xFFFF;
+            }
+        }
+    }
+
+  int slot = fat16_find_free_slot (disk, parent->directory, lfn_count + 1);
   if (slot < 0)
     {
       return slot;
     }
-  int pos = fat16_dir_entry_pos (disk, parent->directory, slot);
-  if (pos < 0)
+  for (int i = 0; i <= lfn_count; i++)
     {
-      return pos;
+      int pos = fat16_dir_entry_pos (disk, parent->directory, slot + i);
+      if (pos < 0)
+        {
+          return pos;
+        }
+      int res = fat16_write_dir_entry (
+          disk, pos,
+          i < lfn_count ? (struct fat_directory_item *)&lfn[i] : item);
+      if (res < 0)
+        {
+          return res;
+        }
+      if (i == lfn_count)
+        {
+          return pos;
+        }
     }
-  int res = fat16_write_dir_entry (disk, pos, item);
-  return res < 0 ? res : pos;
+  return -IO_ERROR;
 }
 
 static void *
@@ -1482,11 +1665,6 @@ fat16_open_for_write (struct disk *disk, struct path_part *path,
   else
     {
       memset (&entry, 0, sizeof (entry));
-      res = fat16_make_short_name (parent.name, entry.filename);
-      if (res < 0)
-        {
-          goto out;
-        }
       entry.attribute = FAT_FILE_ARCHIVED;
       fat16_stamp_item (&entry);
       pos = fat16_create_item (disk, &parent, &entry);
@@ -1671,11 +1849,6 @@ fat16_mkdir (struct disk *disk, struct path_part *path)
   if (fat16_find_index (parent.directory, parent.name) >= 0)
     {
       res = -FILE_EXISTS_ERROR;
-      goto out;
-    }
-  res = fat16_make_short_name (parent.name, entry.filename);
-  if (res < 0)
-    {
       goto out;
     }
   int cluster = fat16_alloc_cluster (disk);
