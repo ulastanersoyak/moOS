@@ -69,6 +69,9 @@ int spawn (const char *program, char **argv, const int io[2]);
 int wait (int pid);
 int isatty (int fd); // 1 if fd is the terminal
 int time (struct datetime *now);
+// working directory, inherited by the programs a task spawns
+int chdir (const char *path);
+int getcwd (char *buf, uint32_t len); // returns the length of the path
 
 // heap
 void *malloc (uint32_t size);

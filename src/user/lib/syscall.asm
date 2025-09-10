@@ -41,3 +41,5 @@ $%1:
 	SYSCALL wait, 21
 	SYSCALL isatty, 22
 	SYSCALL time, 23
+	SYSCALL chdir, 24
+	SYSCALL getcwd, 25

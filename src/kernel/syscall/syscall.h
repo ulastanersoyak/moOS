@@ -31,6 +31,8 @@ enum
   SYS_WAIT = 21,       // int wait (int pid), returns the exit code
   SYS_ISATTY = 22,     // int isatty (int fd)
   SYS_TIME = 23,       // int time (struct datetime *out)
+  SYS_CHDIR = 24,      // int chdir (const char *path)
+  SYS_GETCWD = 25,     // int getcwd (char *buf, uint32_t len)
 };
 
 // handles int 0x80 from user tasks

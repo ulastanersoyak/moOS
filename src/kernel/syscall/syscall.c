@@ -272,6 +272,39 @@ sys_spawn (const char *user_name, char **user_argv, const int *io)
                      stdout);
 }
 
+// changes the working directory, which must be an existing directory
+static int32_t
+sys_chdir (const char *user_path)
+{
+  char path[MAX_PATH_LEN + 1];
+  int32_t res = sys_get_path (user_path, path);
+  if (res < 0)
+    {
+      return res;
+    }
+  // listing fails for files and missing directories
+  struct file_dirent entry;
+  res = listdir (path, &entry, 1);
+  if (res < 0)
+    {
+      return res;
+    }
+  task_set_cwd (path);
+  return OK;
+}
+
+static int32_t
+sys_getcwd (char *buf, uint32_t len)
+{
+  uint32_t cwd_len = strlen (task_cwd ());
+  if (!task_user_range_valid (buf, len) || cwd_len + 1 > len)
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  memcpy (buf, task_cwd (), cwd_len + 1);
+  return cwd_len;
+}
+
 static int32_t
 sys_isatty (int fd)
 {
@@ -384,6 +417,12 @@ syscall_handler (struct interrupt_frame *frame)
       break;
     case SYS_TIME:
       res = sys_time ((struct rtc_time *)frame->ebx);
+      break;
+    case SYS_CHDIR:
+      res = sys_chdir ((const char *)frame->ebx);
+      break;
+    case SYS_GETCWD:
+      res = sys_getcwd ((char *)frame->ebx, frame->ecx);
       break;
     default:
       res = -INVALID_ARG_ERROR;
