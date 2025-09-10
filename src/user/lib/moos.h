@@ -1,6 +1,7 @@
 #ifndef MOOS_H
 #define MOOS_H
 
+#include <stdarg.h>
 #include <stdint.h>
 
 // system calls
@@ -167,8 +168,32 @@ void free (void *ptr);
 // strings
 uint32_t strlen (const char *str);
 int strcmp (const char *a, const char *b);
+int strncmp (const char *a, const char *b, uint32_t n);
+int strncasecmp (const char *a, const char *b, uint32_t n);
+char *strcpy (char *dest, const char *src);
+char *strcat (char *dest, const char *src);
+char *strchr (const char *str, int c); // 0 if c isnt in str
 void *memcpy (void *dest, const void *src, uint32_t len);
+void *memmove (void *dest, const void *src, uint32_t len); // may overlap
 void *memset (void *dest, int c, uint32_t len);
+int memcmp (const void *a, const void *b, uint32_t len);
+int atoi (const char *str);
+
+// chars
+int isdigit (int c);
+int isalpha (int c);
+int isspace (int c);
+int isprint (int c);
+int tolower (int c);
+int toupper (int c);
+
+// formatted output to stdout: %s %d %u %x %c and %%, with a width like %5d
+// or %-12s (left aligned). snprintf always terminates the string and returns
+// the length it would have had
+int printf (const char *fmt, ...);
+int vprintf (const char *fmt, va_list args);
+int snprintf (char *buf, uint32_t size, const char *fmt, ...);
+int vsnprintf (char *buf, uint32_t size, const char *fmt, va_list args);
 
 // helpers
 void print_int (int32_t num);

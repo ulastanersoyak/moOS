@@ -111,6 +111,309 @@ memset (void *dest, int c, uint32_t len)
   return dest;
 }
 
+int
+strncmp (const char *a, const char *b, uint32_t n)
+{
+  for (; n > 0; n--, a++, b++)
+    {
+      if (*a != *b || !*a)
+        {
+          return (unsigned char)*a - (unsigned char)*b;
+        }
+    }
+  return 0;
+}
+
+int
+strncasecmp (const char *a, const char *b, uint32_t n)
+{
+  for (; n > 0; n--, a++, b++)
+    {
+      int diff = tolower ((unsigned char)*a) - tolower ((unsigned char)*b);
+      if (diff || !*a)
+        {
+          return diff;
+        }
+    }
+  return 0;
+}
+
+char *
+strcpy (char *dest, const char *src)
+{
+  memcpy (dest, src, strlen (src) + 1);
+  return dest;
+}
+
+char *
+strcat (char *dest, const char *src)
+{
+  strcpy (dest + strlen (dest), src);
+  return dest;
+}
+
+char *
+strchr (const char *str, int c)
+{
+  for (; *str; str++)
+    {
+      if (*str == (char)c)
+        {
+          return (char *)str;
+        }
+    }
+  return c ? 0 : (char *)str;
+}
+
+void *
+memmove (void *dest, const void *src, uint32_t len)
+{
+  uint8_t *d = dest;
+  const uint8_t *s = src;
+  if (d < s)
+    {
+      return memcpy (dest, src, len);
+    }
+  while (len--)
+    {
+      d[len] = s[len];
+    }
+  return dest;
+}
+
+int
+memcmp (const void *a, const void *b, uint32_t len)
+{
+  const uint8_t *x = a;
+  const uint8_t *y = b;
+  for (uint32_t i = 0; i < len; i++)
+    {
+      if (x[i] != y[i])
+        {
+          return x[i] - y[i];
+        }
+    }
+  return 0;
+}
+
+int
+atoi (const char *str)
+{
+  int sign = 1;
+  int num = 0;
+  while (isspace (*str))
+    {
+      str++;
+    }
+  if (*str == '-' || *str == '+')
+    {
+      sign = *str++ == '-' ? -1 : 1;
+    }
+  while (isdigit (*str))
+    {
+      num = num * 10 + (*str++ - '0');
+    }
+  return sign * num;
+}
+
+int
+isdigit (int c)
+{
+  return c >= '0' && c <= '9';
+}
+
+int
+isalpha (int c)
+{
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+int
+isspace (int c)
+{
+  return c == ' ' || (c >= '\t' && c <= '\r');
+}
+
+int
+isprint (int c)
+{
+  return c >= 32 && c <= 126;
+}
+
+int
+tolower (int c)
+{
+  return c >= 'A' && c <= 'Z' ? c + 'a' - 'A' : c;
+}
+
+int
+toupper (int c)
+{
+  return c >= 'a' && c <= 'z' ? c - 'a' + 'A' : c;
+}
+
+// output of vsnprintf, counts every char but only stores what fits
+struct format_out
+{
+  char *buf;
+  uint32_t size;
+  uint32_t len;
+};
+
+static void
+format_put (struct format_out *out, char c)
+{
+  if (out->len + 1 < out->size)
+    {
+      out->buf[out->len] = c;
+    }
+  out->len++;
+}
+
+static void
+format_padded (struct format_out *out, const char *str, uint32_t len,
+               uint32_t width, int left, char pad)
+{
+  if (!left)
+    {
+      for (uint32_t i = len; i < width; i++)
+        {
+          format_put (out, pad);
+        }
+    }
+  for (uint32_t i = 0; i < len; i++)
+    {
+      format_put (out, str[i]);
+    }
+  if (left)
+    {
+      for (uint32_t i = len; i < width; i++)
+        {
+          format_put (out, ' ');
+        }
+    }
+}
+
+int
+vsnprintf (char *buf, uint32_t size, const char *fmt, va_list args)
+{
+  struct format_out out = { buf, size, 0 };
+  for (; *fmt; fmt++)
+    {
+      if (*fmt != '%')
+        {
+          format_put (&out, *fmt);
+          continue;
+        }
+      fmt++;
+      int left = *fmt == '-';
+      if (left)
+        {
+          fmt++;
+        }
+      char pad = *fmt == '0' ? '0' : ' ';
+      uint32_t width = 0;
+      while (isdigit (*fmt))
+        {
+          width = width * 10 + (*fmt++ - '0');
+        }
+      char digits[12];
+      uint32_t len = 0;
+      switch (*fmt)
+        {
+        case 's':
+          {
+            const char *str = va_arg (args, const char *);
+            str = str ? str : "(null)";
+            format_padded (&out, str, strlen (str), width, left, ' ');
+            continue;
+          }
+        case 'c':
+          digits[len++] = (char)va_arg (args, int);
+          break;
+        case 'd':
+        case 'u':
+        case 'x':
+          {
+            uint32_t num = va_arg (args, uint32_t);
+            uint32_t base = *fmt == 'x' ? 16 : 10;
+            int negative = *fmt == 'd' && (int32_t)num < 0;
+            if (negative)
+              {
+                num = -num;
+              }
+            char reversed[11];
+            uint32_t count = 0;
+            do
+              {
+                reversed[count++] = "0123456789abcdef"[num % base];
+                num /= base;
+              }
+            while (num);
+            if (negative)
+              {
+                digits[len++] = '-';
+              }
+            while (count)
+              {
+                digits[len++] = reversed[--count];
+              }
+            break;
+          }
+        case '%':
+          digits[len++] = '%';
+          break;
+        default:
+          // unknown conversion, print it as it is
+          digits[len++] = '%';
+          if (*fmt)
+            {
+              digits[len++] = *fmt;
+            }
+          else
+            {
+              fmt--;
+            }
+          break;
+        }
+      format_padded (&out, digits, len, width, left, pad);
+    }
+  if (size > 0)
+    {
+      buf[out.len < size ? out.len : size - 1] = '\0';
+    }
+  return out.len;
+}
+
+int
+snprintf (char *buf, uint32_t size, const char *fmt, ...)
+{
+  va_list args;
+  va_start (args, fmt);
+  int len = vsnprintf (buf, size, fmt, args);
+  va_end (args);
+  return len;
+}
+
+int
+vprintf (const char *fmt, va_list args)
+{
+  char buf[512];
+  int len = vsnprintf (buf, sizeof (buf), fmt, args);
+  write (STDOUT, buf, len < (int)sizeof (buf) ? len : sizeof (buf) - 1);
+  return len;
+}
+
+int
+printf (const char *fmt, ...)
+{
+  va_list args;
+  va_start (args, fmt);
+  int len = vprintf (fmt, args);
+  va_end (args);
+  return len;
+}
+
 void
 eprint (const char *str)
 {
