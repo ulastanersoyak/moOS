@@ -306,6 +306,41 @@ sys_getcwd (char *buf, uint32_t len)
 }
 
 static int32_t
+sys_tasks (struct task_info *out, int max)
+{
+  if (max < 0 || !task_user_range_valid (out, max * sizeof (*out)))
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  return task_list (out, max);
+}
+
+// switches the scheduling policy unless policy is -1, returns the policy
+static int32_t
+sys_sched (int32_t policy)
+{
+  if (policy == SCHED_ROUND_ROBIN || policy == SCHED_REAL_TIME)
+    {
+      sched_set_policy (policy);
+    }
+  else if (policy != -1)
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  return sched_get_policy ();
+}
+
+static int32_t
+sys_setprio (int32_t pid, int32_t priority)
+{
+  if (priority < 1 || priority > TASK_PRIORITY_USER_MAX)
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  return task_set_priority (pid, priority);
+}
+
+static int32_t
 sys_isatty (int fd)
 {
   struct handle *handle = task_fd_get (fd);
@@ -423,6 +458,18 @@ syscall_handler (struct interrupt_frame *frame)
       break;
     case SYS_GETCWD:
       res = sys_getcwd ((char *)frame->ebx, frame->ecx);
+      break;
+    case SYS_TASKS:
+      res = sys_tasks ((struct task_info *)frame->ebx, frame->ecx);
+      break;
+    case SYS_KILL:
+      res = task_kill (frame->ebx);
+      break;
+    case SYS_SCHED:
+      res = sys_sched (frame->ebx);
+      break;
+    case SYS_SETPRIO:
+      res = sys_setprio (frame->ebx, frame->ecx);
       break;
     default:
       res = -INVALID_ARG_ERROR;

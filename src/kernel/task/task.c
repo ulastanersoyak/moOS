@@ -738,6 +738,48 @@ task_return_to_user (void)
     }
 }
 
+int
+task_list (struct task_info *out, int max)
+{
+  int count = 0;
+  uint32_t flags = irq_save ();
+  for (uint32_t i = 0; i < MAX_TASKS && count < max; i++)
+    {
+      struct task *task = &task_table[i];
+      if (task->state == TASK_UNUSED)
+        {
+          continue;
+        }
+      struct task_info *info = &out[count++];
+      memset (info, 0, sizeof (*info));
+      info->pid = task->pid;
+      strcpy (info->name, task->name);
+      strcpy (info->state, task_state_name (task->state));
+      info->priority = task->priority;
+      info->background = task->background;
+      info->is_kernel = task->is_kernel;
+      info->cpu_ms = task->cpu_ticks * (1000 / PIT_FREQUENCY_HZ);
+    }
+  irq_restore (flags);
+  return count;
+}
+
+int32_t
+task_set_priority (int32_t pid, uint8_t priority)
+{
+  uint32_t flags = irq_save ();
+  struct task *task = pid ? task_find (pid, 0) : task_running;
+  if (!task || task->is_kernel || task->killed)
+    {
+      irq_restore (flags);
+      return -INVALID_ARG_ERROR;
+    }
+  task->priority = priority;
+  sched_request_resched ();
+  irq_restore (flags);
+  return OK;
+}
+
 uint8_t
 task_user_range_valid (const void *ptr, uint32_t len)
 {

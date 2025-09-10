@@ -33,6 +33,10 @@ enum
   SYS_TIME = 23,       // int time (struct datetime *out)
   SYS_CHDIR = 24,      // int chdir (const char *path)
   SYS_GETCWD = 25,     // int getcwd (char *buf, uint32_t len)
+  SYS_TASKS = 26,      // int tasks (struct task_info *out, int max)
+  SYS_KILL = 27,       // int kill (int pid)
+  SYS_SCHED = 28,      // int sched (int policy), -1 only returns it
+  SYS_SETPRIO = 29,    // int setprio (int pid, int priority), 0 is self
 };
 
 // handles int 0x80 from user tasks

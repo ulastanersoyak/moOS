@@ -73,6 +73,33 @@ int time (struct datetime *now);
 int chdir (const char *path);
 int getcwd (char *buf, uint32_t len); // returns the length of the path
 
+// tasks, see ps in the shell. must match struct task_info in
+// src/kernel/task/task.h
+struct task_info
+{
+  int32_t pid;
+  char name[16];
+  char state[16];
+  uint8_t priority;
+  uint8_t background;
+  uint8_t is_kernel;
+  uint8_t reserved;
+  uint32_t cpu_ms;
+};
+int tasks (struct task_info *out, int max); // returns how many
+int kill (int pid); // the task exits the next time it runs
+
+// scheduling policies, sched (SCHED_GET) only returns the current one
+#define SCHED_GET (-1)
+#define SCHED_RR 0 // round robin
+#define SCHED_RT 1 // fixed priority preemptive
+int sched (int policy);
+// real time priority 1-29 of a task, pid 0 is the calling task
+#define PRIO_MIN 1
+#define PRIO_MAX 29
+#define PRIO_DEFAULT 10
+int setprio (int pid, int priority);
+
 // heap
 void *malloc (uint32_t size);
 void *calloc (uint32_t count, uint32_t size);

@@ -43,3 +43,7 @@ $%1:
 	SYSCALL time, 23
 	SYSCALL chdir, 24
 	SYSCALL getcwd, 25
+	SYSCALL tasks, 26
+	SYSCALL kill, 27
+	SYSCALL sched, 28
+	SYSCALL setprio, 29

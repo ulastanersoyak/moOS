@@ -144,4 +144,23 @@ uint8_t task_user_range_valid (const void *ptr, uint32_t len);
 
 const char *task_state_name (enum task_state state);
 
+// what ps shows about a task, filled by task_list
+struct task_info
+{
+  int32_t pid;
+  char name[TASK_NAME_LEN];
+  char state[TASK_NAME_LEN];
+  uint8_t priority;
+  uint8_t background;
+  uint8_t is_kernel;
+  uint8_t reserved;
+  uint32_t cpu_ms;
+};
+
+// fills out with up to max tasks, returns how many
+int task_list (struct task_info *out, int max);
+
+// sets the real time priority of a user task, pid 0 is the running task
+int32_t task_set_priority (int32_t pid, uint8_t priority);
+
 #endif // !TASK_H
