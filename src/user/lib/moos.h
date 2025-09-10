@@ -112,6 +112,52 @@ struct run_opts
 };
 int run (const char *program, char **argv, const struct run_opts *opts);
 
+// terminal. text is drawn in one of the 16 vga colours on black
+enum colour
+{
+  BLACK,
+  BLUE,
+  GREEN,
+  CYAN,
+  RED,
+  MAGENTA,
+  BROWN,
+  LIGHT_GREY,
+  DARK_GREY,
+  LIGHT_BLUE,
+  LIGHT_GREEN,
+  LIGHT_CYAN,
+  LIGHT_RED,
+  LIGHT_MAGENTA,
+  YELLOW,
+  WHITE,
+};
+#define TERM_WIDTH 80
+#define TERM_HEIGHT 25
+struct cursor
+{
+  uint32_t row;
+  uint32_t column;
+  uint32_t scrolls; // times the screen scrolled up since boot
+};
+void clear (void);
+void setcolor (int colour);
+int getcursor (struct cursor *out);
+int setcursor (int row, int column);
+
+struct sysinfo
+{
+  uint32_t heap_used_kb; // kernel heap, user pages come from it too
+  uint32_t heap_total_kb;
+  uint32_t heap_used_blocks;
+  uint32_t heap_total_blocks;
+  uint32_t uptime_ms;
+  uint32_t ticks; // timer interrupts since boot
+  uint32_t tick_hz;
+};
+int sysinfo (struct sysinfo *out);
+void reboot (void);
+
 // heap
 void *malloc (uint32_t size);
 void *calloc (uint32_t count, uint32_t size);

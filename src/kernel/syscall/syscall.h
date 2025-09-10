@@ -38,6 +38,12 @@ enum
   SYS_SCHED = 28,      // int sched (int policy), -1 only returns it
   SYS_SETPRIO = 29,    // int setprio (int pid, int priority), 0 is self
   SYS_RUN = 30,        // int run (path, char **argv, struct run_opts *opts)
+  SYS_CLEAR = 31,      // clear (void), clears the screen
+  SYS_SETCOLOR = 32,   // setcolor (int colour), vga colour of new text
+  SYS_GETCURSOR = 33,  // int getcursor (struct cursor *out)
+  SYS_SETCURSOR = 34,  // setcursor (int row, int column)
+  SYS_SYSINFO = 35,    // int sysinfo (struct sysinfo *out)
+  SYS_REBOOT = 36,     // reboot (void)
 };
 
 // handles int 0x80 from user tasks

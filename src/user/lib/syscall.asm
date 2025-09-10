@@ -48,3 +48,9 @@ $%1:
 	SYSCALL sched, 28
 	SYSCALL setprio, 29
 	SYSCALL run, 30
+	SYSCALL clear, 31
+	SYSCALL setcolor, 32
+	SYSCALL getcursor, 33
+	SYSCALL setcursor, 34
+	SYSCALL sysinfo, 35
+	SYSCALL reboot, 36

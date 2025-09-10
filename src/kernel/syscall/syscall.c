@@ -1,10 +1,13 @@
 #include "syscall.h"
 #include "../../drivers/rtc/rtc.h"
 #include "../../drivers/screen/terminal.h"
+#include "../../drivers/screen/vga.h"
 #include "../../drivers/timer/pit.h"
 #include "../../libc/stdio/stdio.h"
 #include "../../libc/string/string.h"
 #include "../config.h"
+#include "../io/io.h"
+#include "../kmem/kheap.h"
 #include "../task/handle.h"
 #include "../task/sched.h"
 #include "../task/task.h"
@@ -381,6 +384,72 @@ sys_setprio (int32_t pid, int32_t priority)
   return task_set_priority (pid, priority);
 }
 
+// terminal cursor for line editing, must match src/user/lib/moos.h
+struct cursor
+{
+  uint32_t row;
+  uint32_t column;
+  uint32_t scrolls; // times the screen scrolled up since boot
+};
+
+static int32_t
+sys_getcursor (struct cursor *out)
+{
+  if (!task_user_range_valid (out, sizeof (*out)))
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  size_t row;
+  size_t column;
+  terminal_get_cursor (&row, &column);
+  out->row = row;
+  out->column = column;
+  out->scrolls = terminal_scroll_count ();
+  return OK;
+}
+
+static int32_t
+sys_setcursor (uint32_t row, uint32_t column)
+{
+  if (row >= VGA_HEIGHT || column >= VGA_WIDTH)
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  terminal_set_cursor (row, column);
+  return OK;
+}
+
+// what mem and uptime show, must match src/user/lib/moos.h
+struct sysinfo
+{
+  uint32_t heap_used_kb;
+  uint32_t heap_total_kb;
+  uint32_t heap_used_blocks;
+  uint32_t heap_total_blocks;
+  uint32_t uptime_ms;
+  uint32_t ticks;
+  uint32_t tick_hz;
+};
+
+static int32_t
+sys_sysinfo (struct sysinfo *out)
+{
+  if (!task_user_range_valid (out, sizeof (*out)))
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  struct heap_stats stats;
+  kheap_stats (&stats);
+  out->heap_used_blocks = stats.used_blocks;
+  out->heap_total_blocks = stats.total_blocks;
+  out->heap_used_kb = stats.used_blocks * (HEAP_BLOCK_SIZE / 1024);
+  out->heap_total_kb = stats.total_blocks * (HEAP_BLOCK_SIZE / 1024);
+  out->uptime_ms = pit_uptime_ms ();
+  out->ticks = pit_ticks ();
+  out->tick_hz = PIT_FREQUENCY_HZ;
+  return OK;
+}
+
 static int32_t
 sys_isatty (int fd)
 {
@@ -515,6 +584,25 @@ syscall_handler (struct interrupt_frame *frame)
     case SYS_RUN:
       res = sys_run ((const char *)frame->ebx, (char **)frame->ecx,
                      (const struct run_opts *)frame->edx);
+      break;
+    case SYS_CLEAR:
+      terminal_clean ();
+      break;
+    case SYS_SETCOLOR:
+      terminal_setcolour (frame->ebx & 0x0F);
+      break;
+    case SYS_GETCURSOR:
+      res = sys_getcursor ((struct cursor *)frame->ebx);
+      break;
+    case SYS_SETCURSOR:
+      res = sys_setcursor (frame->ebx, frame->ecx);
+      break;
+    case SYS_SYSINFO:
+      res = sys_sysinfo ((struct sysinfo *)frame->ebx);
+      break;
+    case SYS_REBOOT:
+      // pulse the cpu reset line through the keyboard controller
+      outb (0x64, 0xFE);
       break;
     default:
       res = -INVALID_ARG_ERROR;
