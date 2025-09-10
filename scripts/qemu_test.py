@@ -22,7 +22,7 @@ KEY_NAMES = {
     " ": "spc", "\n": "ret", ".": "dot", "/": "slash", "-": "minus",
     ":": "shift-semicolon", "_": "shift-minus", ",": "comma", "&": "shift-7",
     ">": "shift-dot", "<": "shift-comma", "|": "shift-backslash",
-    '"': "shift-apostrophe",
+    '"': "shift-apostrophe", "~": "shift-grave_accent",
 }
 
 
@@ -96,10 +96,20 @@ STEPS = [
     ("rm nothere\n", 0.4),
     ("cat dir/long.txt > copy.txt\n", 1.5),
     ("ls\n", 0.5),
+    # long file names, looked up ignoring case or through the 8.3 alias
+    ('echo "apple banana" > "long notes about moos.txt"\n', 0.5),
+    ('mkdir "My Projects"\n', 0.4),
+    ('cd "my projects"\n', 0.3),
+    ("echo hello > ReadMe.md\n", 0.4),
+    ("ls\n", 0.5),
+    ("cd ..\n", 0.3),
+    ('ls | grep long\n', 0.6),
+    ("cat LONGNO~1.TXT\n", 0.5),
+    ('rm "my projects/readme.md" "my projects"\n', 0.6),
     # pipes, < redirection, programs starting programs
     ("cat fruit.txt|sort\n", 0.6),
     ('echo "two  spaces" | wc\n', 0.6),
-    ("ls bin | grep E | sort | wc\n", 1.0),
+    ("ls bin | grep elf | sort | wc\n", 1.0),
     ("cat dir/long.txt | sort | grep 600 | wc\n", 1.5),
     ("wc < fruit.txt\n", 0.5),
     ("cat nosuch | wc\n", 0.6),
@@ -123,9 +133,9 @@ EXPECTED = [
     "welcome to moOS!",
     "cd [dir]",                       # help
     "hi there",                       # echo
-    "FS_TEST.TXT   14 bytes",         # ls
-    "DIR/          <dir>",
-    "LONG.TXT      6000 bytes",       # ls dir
+    "fs_test.txt   14 bytes",         # ls
+    "dir/          <dir>",
+    "long.txt      6000 bytes",       # ls dir
     "nosuch: not found",
     "file sys text",                  # cat
     "line 0600",
@@ -150,8 +160,11 @@ EXPECTED = [
     "0:/notes",
     "notes: directory not empty",
     "nothere: not found",
-    "SORTED.TXT    13 bytes",
-    "COPY.TXT      6000 bytes",
+    "sorted.txt    13 bytes",
+    "copy.txt      6000 bytes",
+    "long notes about moos.txt  13 bytes",   # vfat long names
+    "ReadMe.md     6 bytes",
+    "moos 0:/> cat LONGNO~1.TXT\napple banana",
     "moos 0:/> cat fruit.txt|sort\napple\nbanana\n",
     "1 2 12\n",                    # quotes keep both spaces
     "16 80 720\n",                 # 16 programs through a 4 stage pipeline
@@ -206,6 +219,8 @@ def check_disk():
         failed.append("sorted.txt has wrong content")
     if mtools("::/copy.txt").stdout != open("./build/long.txt", "rb").read():
         failed.append("copy.txt differs from long.txt")
+    if mtools("::/long notes about moos.txt").stdout != b"apple banana\n":
+        failed.append("long notes about moos.txt has wrong content")
     return failed
 
 
@@ -280,7 +295,7 @@ def main():
         failed.append(f"heap usage changed across programs: {mem}")
     # files written by moOS carry the date of the real time clock
     today = time.strftime("%Y-%m-%d")
-    if not re.search(rf"FRUIT\.TXT +13 bytes +{today} ", log):
+    if not re.search(rf"fruit\.txt +13 bytes +{today} ", log):
         failed.append(f"new files are not dated {today}")
     if log.count("nice to meet you, Bob") != 2:
         failed.append("history did not repeat the last command")
