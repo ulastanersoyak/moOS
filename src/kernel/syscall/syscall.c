@@ -207,10 +207,20 @@ sys_pipe (int *fds)
   return OK;
 }
 
-// starts a program with arguments copied out of user memory. io holds the
-// fds that become stdin and stdout of the child, 0 inherits both
+// how run starts a program, must match src/user/lib/moos.h
+struct run_opts
+{
+  int32_t stdin; // fds of the caller, -1 passes on its own
+  int32_t stdout;
+  int32_t priority;
+  int32_t background;
+};
+
+// starts a program with arguments copied out of user memory. stdin and
+// stdout of the child are handles of the caller, 0 inherits them
 static int32_t
-sys_spawn (const char *user_name, char **user_argv, const int *io)
+sys_start (const char *user_name, char **user_argv, struct handle *stdin,
+           struct handle *stdout, uint8_t priority, uint8_t background)
 {
   char name[MAX_PATH_LEN + 1];
   char path[MAX_PATH_LEN + 1];
@@ -252,7 +262,14 @@ sys_spawn (const char *user_name, char **user_argv, const int *io)
       argv[argc++] = args + used;
       used += len + 1;
     }
+  return task_spawn (path, argc, argv, priority, background, stdin, stdout);
+}
 
+// io holds the fds that become stdin and stdout of the child, 0 inherits
+// both. the child gets the priority of the caller
+static int32_t
+sys_spawn (const char *user_name, char **user_argv, const int *io)
+{
   struct handle *stdin = 0;
   struct handle *stdout = 0;
   if (io)
@@ -268,8 +285,32 @@ sys_spawn (const char *user_name, char **user_argv, const int *io)
           return -INVALID_ARG_ERROR;
         }
     }
-  return task_spawn (path, argc, argv, task_running->priority, 0, stdin,
-                     stdout);
+  return sys_start (user_name, user_argv, stdin, stdout,
+                    task_running->priority, 0);
+}
+
+// like spawn, with a real time priority and optionally in the background
+static int32_t
+sys_run (const char *user_name, char **user_argv,
+         const struct run_opts *user_opts)
+{
+  if (!task_user_range_valid (user_opts, sizeof (*user_opts)))
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  struct run_opts opts = *user_opts;
+  if (opts.priority < 1 || opts.priority > TASK_PRIORITY_USER_MAX)
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  struct handle *stdin = opts.stdin < 0 ? 0 : task_fd_get (opts.stdin);
+  struct handle *stdout = opts.stdout < 0 ? 0 : task_fd_get (opts.stdout);
+  if ((opts.stdin >= 0 && !stdin) || (opts.stdout >= 0 && !stdout))
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  return sys_start (user_name, user_argv, stdin, stdout, opts.priority,
+                    opts.background != 0);
 }
 
 // changes the working directory, which must be an existing directory
@@ -470,6 +511,10 @@ syscall_handler (struct interrupt_frame *frame)
       break;
     case SYS_SETPRIO:
       res = sys_setprio (frame->ebx, frame->ecx);
+      break;
+    case SYS_RUN:
+      res = sys_run ((const char *)frame->ebx, (char **)frame->ecx,
+                     (const struct run_opts *)frame->edx);
       break;
     default:
       res = -INVALID_ARG_ERROR;

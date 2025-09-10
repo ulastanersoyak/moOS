@@ -37,6 +37,7 @@ enum
   SYS_KILL = 27,       // int kill (int pid)
   SYS_SCHED = 28,      // int sched (int policy), -1 only returns it
   SYS_SETPRIO = 29,    // int setprio (int pid, int priority), 0 is self
+  SYS_RUN = 30,        // int run (path, char **argv, struct run_opts *opts)
 };
 
 // handles int 0x80 from user tasks

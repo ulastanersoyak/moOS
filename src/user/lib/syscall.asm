@@ -47,3 +47,4 @@ $%1:
 	SYSCALL kill, 27
 	SYSCALL sched, 28
 	SYSCALL setprio, 29
+	SYSCALL run, 30
