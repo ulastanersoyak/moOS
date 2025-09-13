@@ -21,7 +21,8 @@ struct task task_table[MAX_TASKS];
 struct task *task_running = 0;
 struct task *task_idle = 0;
 
-static struct task *task_shell = 0;
+// the boot context, adopts the children of tasks that exit
+static struct task *task_init_thread = 0;
 static struct page_dir *kernel_page_dir = 0;
 static int32_t next_pid = 0;
 
@@ -171,12 +172,12 @@ task_init (struct page_dir *kernel_dir, uint8_t verbose)
   task_idle->context_esp = (uint32_t)sp;
   task_idle->state = TASK_READY;
 
-  // whatever runs kernel_main from now on is the shell task
-  task_shell = task_alloc ("shell", TASK_PRIORITY_SHELL, 1);
-  task_shell->state = TASK_RUNNING;
-  strcpy (task_shell->cwd, "0:/");
-  task_running = task_shell;
-  task_shell->foreground = 1;
+  // whatever runs kernel_main from now on is the init thread
+  task_init_thread = task_alloc ("init", TASK_PRIORITY_SHELL, 1);
+  task_init_thread->state = TASK_RUNNING;
+  strcpy (task_init_thread->cwd, "0:/");
+  task_running = task_init_thread;
+  task_init_thread->foreground = 1;
 
   if (verbose)
     {
@@ -346,8 +347,9 @@ task_name_from_path (const char *path, char *out)
 
 int32_t
 task_spawn (const char *path, int argc, char **argv, uint8_t priority,
-            uint8_t background, struct handle *stdin, struct handle *stdout)
+            uint32_t flags, struct handle *stdin, struct handle *stdout)
 {
+  uint8_t background = (flags & TASK_SPAWN_BACKGROUND) != 0;
   char name[TASK_NAME_LEN];
   task_name_from_path (path, name);
   struct task *task = task_alloc (name, priority, 0);
@@ -384,20 +386,21 @@ task_spawn (const char *path, int argc, char **argv, uint8_t priority,
   task->parent = task_running;
   task->background = background;
   task->detached = background;
+  task->is_shell = (flags & TASK_SPAWN_SHELL) != 0;
   task->foreground = !background && task_running->foreground;
   strcpy (task->cwd, task_running->cwd);
   task->fds[0] = handle_ref (stdin ? stdin : task_inherit_fd (0));
   task->fds[1] = handle_ref (stdout ? stdout : task_inherit_fd (1));
   task->fds[2] = handle_ref (task_inherit_fd (2));
 
-  uint32_t flags = irq_save ();
+  uint32_t eflags = irq_save ();
   if (task->foreground)
     {
       // drop keys typed before the program started
       keyboard_flush ();
     }
   sched_wake (task);
-  irq_restore (flags);
+  irq_restore (eflags);
   return task->pid;
 }
 
@@ -580,7 +583,7 @@ task_exit (int32_t exit_code)
     {
       if (task_table[i].state != TASK_UNUSED && task_table[i].parent == task)
         {
-          task_table[i].parent = task_shell;
+          task_table[i].parent = task_init_thread;
           task_table[i].detached = 1;
         }
     }
@@ -635,7 +638,8 @@ task_kill_foreground (void)
   for (uint32_t i = 0; i < MAX_TASKS; i++)
     {
       struct task *task = &task_table[i];
-      if (task->foreground && !task->is_kernel && task->state != TASK_UNUSED
+      if (task->foreground && !task->is_kernel && !task->is_shell
+          && task->state != TASK_UNUSED
           && task->state != TASK_ZOMBIE && task_kill (task->pid) == OK)
         {
           killed = 1;

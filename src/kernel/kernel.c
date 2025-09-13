@@ -10,7 +10,6 @@
 #include "idt/idt.h"
 #include "kmem/kheap.h"
 #include "multiboot.h"
-#include "shell/shell.h"
 #include "task/task.h"
 #include "task/tss.h"
 #include <stdint.h>
@@ -126,6 +125,33 @@ read_boot_info (uint32_t boot_magic, uint32_t boot_info)
     }
 }
 
+#if (IS_RTOS != 1)
+// the boot context ends up as the init thread. it starts the shell, a user
+// program, and starts a new one whenever it exits or crashes
+static void
+init_main (void)
+{
+  char *argv[] = { "sh", 0 };
+  while (1)
+    {
+      int32_t pid = task_spawn (TASK_SHELL_PATH, 1, argv, TASK_PRIORITY_SHELL,
+                                TASK_SPAWN_SHELL, 0, 0);
+      if (pid < 0)
+        {
+          printf ("init: cant start %s (error %d)\n", TASK_SHELL_PATH, pid);
+          // nothing else can run the system, keep the cpu idle
+          while (1)
+            {
+              task_sleep_ms (1000);
+            }
+        }
+      int32_t exit_code = task_wait (pid);
+      printf ("init: sh %s, starting a new one\n",
+              exit_code == TASK_KILLED ? "was killed" : "exited");
+    }
+}
+#endif
+
 // boot_magic and boot_info come from a multiboot loader (eax and ebx), both
 // are 0 when booted by the moOS bootloader
 void
@@ -196,6 +222,6 @@ kernel_main (uint32_t boot_magic, uint32_t boot_info)
   pit_init (verbose);
   enable_interrupts (verbose);
 #if (IS_RTOS != 1)
-  shell_run ();
+  init_main ();
 #endif
 }

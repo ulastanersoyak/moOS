@@ -48,7 +48,6 @@ C_SRCS := src/kernel/kernel.c \
 	src/kernel/idt/idt.c \
 	src/kernel/memory/heap/heap.c \
 	src/kernel/kmem/kheap.c \
-	src/kernel/ascii/ascii.c \
 	src/kernel/memory/paging/page.c \
 	src/drivers/disk/disk.c \
 	src/libc/stdlib/stdlib.c \
@@ -68,9 +67,7 @@ C_SRCS := src/kernel/kernel.c \
 	src/kernel/task/elf.c \
 	src/kernel/task/handle.c \
 	src/kernel/task/pipe.c \
-	src/kernel/syscall/syscall.c \
-	src/kernel/shell/shell.c \
-	src/kernel/shell/readline.c
+	src/kernel/syscall/syscall.c
 
 ASM_OBJS := $(patsubst src/%.asm,build/%.asm.o,$(ASM_SRCS))
 C_OBJS := $(patsubst src/%.c,build/%.o,$(C_SRCS))

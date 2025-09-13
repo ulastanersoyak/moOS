@@ -126,6 +126,8 @@
 // programs typed without a path are looked up here
 #define TASK_BIN_DIR "0:/bin/"
 #define TASK_BIN_EXT ".elf"
+// started by the init thread at boot and again whenever it exits
+#define TASK_SHELL_PATH "0:/bin/sh.elf"
 // program arguments copied to the top of the user stack
 #define TASK_MAX_ARGS 16
 #define TASK_MAX_ARGS_BYTES 1024

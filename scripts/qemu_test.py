@@ -123,6 +123,8 @@ STEPS = [
     ("<ctrl-d>", 0.5),
     ("cd | sort\n", 0.3),
     ("date\n", 0.4),
+    # the shell is a user program, init starts a new one when it dies
+    ("kill sh\n", 1.0),
     ("ps\n", 0.5),
     ("mem\n", 0.5),
 ]
@@ -167,7 +169,7 @@ EXPECTED = [
     "moos 0:/> cat LONGNO~1.TXT\napple banana",
     "moos 0:/> cat fruit.txt|sort\napple\nbanana\n",
     "1 2 12\n",                    # quotes keep both spaces
-    "16 80 720\n",                 # 16 programs through a 4 stage pipeline
+    "19 95 855\n",                 # 19 programs through a 4 stage pipeline
     "1 2 10\n",                    # 6000 bytes through pipes larger than 4 kb
     "2 2 13\n",
     "nosuch: not found\n0 0 0",
@@ -178,6 +180,7 @@ EXPECTED = [
     "wc done",
     "typed line\n1 2 11",          # terminal input ended with ctrl+d
     "cd: pipes, redirection and & only work with programs",
+    "init: sh was killed, starting a new one\n\nwelcome to moOS!",
 ]
 
 FORBIDDEN = ["kernel panic", "still alive", "[ER]", "kfree: invalid"]

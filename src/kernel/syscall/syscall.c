@@ -265,7 +265,8 @@ sys_start (const char *user_name, char **user_argv, struct handle *stdin,
       argv[argc++] = args + used;
       used += len + 1;
     }
-  return task_spawn (path, argc, argv, priority, background, stdin, stdout);
+  return task_spawn (path, argc, argv, priority,
+                     background ? TASK_SPAWN_BACKGROUND : 0, stdin, stdout);
 }
 
 // io holds the fds that become stdin and stdout of the child, 0 inherits

@@ -666,13 +666,8 @@ sh_complete (const char *prefix, uint32_t prefix_len, uint8_t is_command,
     }
   memcpy (word, prefix, prefix_len);
   word[prefix_len] = '\0';
-  struct dirent *entries
-      = calloc (SH_MAX_DIR_ENTRIES, sizeof (struct dirent));
-  if (!entries)
-    {
-      return 0;
-    }
-
+  // static so the shell doesnt grow its heap while it runs
+  static struct dirent entries[SH_MAX_DIR_ENTRIES];
   int total = 0;
   char name[SH_COMPLETION_LEN];
   if (is_command && !strchr (word, '/'))
@@ -720,7 +715,6 @@ sh_complete (const char *prefix, uint32_t prefix_len, uint8_t is_command,
                                      out, total, max);
         }
     }
-  free (entries);
   return total;
 }
 

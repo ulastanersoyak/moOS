@@ -9,6 +9,10 @@
 // exit code of a task killed by an exception, ctrl+c or kill
 #define TASK_KILLED (-1)
 
+// task_spawn flags
+#define TASK_SPAWN_BACKGROUND 0x1 // started with &, nobody waits for it
+#define TASK_SPAWN_SHELL 0x2      // ctrl+c doesnt kill it
+
 enum task_state
 {
   TASK_UNUSED,
@@ -32,6 +36,7 @@ struct task
   uint8_t background; // started with &, nobody waits for it
   uint8_t foreground; // receives keyboard input and ctrl+c
   uint8_t detached;   // nobody will wait for it, freed as soon as it exits
+  uint8_t is_shell;   // in the foreground but ctrl+c doesnt kill it
   volatile uint8_t killed;
 
   // saved kernel stack pointer while the task is not running
@@ -65,7 +70,7 @@ extern struct task task_table[MAX_TASKS];
 extern struct task *task_running;
 extern struct task *task_idle;
 
-// turns the boot context into the shell task and starts the idle thread
+// turns the boot context into the init thread and starts the idle thread
 void task_init (struct page_dir *kernel_dir, uint8_t verbose);
 
 // page directory used by kernel threads
@@ -74,10 +79,11 @@ struct page_dir *task_kernel_dir (void);
 // loads the elf executable at path and makes it ready to run in ring 3 with
 // argc/argv as arguments of main. stdin and stdout become fd 0 and 1 of the
 // task (0 inherits the fd of the running task), the task takes its own
-// reference. returns its pid or a negative error. foreground tasks receive
-// keyboard input
+// reference. flags are TASK_SPAWN_*. returns its pid or a negative error.
+// tasks that dont run in the background receive keyboard input if their
+// parent does
 int32_t task_spawn (const char *path, int argc, char **argv, uint8_t priority,
-                    uint8_t background, struct handle *stdin,
+                    uint32_t flags, struct handle *stdin,
                     struct handle *stdout);
 
 // finds the program for a command: "hello" becomes 0:/bin/hello.elf, names
@@ -113,7 +119,8 @@ void task_exit (int32_t exit_code);
 // marks a user task to exit with TASK_KILLED the next time it runs
 int32_t task_kill (int32_t pid);
 
-// ctrl+c, kills every foreground user task (a whole pipeline)
+// ctrl+c, kills every foreground user task (a whole pipeline) except the
+// shell
 void task_kill_foreground (void);
 
 // waits until task_wake_channel is called with the same channel, or the task
