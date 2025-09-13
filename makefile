@@ -78,12 +78,12 @@ FILES := $(ASM_OBJS) $(C_OBJS)
 
 # user programs, elf executables copied to 0:/bin on the disk image
 USER_PROGS := hello count crash spin rtdemo memtest cat wc sort cp echo ls grep \
-	date time pipetest cowsay moose
+	date time pipetest cowsay moose sh
 USER_LIB_OBJS := build/user/lib/crt0.asm.o build/user/lib/syscall.asm.o \
 	build/user/lib/moos.o
 USER_BINS := $(patsubst %,build/user/%.elf,$(USER_PROGS))
 # keep user objects, make would delete them as intermediate files
-.SECONDARY: $(USER_BINS:.elf=.o)
+.SECONDARY: $(USER_BINS:.elf=.o) build/user/shline.o
 
 FLAGS = -g -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector \
 	-fno-asynchronous-unwind-tables -fomit-frame-pointer -march=i686 \
@@ -141,6 +141,10 @@ $(LIMINE_DIR)/limine.c:
 build/user/%.elf: build/user/%.o $(USER_LIB_OBJS) ./src/user/linker.ld
 	$(LD) -s -z noexecstack -T ./src/user/linker.ld -o $@ $< $(USER_LIB_OBJS)
 
+# the shell is split into the command interpreter and the line editor
+build/user/sh.elf: build/user/sh.o build/user/shline.o $(USER_LIB_OBJS) ./src/user/linker.ld
+	$(LD) -s -z noexecstack -T ./src/user/linker.ld -o $@ build/user/sh.o build/user/shline.o $(USER_LIB_OBJS)
+
 # multi cluster test file: 600 lines of "line NNNN\n"
 ./build/long.txt:
 	@mkdir -p $(dir $@)
@@ -172,7 +176,8 @@ build/%.o: src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(FLAGS) -c $< -o $@
 
--include $(C_OBJS:.o=.d) $(USER_BINS:.elf=.d) build/user/lib/moos.d
+-include $(C_OBJS:.o=.d) $(USER_BINS:.elf=.d) build/user/lib/moos.d \
+	build/user/shline.d
 
 clean:
 	rm -rf ./build/* ./bin/*
