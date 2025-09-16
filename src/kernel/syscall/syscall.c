@@ -9,6 +9,7 @@
 #include "../io/io.h"
 #include "../kmem/kheap.h"
 #include "../task/handle.h"
+#include "../task/mutex.h"
 #include "../task/sched.h"
 #include "../task/task.h"
 
@@ -452,6 +453,17 @@ sys_sysinfo (struct sysinfo *out)
 }
 
 static int32_t
+sys_mutex_open (const char *user_name, uint32_t flags)
+{
+  char name[MUTEX_NAME_LEN];
+  if (sys_copy_string (user_name, name, MUTEX_NAME_LEN - 1) < 0)
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  return mutex_open (name, flags);
+}
+
+static int32_t
 sys_isatty (int fd)
 {
   struct handle *handle = task_fd_get (fd);
@@ -600,6 +612,18 @@ syscall_handler (struct interrupt_frame *frame)
       break;
     case SYS_SYSINFO:
       res = sys_sysinfo ((struct sysinfo *)frame->ebx);
+      break;
+    case SYS_MUTEX_OPEN:
+      res = sys_mutex_open ((const char *)frame->ebx, frame->ecx);
+      break;
+    case SYS_MUTEX_LOCK:
+      res = mutex_lock (frame->ebx);
+      break;
+    case SYS_MUTEX_UNLOCK:
+      res = mutex_unlock (frame->ebx);
+      break;
+    case SYS_MUTEX_CLOSE:
+      res = mutex_close (frame->ebx);
       break;
     case SYS_REBOOT:
       // pulse the cpu reset line through the keyboard controller

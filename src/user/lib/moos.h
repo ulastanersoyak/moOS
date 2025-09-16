@@ -159,6 +159,17 @@ struct sysinfo
 int sysinfo (struct sysinfo *out);
 void reboot (void);
 
+// mutexes are shared between programs by name (up to 15 chars). the first
+// open creates it with flags, MUTEX_INHERIT turns on priority inheritance:
+// the owner runs at the priority of its most important waiter, so a medium
+// priority task cant keep a high priority one waiting (priority inversion).
+// lock returns -1 if the task got killed while waiting
+#define MUTEX_INHERIT 0x1
+int mutex_open (const char *name, int flags); // returns an id
+int mutex_lock (int id);
+int mutex_unlock (int id);
+int mutex_close (int id);
+
 // heap
 void *malloc (uint32_t size);
 void *calloc (uint32_t count, uint32_t size);

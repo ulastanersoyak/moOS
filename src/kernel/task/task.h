@@ -26,12 +26,18 @@ enum task_state
   TASK_ZOMBIE,  // exited, kept until the parent collects the exit code
 };
 
+struct mutex;
+
 struct task
 {
   int32_t pid;
   char name[TASK_NAME_LEN];
   enum task_state state;
-  uint8_t priority;   // only used by the real time policy
+  // only used by the real time policy. priority is the effective one, it
+  // can be raised above base_priority while the task holds a mutex a more
+  // important task waits for (priority inheritance)
+  uint8_t priority;
+  uint8_t base_priority;
   uint8_t is_kernel;  // kernel threads have no user address space
   uint8_t background; // started with &, nobody waits for it
   uint8_t foreground; // receives keyboard input and ctrl+c
@@ -62,6 +68,8 @@ struct task
   struct task *parent;
   int32_t wait_pid;   // child the task waits for in TASK_WAITING_CHILD
   void *wait_channel; // what the task waits for in TASK_BLOCKED
+  struct mutex *wait_mutex; // mutex it waits for, also its wait channel
+  uint32_t mutexes;         // bit n set: mutex n is open, see mutex.h
   int32_t exit_code;  // set when it becomes a zombie
 };
 

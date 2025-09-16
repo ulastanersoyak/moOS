@@ -9,6 +9,7 @@
 #include "../io/io.h"
 #include "../kpanic.h"
 #include "elf.h"
+#include "mutex.h"
 #include "sched.h"
 
 // asm functions
@@ -72,6 +73,7 @@ task_alloc (const char *name, uint8_t priority, uint8_t is_kernel)
     }
   memcpy (task->name, name, len);
   task->priority = priority;
+  task->base_priority = priority;
   task->is_kernel = is_kernel;
   task->wait_pid = -1;
   return task;
@@ -564,6 +566,8 @@ task_exit (int32_t exit_code)
     {
       panic ("task_exit: kernel threads cant exit\n");
     }
+  // tasks waiting for its mutexes get them now
+  mutex_release_all (task);
   // closing files flushes writes, closing pipe ends wakes up the other side
   for (int i = 0; i < TASK_MAX_FDS; i++)
     {
@@ -778,8 +782,8 @@ task_set_priority (int32_t pid, uint8_t priority)
       irq_restore (flags);
       return -INVALID_ARG_ERROR;
     }
-  task->priority = priority;
-  sched_request_resched ();
+  task->base_priority = priority;
+  mutex_update_priority (task);
   irq_restore (flags);
   return OK;
 }

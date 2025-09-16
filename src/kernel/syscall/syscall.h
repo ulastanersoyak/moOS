@@ -44,6 +44,10 @@ enum
   SYS_SETCURSOR = 34,  // setcursor (int row, int column)
   SYS_SYSINFO = 35,    // int sysinfo (struct sysinfo *out)
   SYS_REBOOT = 36,     // reboot (void)
+  SYS_MUTEX_OPEN = 37,   // int mutex_open (const char *name, int flags)
+  SYS_MUTEX_LOCK = 38,   // int mutex_lock (int id)
+  SYS_MUTEX_UNLOCK = 39, // int mutex_unlock (int id)
+  SYS_MUTEX_CLOSE = 40,  // int mutex_close (int id)
 };
 
 // handles int 0x80 from user tasks

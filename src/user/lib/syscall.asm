@@ -54,3 +54,7 @@ $%1:
 	SYSCALL setcursor, 34
 	SYSCALL sysinfo, 35
 	SYSCALL reboot, 36
+	SYSCALL mutex_open, 37
+	SYSCALL mutex_lock, 38
+	SYSCALL mutex_unlock, 39
+	SYSCALL mutex_close, 40
