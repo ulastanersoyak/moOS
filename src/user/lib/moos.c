@@ -66,6 +66,41 @@ readline (char *buf, uint32_t max)
   return len;
 }
 
+static void
+busy_loops (uint32_t count)
+{
+  for (volatile uint32_t i = 0; i < count; i++)
+    {
+    }
+}
+
+uint32_t
+busy_calibrate (void)
+{
+  // start right after a tick so the window is exactly 100 ms long
+  uint32_t start = uptime ();
+  while (uptime () == start)
+    {
+    }
+  start = uptime ();
+  uint32_t loops = 0;
+  while (uptime () - start < 100)
+    {
+      busy_loops (10000);
+      loops += 10000;
+    }
+  return loops / 100;
+}
+
+void
+busy_ms (uint32_t ms, uint32_t loops_per_ms)
+{
+  for (uint32_t i = 0; i < ms; i++)
+    {
+      busy_loops (loops_per_ms);
+    }
+}
+
 uint32_t
 strlen (const char *str)
 {

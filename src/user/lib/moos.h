@@ -213,6 +213,12 @@ void eprint (const char *str); // to stderr
 // prints "what: reason" to stderr for a negative error from a system call
 void print_error (const char *what, int err);
 
+// busy work for the real time demos: busy_ms takes ms of cpu time however
+// often the task gets preempted in between. busy_calibrate measures how many
+// loops make a millisecond, run it once at a high priority first
+uint32_t busy_calibrate (void);
+void busy_ms (uint32_t ms, uint32_t loops_per_ms);
+
 // reads a line with echo and backspace into buf. returns its length
 uint32_t readline (char *buf, uint32_t max);
 
