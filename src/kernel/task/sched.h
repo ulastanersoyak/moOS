@@ -13,6 +13,11 @@ enum sched_policy
   // and preempts lower priority tasks as soon as it becomes ready. tasks
   // with equal priority share the cpu round robin
   SCHED_REAL_TIME,
+  // earliest deadline first: periodic tasks run in the order of their
+  // deadlines, which keeps every deadline as long as they need at most 100%
+  // of the cpu together. the shell and killed tasks still go first, other
+  // tasks only run when no periodic task is ready, by priority
+  SCHED_EDF,
 };
 
 void sched_set_policy (enum sched_policy policy);

@@ -365,7 +365,8 @@ sys_tasks (struct task_info *out, int max)
 static int32_t
 sys_sched (int32_t policy)
 {
-  if (policy == SCHED_ROUND_ROBIN || policy == SCHED_REAL_TIME)
+  if (policy == SCHED_ROUND_ROBIN || policy == SCHED_REAL_TIME
+      || policy == SCHED_EDF)
     {
       sched_set_policy (policy);
     }

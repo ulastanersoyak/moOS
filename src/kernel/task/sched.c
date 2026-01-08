@@ -25,8 +25,47 @@ sched_get_policy (void)
 const char *
 sched_policy_name (enum sched_policy policy)
 {
-  return policy == SCHED_REAL_TIME ? "real time (fixed priority preemptive)"
-                                   : "round robin";
+  switch (policy)
+    {
+    case SCHED_REAL_TIME:
+      return "real time (fixed priority preemptive)";
+    case SCHED_EDF:
+      return "earliest deadline first";
+    default:
+      return "round robin";
+    }
+}
+
+// edf ranks: the shell (and killed tasks) first, then periodic tasks, then
+// the rest
+static uint8_t
+sched_edf_class (struct task *task)
+{
+  if (task->priority >= TASK_PRIORITY_SHELL)
+    {
+      return 0;
+    }
+  return task->period_ticks ? 1 : 2;
+}
+
+// true if task a should run before task b under the current policy
+static uint8_t
+sched_runs_before (struct task *a, struct task *b)
+{
+  if (current_policy == SCHED_EDF)
+    {
+      uint8_t class_a = sched_edf_class (a);
+      uint8_t class_b = sched_edf_class (b);
+      if (class_a != class_b)
+        {
+          return class_a < class_b;
+        }
+      if (class_a == 1)
+        {
+          return (int32_t)(a->deadline - b->deadline) < 0;
+        }
+    }
+  return a->priority > b->priority;
 }
 
 static uint8_t
@@ -54,7 +93,7 @@ sched_pick_next (void)
         {
           return task;
         }
-      if (!best || task->priority > best->priority)
+      if (!best || sched_runs_before (task, best))
         {
           best = task;
         }
@@ -101,8 +140,8 @@ sched_wake (struct task *task)
 {
   task->state = TASK_READY;
   if (task_running == task_idle
-      || (current_policy == SCHED_REAL_TIME
-          && task->priority > task_running->priority))
+      || (current_policy != SCHED_ROUND_ROBIN
+          && sched_runs_before (task, task_running)))
     {
       need_resched = 1;
     }

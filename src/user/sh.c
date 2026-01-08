@@ -510,8 +510,15 @@ cmd_kill (int argc, char **argv)
 static const char *
 sh_policy_name (int policy)
 {
-  return policy == SCHED_RT ? "real time (fixed priority preemptive)"
-                            : "round robin";
+  switch (policy)
+    {
+    case SCHED_RT:
+      return "real time (fixed priority preemptive)";
+    case SCHED_EDF:
+      return "earliest deadline first";
+    default:
+      return "round robin";
+    }
 }
 
 static void
@@ -528,9 +535,13 @@ cmd_sched (int argc, char **argv)
         {
           policy = SCHED_RT;
         }
+      else if (strcmp (argv[1], "edf") == 0)
+        {
+          policy = SCHED_EDF;
+        }
       else
         {
-          printf ("usage: sched [rr|rt]\n");
+          printf ("usage: sched [rr|rt|edf]\n");
           return;
         }
     }
@@ -560,7 +571,7 @@ static const struct sh_command commands[] = {
   { "run", "run <program> ...", cmd_run },
   { "ps", "ps", cmd_ps },
   { "kill", "kill <pid|name>", cmd_kill },
-  { "sched", "sched [rr|rt]", cmd_sched },
+  { "sched", "sched [rr|rt|edf]", cmd_sched },
   { "prio", "prio <n> <program> ...", cmd_prio },
   { "mem", "mem", cmd_mem },
   { "uptime", "uptime", cmd_uptime },

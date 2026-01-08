@@ -97,6 +97,7 @@ int kill (int pid); // the task exits the next time it runs
 #define SCHED_GET (-1)
 #define SCHED_RR 0 // round robin
 #define SCHED_RT 1 // fixed priority preemptive
+#define SCHED_EDF 2 // earliest deadline first for periodic tasks
 int sched (int policy);
 // real time priority 1-29 of a task, pid 0 is the calling task
 #define PRIO_MIN 1
