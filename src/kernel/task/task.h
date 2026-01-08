@@ -62,6 +62,13 @@ struct task
   char cwd[MAX_PATH_LEN + 1];
 
   uint32_t wake_tick; // when TASK_SLEEPING
+
+  // periodic tasks: a job is released every period_ticks and has to be done
+  // (task_wait_period called) by deadline, the start of the next period
+  uint32_t period_ticks; // 0 if the task isnt periodic
+  uint32_t deadline;
+  uint32_t jobs;
+  uint32_t deadline_misses;
   int32_t slice;      // ticks left before round robin switches task
   uint32_t cpu_ticks; // timer ticks spent running
 
@@ -170,10 +177,22 @@ struct task_info
   uint8_t is_kernel;
   uint8_t reserved;
   uint32_t cpu_ms;
+  uint32_t period_ms; // 0 if the task isnt periodic
+  uint32_t jobs;
+  uint32_t deadline_misses;
 };
 
 // fills out with up to max tasks, returns how many
 int task_list (struct task_info *out, int max);
+
+// makes the running task periodic with a period of ms, the first job starts
+// now. 0 makes it an ordinary task again
+int32_t task_set_period (uint32_t ms);
+
+// ends the current job of a periodic task and sleeps until the next one is
+// released. returns 1 if the job missed its deadline, 0 if it didnt. late
+// jobs dont skip periods, the next one starts right away
+int32_t task_wait_period (void);
 
 // sets the real time priority of a user task, pid 0 is the running task
 int32_t task_set_priority (int32_t pid, uint8_t priority);

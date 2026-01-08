@@ -767,9 +767,51 @@ task_list (struct task_info *out, int max)
       info->background = task->background;
       info->is_kernel = task->is_kernel;
       info->cpu_ms = task->cpu_ticks * (1000 / PIT_FREQUENCY_HZ);
+      info->period_ms = task->period_ticks * (1000 / PIT_FREQUENCY_HZ);
+      info->jobs = task->jobs;
+      info->deadline_misses = task->deadline_misses;
     }
   irq_restore (flags);
   return count;
+}
+
+int32_t
+task_set_period (uint32_t ms)
+{
+  struct task *task = task_running;
+  if (task->is_kernel)
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  uint32_t flags = irq_save ();
+  task->period_ticks = pit_ms_to_ticks (ms);
+  task->deadline = pit_ticks () + task->period_ticks;
+  task->jobs = 0;
+  task->deadline_misses = 0;
+  // the earliest deadline first policy orders tasks by their deadline
+  sched_request_resched ();
+  irq_restore (flags);
+  return OK;
+}
+
+int32_t
+task_wait_period (void)
+{
+  struct task *task = task_running;
+  if (!task->period_ticks)
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  uint32_t flags = irq_save ();
+  // a job that ends in the tick of its deadline already ended too late
+  int32_t missed = (int32_t)(pit_ticks () - task->deadline) >= 0;
+  task->jobs++;
+  task->deadline_misses += missed;
+  uint32_t release = task->deadline;
+  task->deadline += task->period_ticks;
+  irq_restore (flags);
+  task_sleep_until_tick (release);
+  return missed;
 }
 
 int32_t

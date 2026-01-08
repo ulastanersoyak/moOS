@@ -462,9 +462,15 @@ cmd_ps (int argc, char **argv)
     {
       struct task_info *task = &list[i];
       uint32_t ms = task->cpu_ms;
-      printf ("%-5d%-12s%-10s%-6u%u.%u%u s%s\n", task->pid, task->name,
+      printf ("%-5d%-12s%-10s%-6u%u.%u%u s%s", task->pid, task->name,
               task->state, task->priority, ms / 1000, (ms / 100) % 10,
               (ms / 10) % 10, task->background ? " &" : "");
+      if (task->period_ms)
+        {
+          printf ("  every %u ms, %u of %u late", task->period_ms,
+                  task->deadline_misses, task->jobs);
+        }
+      printf ("\n");
     }
 }
 

@@ -86,6 +86,9 @@ struct task_info
   uint8_t is_kernel;
   uint8_t reserved;
   uint32_t cpu_ms;
+  uint32_t period_ms; // 0 if the task isnt periodic
+  uint32_t jobs;
+  uint32_t deadline_misses;
 };
 int tasks (struct task_info *out, int max); // returns how many
 int kill (int pid); // the task exits the next time it runs
@@ -169,6 +172,13 @@ int mutex_open (const char *name, int flags); // returns an id
 int mutex_lock (int id);
 int mutex_unlock (int id);
 int mutex_close (int id);
+
+// periodic tasks: period starts the first job now, each job ends with
+// wait_period, which sleeps until the next job is released. a job has to be
+// done before the next one is released (its deadline), wait_period returns
+// 1 if it wasnt. ps shows the missed deadlines
+int period (uint32_t ms); // 0 makes the task ordinary again
+int wait_period (void);
 
 // heap
 void *malloc (uint32_t size);

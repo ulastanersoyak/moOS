@@ -58,3 +58,5 @@ $%1:
 	SYSCALL mutex_lock, 38
 	SYSCALL mutex_unlock, 39
 	SYSCALL mutex_close, 40
+	SYSCALL period, 41
+	SYSCALL wait_period, 42

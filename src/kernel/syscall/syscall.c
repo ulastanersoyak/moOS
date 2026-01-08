@@ -625,6 +625,12 @@ syscall_handler (struct interrupt_frame *frame)
     case SYS_MUTEX_CLOSE:
       res = mutex_close (frame->ebx);
       break;
+    case SYS_PERIOD:
+      res = task_set_period (frame->ebx);
+      break;
+    case SYS_WAIT_PERIOD:
+      res = task_wait_period ();
+      break;
     case SYS_REBOOT:
       // pulse the cpu reset line through the keyboard controller
       outb (0x64, 0xFE);

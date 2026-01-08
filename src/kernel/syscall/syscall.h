@@ -48,6 +48,8 @@ enum
   SYS_MUTEX_LOCK = 38,   // int mutex_lock (int id)
   SYS_MUTEX_UNLOCK = 39, // int mutex_unlock (int id)
   SYS_MUTEX_CLOSE = 40,  // int mutex_close (int id)
+  SYS_PERIOD = 41,       // int period (uint32_t ms), 0 stops
+  SYS_WAIT_PERIOD = 42,  // int wait_period (void), 1 if the job was late
 };
 
 // handles int 0x80 from user tasks
