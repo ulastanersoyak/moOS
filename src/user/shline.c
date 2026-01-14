@@ -14,12 +14,16 @@ struct editor
   uint32_t cursor;
   // screen position of the first char, fixed up when the screen scrolls
   struct cursor start;
+  // where the editor left the cursor, anything else means another program
+  // printed in the meantime
+  struct cursor last;
 };
 
 static void
 editor_start_here (struct editor *e)
 {
   getcursor (&e->start);
+  e->last = e->start;
 }
 
 // moves the terminal cursor to char idx of the line
@@ -200,6 +204,21 @@ sh_readline (char *line, uint32_t max)
   while (1)
     {
       int key = getchar ();
+      // a background program printed over the line, start it again below
+      // the output instead of editing the line where it used to be
+      struct cursor now;
+      getcursor (&now);
+      if (now.row != e.last.row || now.column != e.last.column
+          || now.scrolls != e.last.scrolls)
+        {
+          if (now.column != 0)
+            {
+              putchar ('\n');
+            }
+          sh_print_prompt ();
+          editor_start_here (&e);
+          editor_redraw (&e, 0, 0);
+        }
       switch (key)
         {
         case '\n':
@@ -277,5 +296,6 @@ sh_readline (char *line, uint32_t max)
             }
           break;
         }
+      getcursor (&e.last);
     }
 }
