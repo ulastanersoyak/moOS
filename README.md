@@ -70,13 +70,18 @@ shell
 
 ## screenshots
 
-files, redirection and pipelines
+long file names, redirection and pipelines
 
 ![files and pipelines](images/files.png)
 
-background tasks, the real time scheduler and a program killed by a page fault
+a program killed by a page fault, and priority inversion with and without
+priority inheritance
 
-![tasks and scheduling](images/tasks.png)
+![tasks and priority inheritance](images/tasks.png)
+
+periodic tasks under rate monotonic priorities and earliest deadline first
+
+![rate monotonic and edf](images/rtos.png)
 
 the shell builtins
 
