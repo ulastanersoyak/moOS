@@ -26,7 +26,7 @@
 // TODO: shell                  [x]
 // TODO: userland               [x]
 // TODO: scheduler              [x]
-// TODO: rtos                   [ ]
+// TODO: rtos                   [x]
 
 #define IS_RTOS (0)
 

@@ -2,8 +2,10 @@
 
 a 32-bit operating system written in c and assembly. it boots with its own
 bootloader or with limine, runs preemptively scheduled ring 3 programs from a
-fat16 disk and comes with a shell that has pipes, redirection, job control,
-history and tab completion.
+fat16 disk with long file names and comes with a user space shell that has
+pipes, redirection, job control, history and tab completion. the scheduler
+does round robin, fixed priority real time with priority inheritance and
+earliest deadline first.
 
 ![moOS booting into the shell](images/boot.png)
 
@@ -20,12 +22,19 @@ kernel
 - paging with one address space per program, kernel pages are supervisor
   only and program code is read only
 - kernel heap with block allocation, usage stats and invalid free detection
-- preemptive multitasking with two scheduling policies, switchable at runtime
-  with `sched rr` / `sched rt`:
+- preemptive multitasking with three scheduling policies, switchable at
+  runtime with `sched rr` / `sched rt` / `sched edf`:
   - round robin: every task gets a 50 ms time slice in turn
   - real time: fixed priority preemptive. the highest priority ready task
     always runs and preempts lower priority tasks the moment it wakes up,
     equal priorities share the cpu round robin
+  - earliest deadline first: periodic tasks run in the order of their
+    deadlines, the shell still goes first
+- periodic tasks (`period`, `wait_period`) that count their missed deadlines
+- named mutexes shared between programs, with optional priority inheritance
+  against priority inversion
+- an init thread that starts the shell and starts a new one when it exits or
+  crashes
 - elf loader, `argc`/`argv`, per program heap (`sbrk`)
 - `int 0x80` system calls for files, directories, pipes, processes, time and
   the terminal. every pointer coming from user space is checked
@@ -40,12 +49,16 @@ drivers
 file system
 - fat16: read, create, write, append, truncate, delete, `mkdir`, `rmdir`,
   directory listing, real file dates. images stay valid for `fsck.fat`
+- vfat long file names up to 63 chars with 8.3 aliases (`LONGFI~1.TXT`),
+  case insensitive lookups and the case of short names kept
 - paths relative to a working directory, `.` and `..`
 
 shell
+- a user program (`0:/bin/sh.elf`) on top of system calls, a crash in it
+  cant take the kernel down
 - builtins: `help`, `cd`, `pwd`, `touch`, `rm`, `mkdir`, `run`, `ps`,
-  `kill`, `sched`, `prio`, `mem`, `uptime`, `sleep`, `cowsay`, `moose`,
-  `clear`, `reboot`
+  `kill`, `sched`, `prio`, `mem`, `uptime`, `sleep`, `clear`, `reboot`,
+  `exit`
 - pipelines (`cat notes.txt | sort | wc`), `< file`, `> file`, `>> file`, `&` and
   "quoted arguments"
 - job control: `prog &` runs in the background, `ps`, `kill <pid|name>`,
@@ -54,10 +67,6 @@ shell
   foreground pipeline, ctrl+d ends input typed into a program
 - line editing with the arrow keys, home, end and delete, history with
   up/down, tab completion of commands and paths
-
-planned
-- long file names (vfat)
-- a shell running in user space
 
 ## screenshots
 
@@ -155,6 +164,11 @@ type their name in the shell to run them:
 | `spin` | busy loop, a cpu hog for scheduler tests |
 | `memtest` | stress tests the user heap |
 | `crash [code]` | writes to kernel memory (or its own code) and gets killed |
+| `pidemo [nopi]` | priority inversion with and without priority inheritance |
+| `edfdemo` | two periodic tasks that only edf can schedule |
+| `cowsay [text]` | a cow says something |
+| `moose [text]` | the moOS moose |
+| `sh` | the shell, started by init at boot |
 
 programs that read stdin when they get no file arguments work in pipelines:
 ```
@@ -181,14 +195,38 @@ rtdemo: max lateness 0 ms, average 0 ms
 moos 0:/> kill spin
 ```
 
+`pidemo` shows priority inversion. a low priority task holds a lock that a
+high priority task needs while a medium priority task hogs the cpu. with
+priority inheritance (the default) low runs at high's priority until it
+unlocks, with `pidemo nopi` high has to wait for medium too:
+```
+moos 0:/> pidemo
+high: got the lock after 150 ms
+moos 0:/> pidemo nopi
+high: got the lock after 550 ms
+```
+
+`edfdemo` runs two periodic tasks that need 90% of the cpu (30 ms every
+60 ms and 36 ms every 90 ms). rate monotonic priorities cant schedule them,
+earliest deadline first can:
+```
+moos 0:/> sched rt
+moos 0:/> edfdemo
+slow: 36 ms every 90 ms, 9 of 20 deadlines missed
+moos 0:/> sched edf
+moos 0:/> edfdemo
+slow: 36 ms every 90 ms, 0 of 20 deadlines missed
+```
+
 ## project structure
 - `src/bootloader/` - boot sector, kernel entry stub and limine config
-- `src/kernel/` - core os: interrupts, memory, tasks, scheduler, syscalls,
-  shell
+- `src/kernel/` - core os: interrupts, memory, tasks, scheduler, mutexes,
+  syscalls
 - `src/drivers/` - screen, keyboard, timer, clock, serial and disk drivers
 - `src/file_system/` - vfs, path parser and fat16 driver
 - `src/libc/` - kernel side c library
-- `src/user/` - user programs and their syscall library
+- `src/user/` - user programs including the shell, and their syscall
+  library
 - `external/limine/` - limine bootloader (git submodule)
 - `scripts/` - qemu test driver and helpers
 - `docs/` - debugging guide and fat16 reference
