@@ -123,6 +123,18 @@ STEPS = [
     ("<ctrl-d>", 0.5),
     ("cd | sort\n", 0.3),
     ("date\n", 0.4),
+    # priority inheritance, and periodic tasks under rate monotonic
+    # priorities and earliest deadline first
+    ("pidemo\n", 1.5),
+    ("pidemo nopi\n", 1.5),
+    ("sched rt\n", 0.3),
+    ("edfdemo\n", 2.5),
+    ("sched edf\n", 0.3),
+    ("edfdemo\n", 2.5),
+    # the shell runs before periodic tasks, so ps can make them late
+    ("edfdemo &\n", 0.8),
+    ("ps\n", 2.0),
+    ("sched rr\n", 0.3),
     # the shell is a user program, init starts a new one when it dies
     ("kill sh\n", 1.0),
     ("ps\n", 0.5),
@@ -169,7 +181,7 @@ EXPECTED = [
     "moos 0:/> cat LONGNO~1.TXT\napple banana",
     "moos 0:/> cat fruit.txt|sort\napple\nbanana\n",
     "1 2 12\n",                    # quotes keep both spaces
-    "19 95 855\n",                 # 19 programs through a 4 stage pipeline
+    "21 105 945\n",                # 21 programs through a 4 stage pipeline
     "1 2 10\n",                    # 6000 bytes through pipes larger than 4 kb
     "2 2 13\n",
     "nosuch: not found\n0 0 0",
@@ -181,6 +193,8 @@ EXPECTED = [
     "typed line\n1 2 11",          # terminal input ended with ctrl+d
     "cd: pipes, redirection and & only work with programs",
     "init: sh was killed, starting a new one\n\nwelcome to moOS!",
+    "scheduler: earliest deadline first",
+    "every 60 ms, 0 of",               # ps shows periodic tasks
 ]
 
 FORBIDDEN = ["kernel panic", "still alive", "[ER]", "kfree: invalid"]
@@ -292,6 +306,16 @@ def main():
     last_ps = log[log.rfind("pid  name"):]
     if "spin" in last_ps or "rtdemo" in last_ps:
         failed.append("tasks left over after kill")
+    # with priority inheritance high only waits for low's critical section,
+    # without it mid runs first
+    waits = [int(x) for x in re.findall(r"high: got the lock after (\d+) ms", log)]
+    if len(waits) != 2 or waits[0] > 300 or waits[1] < waits[0] + 150:
+        failed.append(f"unexpected pidemo waits (pi, no pi): {waits}")
+    # rate monotonic misses deadlines of slow, edf misses none
+    slow = [int(x) for x in re.findall(r"slow: 36 ms every 90 ms, (\d+) of 20", log)]
+    fast = re.findall(r"fast: 30 ms every 60 ms, (\d+) of 30", log)
+    if len(slow) != 3 or slow[0] == 0 or slow[1] != 0 or fast[:2] != ["0", "0"]:
+        failed.append(f"unexpected edfdemo misses (rt, edf): {slow} {fast}")
     # running and killing programs must not leak heap blocks
     mem = re.findall(r"heap: \d+ kb used / \d+ kb total \((\d+) of", log)
     if len(mem) != 2 or mem[0] != mem[1]:
