@@ -1,8 +1,8 @@
 #include "lib/moos.h"
 
-// two periodic tasks that together need 94% of the cpu:
+// two periodic tasks that together need 90% of the cpu:
 //   fast: a 30 ms job every 60 ms
-//   slow: a 40 ms job every 90 ms
+//   slow: a 36 ms job every 90 ms
 // under sched rt they get rate monotonic priorities (the shorter period
 // wins), which cant schedule this set: fast takes 60 of the first 90 ms and
 // slow misses its deadline every 180 ms. earliest deadline first keeps every
@@ -20,7 +20,7 @@ struct periodic
 
 static const struct periodic tasks_set[] = {
   { "fast", 60, 30, 20 },
-  { "slow", 90, 40, 15 },
+  { "slow", 90, 36, 15 },
 };
 
 #define TASK_COUNT (sizeof (tasks_set) / sizeof (tasks_set[0]))
