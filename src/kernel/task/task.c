@@ -79,16 +79,19 @@ task_alloc (const char *name, uint8_t priority, uint8_t is_kernel)
   return task;
 }
 
-// frees every page mapped in the user page table: code, data, heap, stack
+// frees every page mapped in the user page tables: code, data, heap, stack
 static void
 task_free_user_pages (struct task *task)
 {
-  uint32_t *table = task->dir->user_table;
-  for (uint32_t i = 0; i < TOTAL_ENTRIES_PER_TABLE; i++)
+  for (uint32_t t = 0; t < USER_SPACE_TABLES; t++)
     {
-      if (table[i] & IS_PRESENT)
+      uint32_t *table = task->dir->user_tables[t];
+      for (uint32_t i = 0; table && i < TOTAL_ENTRIES_PER_TABLE; i++)
         {
-          free ((void *)(table[i] & 0xfffff000));
+          if (table[i] & IS_PRESENT)
+            {
+              free ((void *)(table[i] & 0xfffff000));
+            }
         }
     }
 }
@@ -195,8 +198,11 @@ task_init (struct page_dir *kernel_dir, uint8_t verbose)
 static uint8_t *
 task_user_page (struct task *task, uint32_t vaddr, uint8_t writable)
 {
-  uint32_t *entry
-      = &task->dir->user_table[(vaddr / PAGE_SIZE) % TOTAL_ENTRIES_PER_TABLE];
+  uint32_t *entry = page_dir_user_entry (task->dir, vaddr, 1);
+  if (!entry)
+    {
+      return 0;
+    }
   if (!(*entry & IS_PRESENT))
     {
       void *page = calloc (PAGE_SIZE);

@@ -98,13 +98,15 @@
 
 #define PIT_FREQUENCY_HZ 100
 
-// user tasks. programs are elf executables linked at USER_CODE_ADDR. the whole
-// user address space is the single page table at USER_CODE_ADDR (4mb)
+// user tasks. programs are elf executables linked at USER_CODE_ADDR. the user
+// address space is USER_SPACE_TABLES page tables (4mb each) from there, a
+// table is only allocated once a page in it is used
 #define USER_CODE_SEG 0x1B // gdt entry 3 with rpl 3
 #define USER_DATA_SEG 0x23 // gdt entry 4 with rpl 3
 #define USER_CODE_ADDR 0x40000000
 #define USER_STACK_SIZE (16 * 1024)
-#define USER_SPACE_SIZE (TOTAL_ENTRIES_PER_TABLE * PAGE_SIZE)
+#define USER_SPACE_TABLES 16
+#define USER_SPACE_SIZE (USER_SPACE_TABLES * TOTAL_ENTRIES_PER_TABLE * PAGE_SIZE)
 #define USER_STACK_TOP (USER_CODE_ADDR + USER_SPACE_SIZE)
 
 // tasks

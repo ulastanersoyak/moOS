@@ -54,38 +54,71 @@ page_dir_init (uint32_t flags)
   return dir;
 }
 
+#define TABLE_SPAN (TOTAL_ENTRIES_PER_TABLE * PAGE_SIZE)
+
 struct page_dir *
 page_dir_new_user (struct page_dir *kernel_dir, void *user_addr)
 {
   struct page_dir *dir = calloc (sizeof (struct page_dir));
   uint32_t *dir_entry
       = calloc (sizeof (uint32_t) * TOTAL_ENTRIES_PER_DIRECTORY);
-  uint32_t *table = calloc (sizeof (uint32_t) * TOTAL_ENTRIES_PER_TABLE);
-  if (!dir || !dir_entry || !table)
+  if (!dir || !dir_entry)
     {
       free (dir);
       free (dir_entry);
-      free (table);
       return 0;
     }
   // kernel tables are shared. they are supervisor only so ring 3 code
   // can't touch them, but the kernel stays mapped during syscalls
   memcpy (dir_entry, kernel_dir->dir_entry,
           sizeof (uint32_t) * TOTAL_ENTRIES_PER_DIRECTORY);
-  // the user table starts empty, every page in it is not present
-  uint32_t user_idx
-      = (uint32_t)user_addr / (TOTAL_ENTRIES_PER_TABLE * PAGE_SIZE);
-  dir_entry[user_idx]
-      = (uint32_t)table | IS_PRESENT | IS_WRITABLE | ACCESS_ALL;
+  // the user part starts empty, its tables come with the first page mapped
+  // in them
+  dir->user_start = (uint32_t)user_addr & ~(TABLE_SPAN - 1);
+  for (uint32_t i = 0; i < USER_SPACE_TABLES; i++)
+    {
+      dir_entry[dir->user_start / TABLE_SPAN + i] = 0;
+    }
   dir->dir_entry = dir_entry;
-  dir->user_table = table;
   return dir;
+}
+
+uint32_t *
+page_dir_user_entry (struct page_dir *dir, uint32_t vaddr, uint8_t create)
+{
+  if (vaddr < dir->user_start
+      || vaddr - dir->user_start >= USER_SPACE_TABLES * TABLE_SPAN)
+    {
+      return 0;
+    }
+  uint32_t idx = (vaddr - dir->user_start) / TABLE_SPAN;
+  uint32_t *table = dir->user_tables[idx];
+  if (!table)
+    {
+      if (!create)
+        {
+          return 0;
+        }
+      table = calloc (sizeof (uint32_t) * TOTAL_ENTRIES_PER_TABLE);
+      if (!table)
+        {
+          return 0;
+        }
+      dir->user_tables[idx] = table;
+      // not present entries arent cached by the tlb, no flush needed
+      dir->dir_entry[dir->user_start / TABLE_SPAN + idx]
+          = (uint32_t)table | IS_PRESENT | IS_WRITABLE | ACCESS_ALL;
+    }
+  return &table[(vaddr / PAGE_SIZE) % TOTAL_ENTRIES_PER_TABLE];
 }
 
 void
 page_dir_free_user (struct page_dir *dir)
 {
-  free (dir->user_table);
+  for (uint32_t i = 0; i < USER_SPACE_TABLES; i++)
+    {
+      free (dir->user_tables[i]);
+    }
   free (dir->dir_entry);
   free (dir);
 }
