@@ -78,7 +78,7 @@ STEPS = [
     ("hello Tan Bob\n", 0.5),
     ("<up>", 0.3),
     ("\n", 0.5),
-    ("memtest\n", 1.0),
+    ("memtest\n", 3.5),
     ("crash code\n", 0.6),
     ("echo banana > fruit.txt\n", 0.4),
     ("echo apple >> fruit.txt\n", 0.4),

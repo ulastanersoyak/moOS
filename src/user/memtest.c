@@ -1,6 +1,9 @@
 #include "lib/moos.h"
 
 #define BLOCKS 64
+// the user address space is 64 mb, most of it can be heap
+#define BIG_CHUNKS 32
+#define BIG_CHUNK_SIZE (1024 * 1024)
 
 // exercises the user heap: allocations of many sizes, freeing every other
 // block, reuse of freed memory and growing with realloc
@@ -60,6 +63,34 @@ main (void)
       free (blocks[i]);
     }
   free (text);
+
+  // megabytes of heap, every page written and read back
+  uint32_t *big[BIG_CHUNKS];
+  for (int i = 0; i < BIG_CHUNKS; i++)
+    {
+      big[i] = malloc (BIG_CHUNK_SIZE);
+      if (!big[i])
+        {
+          print ("memtest: big malloc failed\n");
+          return 1;
+        }
+      for (uint32_t j = 0; j < BIG_CHUNK_SIZE / 4; j += 1024)
+        {
+          big[i][j] = i * 4096 + j;
+        }
+    }
+  for (int i = 0; i < BIG_CHUNKS; i++)
+    {
+      for (uint32_t j = 0; j < BIG_CHUNK_SIZE / 4; j += 1024)
+        {
+          if (big[i][j] != i * 4096 + j)
+            {
+              print ("memtest: big block corrupted\n");
+              return 1;
+            }
+        }
+      free (big[i]);
+    }
   print ("memtest: ok, heap grew by ");
   print_int (((uint32_t)sbrk (0) - start) / 1024);
   print (" kb\n");
