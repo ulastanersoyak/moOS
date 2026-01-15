@@ -75,6 +75,7 @@ task_alloc (const char *name, uint8_t priority, uint8_t is_kernel)
   task->priority = priority;
   task->base_priority = priority;
   task->is_kernel = is_kernel;
+  fpu_init_state (&task->fpu);
   task->wait_pid = -1;
   return task;
 }

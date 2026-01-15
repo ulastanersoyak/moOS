@@ -2,6 +2,7 @@
 #define TASK_H
 
 #include "../config.h"
+#include "../fpu/fpu.h"
 #include "../memory/paging/page.h"
 #include "handle.h"
 #include <stdint.h>
@@ -47,6 +48,8 @@ struct task
 
   // saved kernel stack pointer while the task is not running
   uint32_t context_esp;
+  // x87 registers, saved while the task is not running
+  struct fpu_state fpu;
   void *kernel_stack; // 0 for the shell, which runs on the boot stack
   uint32_t kernel_stack_top;
 

@@ -128,6 +128,9 @@ schedule (void)
     }
   switch_page_dir (next->dir ? next->dir->dir_entry
                              : task_kernel_dir ()->dir_entry);
+  // the kernel itself doesnt use the fpu, so it only changes hands here
+  fpu_save (&prev->fpu);
+  fpu_restore (&next->fpu);
   context_switch (&prev->context_esp, next->context_esp);
 
   // prev runs again from here. the stack of a task that exited is no longer

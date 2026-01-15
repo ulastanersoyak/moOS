@@ -40,7 +40,8 @@ ASM_SRCS := src/bootloader/kernel.asm \
 	src/kernel/memory/paging/page.asm \
 	src/kernel/gdt/gdt.asm \
 	src/kernel/task/tss.asm \
-	src/kernel/task/task.asm
+	src/kernel/task/task.asm \
+	src/kernel/fpu/fpu.asm
 
 C_SRCS := src/kernel/kernel.c \
 	src/drivers/screen/terminal.c \
@@ -68,6 +69,7 @@ C_SRCS := src/kernel/kernel.c \
 	src/kernel/task/handle.c \
 	src/kernel/task/pipe.c \
 	src/kernel/task/mutex.c \
+	src/kernel/fpu/fpu.c \
 	src/kernel/syscall/syscall.c
 
 ASM_OBJS := $(patsubst src/%.asm,build/%.asm.o,$(ASM_SRCS))

@@ -6,6 +6,7 @@
 #include "../libc/string/string.h"
 #include "./memory/paging/page.h"
 #include "config.h"
+#include "fpu/fpu.h"
 #include "gdt/gdt.h"
 #include "idt/idt.h"
 #include "kmem/kheap.h"
@@ -202,6 +203,7 @@ kernel_main (uint32_t boot_magic, uint32_t boot_info)
     }
 
   kernel_heap_init (verbose);
+  fpu_init (verbose);
 
 #if (IS_RTOS != 1)
   fs_init (verbose);
