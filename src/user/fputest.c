@@ -3,7 +3,8 @@
 // two copies run at the same time with different fpu control words (double
 // and single precision) and compute pi with the leibniz series. the kernel
 // has to keep the fpu registers of each task apart, otherwise one copy sees
-// the control word or the partial sums of the other
+// the control word or the partial sums of the other. also checks the 64 bit
+// division helpers in src/user/lib/int64.c
 
 #define TERMS 400000
 #define CHECK_EVERY 20000
@@ -48,6 +49,23 @@ child (const char *name, uint16_t cw)
   return 0;
 }
 
+// volatile so the compiler cant work the results out at compile time
+static int
+check_int64 (void)
+{
+  volatile int64_t neg = -123456789012LL;
+  volatile int64_t seven = 7;
+  volatile uint64_t big = 0xFFFFFFFFFFFFFFFFULL;
+  volatile uint64_t three = 3;
+  volatile uint64_t quintillion = 1000000000000000000ULL;
+  volatile uint64_t billion = 1000000000ULL;
+  return neg / seven == -17636684144LL && neg % seven == -4
+         && -neg / seven == 17636684144LL && neg / -seven == 17636684144LL
+         && big / three == 0x5555555555555555ULL && big % three == 0
+         && quintillion / billion == billion
+         && (quintillion + 123) % billion == 123;
+}
+
 int
 main (int argc, char **argv)
 {
@@ -56,6 +74,11 @@ main (int argc, char **argv)
   if (argc == 2)
     {
       return child (argv[1], argv[1][0] == 'd' ? 0x027F : 0x007F);
+    }
+  if (!check_int64 ())
+    {
+      printf ("fputest: 64 bit division is wrong\n");
+      return 1;
     }
   char *double_argv[] = { "fputest", "double", 0 };
   char *single_argv[] = { "fputest", "single", 0 };

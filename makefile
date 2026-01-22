@@ -80,7 +80,7 @@ FILES := $(ASM_OBJS) $(C_OBJS)
 USER_PROGS := hello count crash spin rtdemo memtest cat wc sort cp echo ls grep \
 	date time pipetest cowsay moose sh pidemo edfdemo fputest
 USER_LIB_OBJS := build/user/lib/crt0.asm.o build/user/lib/syscall.asm.o \
-	build/user/lib/moos.o
+	build/user/lib/moos.o build/user/lib/int64.o
 USER_BINS := $(patsubst %,build/user/%.elf,$(USER_PROGS))
 # keep user objects, make would delete them as intermediate files
 .SECONDARY: $(USER_BINS:.elf=.o) build/user/shline.o
@@ -177,6 +177,7 @@ build/%.o: src/%.c
 	$(CC) $(FLAGS) -c $< -o $@
 
 -include $(C_OBJS:.o=.d) $(USER_BINS:.elf=.d) build/user/lib/moos.d \
+	build/user/lib/int64.d \
 	build/user/shline.d
 
 clean:
