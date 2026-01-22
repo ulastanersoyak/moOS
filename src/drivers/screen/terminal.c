@@ -15,11 +15,19 @@ static size_t terminal_column;
 static uint8_t terminal_colour;
 static uint16_t *terminal_buffer;
 static uint32_t terminal_scrolls = 0;
+// the text while a program has the screen in a graphics mode, printing goes
+// on here and shows up again when the text mode comes back
+// 80x25, VGA_WIDTH and VGA_HEIGHT arent constant expressions in c
+static uint16_t hidden_buffer[80 * 25];
 
 // moves the blinking vga cursor to current position
 static void
 terminal_update_cursor (void)
 {
+  if (terminal_buffer == hidden_buffer)
+    {
+      return;
+    }
   uint16_t pos = terminal_row * VGA_WIDTH + terminal_column;
   outb (0x3D4, 0x0F);
   outb (0x3D5, pos & 0xFF);
@@ -250,6 +258,21 @@ uint32_t
 terminal_scroll_count (void)
 {
   return terminal_scrolls;
+}
+
+void
+terminal_hide (void)
+{
+  memcpy (hidden_buffer, VGA_MEMORY, sizeof (hidden_buffer));
+  terminal_buffer = hidden_buffer;
+}
+
+void
+terminal_show (void)
+{
+  memcpy (VGA_MEMORY, hidden_buffer, sizeof (hidden_buffer));
+  terminal_buffer = VGA_MEMORY;
+  terminal_update_cursor ();
 }
 
 void

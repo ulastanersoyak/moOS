@@ -17,6 +17,10 @@ void terminal_get_cursor (size_t *row, size_t *column);
 void terminal_set_cursor (size_t row, size_t column);
 // number of times the screen scrolled up since boot
 uint32_t terminal_scroll_count (void);
+// hide copies the text screen into memory and keeps printing there while a
+// graphics mode uses the vga memory, show puts it back
+void terminal_hide (void);
+void terminal_show (void);
 void init_OK (void);
 void init_ER (void);
 #endif // !SCREEN_H
