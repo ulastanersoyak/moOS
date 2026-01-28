@@ -80,6 +80,11 @@ STEPS = [
     ("\n", 0.5),
     ("memtest\n", 3.5),
     ("fputest\n", 4.0),
+    # graphics mode, left normally and by getting killed
+    ("gfxdemo\n", 3.6),
+    ("gfxdemo\n", 1.0),
+    ("<ctrl-c>", 0.6),
+    ("echo back to text\n", 0.4),
     ("crash code\n", 0.6),
     ("echo banana > fruit.txt\n", 0.4),
     ("echo apple >> fruit.txt\n", 0.4),
@@ -170,6 +175,7 @@ EXPECTED = [
     "nice to meet you, Tan\nnice to meet you, Bob",
     "memtest: ok",
     "fputest: ok",                    # tasks keep their own fpu state
+    "moos 0:/> gfxdemo\n^C\n[killed]\nmoos 0:/> echo back to text\nback to text",
     "writing to my own code...\nexception: page fault",
     "moos 0:/> cat fruit.txt \nbanana\napple",   # tab completion
     "2 2 13 f.txt",
@@ -183,7 +189,7 @@ EXPECTED = [
     "moos 0:/> cat LONGNO~1.TXT\napple banana",
     "moos 0:/> cat fruit.txt|sort\napple\nbanana\n",
     "1 2 12\n",                    # quotes keep both spaces
-    "22 110 990\n",                # 22 programs through a 4 stage pipeline
+    "23 115 1035\n",               # 23 programs through a 4 stage pipeline
     "1 2 10\n",                    # 6000 bytes through pipes larger than 4 kb
     "2 2 13\n",
     "nosuch: not found\n0 0 0",
@@ -318,6 +324,8 @@ def main():
     fast = re.findall(r"fast: 30 ms every 60 ms, (\d+) of 30", log)
     if len(slow) != 3 or slow[0] == 0 or slow[1] != 0 or fast[:2] != ["0", "0"]:
         failed.append(f"unexpected edfdemo misses (rt, edf): {slow} {fast}")
+    if not re.search(r"gfxdemo: [1-9]\d* frames in 3\d\d\d ms", log):
+        failed.append("gfxdemo did not draw any frames")
     # running and killing programs must not leak heap blocks
     mem = re.findall(r"heap: \d+ kb used / \d+ kb total \((\d+) of", log)
     if len(mem) != 2 or mem[0] != mem[1]:
