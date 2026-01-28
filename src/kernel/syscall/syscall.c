@@ -1,4 +1,5 @@
 #include "syscall.h"
+#include "../../drivers/keyboard/keyboard.h"
 #include "../../drivers/rtc/rtc.h"
 #include "../../drivers/screen/terminal.h"
 #include "../../drivers/screen/vga.h"
@@ -688,6 +689,15 @@ syscall_handler (struct interrupt_frame *frame)
       break;
     case SYS_GFX_BLIT:
       res = sys_gfx_blit ((const uint8_t *)frame->ebx);
+      break;
+    case SYS_KEY_EVENT:
+      // only the program in the foreground sees what is typed
+      if (frame->ebx)
+        {
+          keyboard_flush_events ();
+        }
+      res = task_running->foreground && !frame->ebx ? keyboard_get_event ()
+                                                    : -1;
       break;
     case SYS_REBOOT:
       // pulse the cpu reset line through the keyboard controller

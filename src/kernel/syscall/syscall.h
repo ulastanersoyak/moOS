@@ -53,6 +53,7 @@ enum
   SYS_GFX_MODE = 43,     // int gfx_mode (int on), 320x200 256 colours
   SYS_GFX_PALETTE = 44,  // int gfx_palette (rgb, int first, int count)
   SYS_GFX_BLIT = 45,     // int gfx_blit (const uint8_t *pixels)
+  SYS_KEY_EVENT = 46,    // int key_event (int flush), -1 if there is none
 };
 
 // handles int 0x80 from user tasks

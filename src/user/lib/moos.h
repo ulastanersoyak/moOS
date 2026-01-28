@@ -193,6 +193,29 @@ int gfx_palette (const uint8_t *rgb, int first, int count);
 // copies a whole frame of GFX_WIDTH * GFX_HEIGHT pixels to the screen
 int gfx_blit (const uint8_t *pixels);
 
+// key events for games: every key going down and up, also ctrl, shift and
+// alt, without waiting. an event is a key code with KEY_RELEASED set when
+// the key went up. key codes are the unshifted char ('a', '1', '\n', 27 for
+// esc) or one of the KEY_ codes below. returns -1 if no event is queued,
+// key_event (1) drops the queued ones (e.g. typed before the program
+// started)
+#define KEY_UP 0x80
+#define KEY_DOWN 0x81
+#define KEY_LEFT 0x82
+#define KEY_RIGHT 0x83
+#define KEY_HOME 0x84
+#define KEY_END 0x85
+#define KEY_DELETE 0x86
+#define KEY_CTRL 0x87
+#define KEY_SHIFT 0x88
+#define KEY_ALT 0x89
+#define KEY_F1 0x8A // KEY_F1 + 11 is f12
+#define KEY_PAGE_UP 0x96
+#define KEY_PAGE_DOWN 0x97
+#define KEY_INSERT 0x98
+#define KEY_RELEASED 0x100
+int key_event (int flush);
+
 // heap
 void *malloc (uint32_t size);
 void *calloc (uint32_t count, uint32_t size);

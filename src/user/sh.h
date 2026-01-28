@@ -9,17 +9,10 @@
 #define SH_COMPLETION_LEN (NAME_MAX + 2)
 #define SH_MAX_COMPLETIONS 32
 
-// navigation keys come from the terminal as codes above the ascii range,
-// must match src/drivers/keyboard/keyboard.h
+// ctrl+c and ctrl+d typed on the terminal, the navigation keys come as the
+// KEY_ codes from lib/moos.h
 #define KEY_CTRL_C 0x03
 #define KEY_CTRL_D 0x04
-#define KEY_UP 0x80
-#define KEY_DOWN 0x81
-#define KEY_LEFT 0x82
-#define KEY_RIGHT 0x83
-#define KEY_HOME 0x84
-#define KEY_END 0x85
-#define KEY_DELETE 0x86
 
 // prints the prompt with the working directory
 void sh_print_prompt (void);
