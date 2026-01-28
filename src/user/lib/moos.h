@@ -181,6 +181,18 @@ int mutex_close (int id);
 int period (uint32_t ms); // 0 makes the task ordinary again
 int wait_period (void);
 
+// graphics: vga mode 13h, GFX_WIDTH x GFX_HEIGHT pixels with one byte each,
+// an index into a palette of 256 colours. one program at a time can switch
+// to it, the text screen comes back with gfx_mode (0) or when the program
+// exits. text printed in between shows up then
+#define GFX_WIDTH 320
+#define GFX_HEIGHT 200
+int gfx_mode (int on);
+// rgb holds 3 bytes (0-255) for each of count colours from first on
+int gfx_palette (const uint8_t *rgb, int first, int count);
+// copies a whole frame of GFX_WIDTH * GFX_HEIGHT pixels to the screen
+int gfx_blit (const uint8_t *pixels);
+
 // heap
 void *malloc (uint32_t size);
 void *calloc (uint32_t count, uint32_t size);

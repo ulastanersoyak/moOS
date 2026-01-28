@@ -2,6 +2,7 @@
 #include "../../drivers/rtc/rtc.h"
 #include "../../drivers/screen/terminal.h"
 #include "../../drivers/screen/vga.h"
+#include "../../drivers/screen/vga_gfx.h"
 #include "../../drivers/timer/pit.h"
 #include "../../libc/stdio/stdio.h"
 #include "../../libc/string/string.h"
@@ -464,6 +465,52 @@ sys_mutex_open (const char *user_name, uint32_t flags)
   return mutex_open (name, flags);
 }
 
+// one program at a time can switch the screen to the graphics mode, the
+// text screen comes back when it switches back or exits
+static int32_t
+sys_gfx_mode (uint32_t on)
+{
+  if (vga_gfx_active () && !task_running->owns_screen)
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  if (on)
+    {
+      task_running->owns_screen = 1;
+      vga_gfx_enter ();
+    }
+  else
+    {
+      task_running->owns_screen = 0;
+      vga_gfx_leave ();
+    }
+  return OK;
+}
+
+static int32_t
+sys_gfx_palette (const uint8_t *rgb, uint32_t first, uint32_t count)
+{
+  if (!task_running->owns_screen || first > 255 || count > 256 - first
+      || !task_user_range_valid (rgb, count * 3))
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  vga_gfx_set_palette (rgb, first, count);
+  return OK;
+}
+
+static int32_t
+sys_gfx_blit (const uint8_t *pixels)
+{
+  if (!task_running->owns_screen
+      || !task_user_range_valid (pixels, VGA_GFX_WIDTH * VGA_GFX_HEIGHT))
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  vga_gfx_blit (pixels);
+  return OK;
+}
+
 static int32_t
 sys_isatty (int fd)
 {
@@ -631,6 +678,16 @@ syscall_handler (struct interrupt_frame *frame)
       break;
     case SYS_WAIT_PERIOD:
       res = task_wait_period ();
+      break;
+    case SYS_GFX_MODE:
+      res = sys_gfx_mode (frame->ebx);
+      break;
+    case SYS_GFX_PALETTE:
+      res = sys_gfx_palette ((const uint8_t *)frame->ebx, frame->ecx,
+                             frame->edx);
+      break;
+    case SYS_GFX_BLIT:
+      res = sys_gfx_blit ((const uint8_t *)frame->ebx);
       break;
     case SYS_REBOOT:
       // pulse the cpu reset line through the keyboard controller

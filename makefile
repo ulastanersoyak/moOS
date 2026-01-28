@@ -45,6 +45,7 @@ ASM_SRCS := src/bootloader/kernel.asm \
 
 C_SRCS := src/kernel/kernel.c \
 	src/drivers/screen/terminal.c \
+	src/drivers/screen/vga_gfx.c \
 	src/libc/string/string.c \
 	src/kernel/idt/idt.c \
 	src/kernel/memory/heap/heap.c \

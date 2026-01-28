@@ -60,3 +60,6 @@ $%1:
 	SYSCALL mutex_close, 40
 	SYSCALL period, 41
 	SYSCALL wait_period, 42
+	SYSCALL gfx_mode, 43
+	SYSCALL gfx_palette, 44
+	SYSCALL gfx_blit, 45

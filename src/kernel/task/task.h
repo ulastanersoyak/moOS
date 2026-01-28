@@ -44,6 +44,7 @@ struct task
   uint8_t foreground; // receives keyboard input and ctrl+c
   uint8_t detached;   // nobody will wait for it, freed as soon as it exits
   uint8_t is_shell;   // in the foreground but ctrl+c doesnt kill it
+  uint8_t owns_screen; // switched the screen to a graphics mode
   volatile uint8_t killed;
 
   // saved kernel stack pointer while the task is not running

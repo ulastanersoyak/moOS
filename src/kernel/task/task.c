@@ -1,6 +1,7 @@
 #include "task.h"
 #include "../../drivers/keyboard/keyboard.h"
 #include "../../drivers/screen/terminal.h"
+#include "../../drivers/screen/vga_gfx.h"
 #include "../../drivers/timer/pit.h"
 #include "../../file_system/path_parser.h"
 #include "../../libc/stdio/stdio.h"
@@ -575,6 +576,12 @@ task_exit (int32_t exit_code)
     }
   // tasks waiting for its mutexes get them now
   mutex_release_all (task);
+  // a program that dies in a graphics mode gives the text screen back
+  if (task->owns_screen)
+    {
+      task->owns_screen = 0;
+      vga_gfx_leave ();
+    }
   // closing files flushes writes, closing pipe ends wakes up the other side
   for (int i = 0; i < TASK_MAX_FDS; i++)
     {
