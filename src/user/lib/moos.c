@@ -305,10 +305,17 @@ format_put (struct format_out *out, char c)
   out->len++;
 }
 
+// pads str (len chars) to width. zero padding goes after a sign
 static void
 format_padded (struct format_out *out, const char *str, uint32_t len,
                uint32_t width, int left, char pad)
 {
+  if (pad == '0' && len > 0 && (str[0] == '-' || str[0] == '+'))
+    {
+      format_put (out, *str++);
+      len--;
+      width = width ? width - 1 : 0;
+    }
   if (!left)
     {
       for (uint32_t i = len; i < width; i++)
@@ -329,6 +336,92 @@ format_padded (struct format_out *out, const char *str, uint32_t len,
     }
 }
 
+// writes num in base to digits (at least min_digits of them) and returns
+// how many chars it wrote
+static uint32_t
+format_number (char *digits, uint64_t num, uint32_t base, int upper,
+               int negative, int plus, uint32_t min_digits)
+{
+  const char *set = upper ? "0123456789ABCDEF" : "0123456789abcdef";
+  char reversed[24];
+  uint32_t count = 0;
+  uint32_t len = 0;
+  // 32 bit numbers dont need the slow 64 bit division
+  while (num > 0xFFFFFFFFu)
+    {
+      reversed[count++] = set[num % base];
+      num /= base;
+    }
+  uint32_t small = num;
+  while (small || count < min_digits || count == 0)
+    {
+      reversed[count++] = set[small % base];
+      small /= base;
+    }
+  if (negative)
+    {
+      digits[len++] = '-';
+    }
+  else if (plus)
+    {
+      digits[len++] = '+';
+    }
+  while (count)
+    {
+      digits[len++] = reversed[--count];
+    }
+  return len;
+}
+
+// fixed point float, rounded to precision digits
+static uint32_t
+format_float (char *digits, double value, uint32_t precision, int plus)
+{
+  uint32_t len = 0;
+  if (value != value)
+    {
+      memcpy (digits, "nan", 3);
+      return 3;
+    }
+  if (value < 0)
+    {
+      digits[len++] = '-';
+      value = -value;
+    }
+  else if (plus)
+    {
+      digits[len++] = '+';
+    }
+  if (precision > 9)
+    {
+      precision = 9;
+    }
+  uint32_t scale = 1;
+  for (uint32_t i = 0; i < precision; i++)
+    {
+      scale *= 10;
+    }
+  if (value > 1e18)
+    {
+      memcpy (digits + len, "inf", 3);
+      return len + 3;
+    }
+  uint64_t whole = (uint64_t)value;
+  uint32_t fraction = (uint32_t)((value - whole) * scale + 0.5);
+  if (fraction >= scale)
+    {
+      whole++;
+      fraction -= scale;
+    }
+  len += format_number (digits + len, whole, 10, 0, 0, 0, 1);
+  if (precision)
+    {
+      digits[len++] = '.';
+      len += format_number (digits + len, fraction, 10, 0, 0, 0, precision);
+    }
+  return len;
+}
+
 int
 vsnprintf (char *buf, uint32_t size, const char *fmt, va_list args)
 {
@@ -341,18 +434,63 @@ vsnprintf (char *buf, uint32_t size, const char *fmt, va_list args)
           continue;
         }
       fmt++;
-      int left = *fmt == '-';
-      if (left)
+      int left = 0;
+      int plus = 0;
+      char pad = ' ';
+      for (;; fmt++)
         {
+          if (*fmt == '-')
+            {
+              left = 1;
+            }
+          else if (*fmt == '+')
+            {
+              plus = 1;
+            }
+          else if (*fmt == '0')
+            {
+              pad = '0';
+            }
+          else if (*fmt != ' ' && *fmt != '#')
+            {
+              break;
+            }
+        }
+      uint32_t width = 0;
+      if (*fmt == '*')
+        {
+          int arg = va_arg (args, int);
+          left |= arg < 0;
+          width = arg < 0 ? -arg : arg;
           fmt++;
         }
-      char pad = *fmt == '0' ? '0' : ' ';
-      uint32_t width = 0;
       while (isdigit (*fmt))
         {
           width = width * 10 + (*fmt++ - '0');
         }
-      char digits[12];
+      int precision = -1;
+      if (*fmt == '.')
+        {
+          fmt++;
+          precision = 0;
+          if (*fmt == '*')
+            {
+              precision = va_arg (args, int);
+              fmt++;
+            }
+          while (isdigit (*fmt))
+            {
+              precision = precision * 10 + (*fmt++ - '0');
+            }
+        }
+      // length modifiers: only long long changes the size of the argument
+      int longs = 0;
+      while (*fmt == 'l' || *fmt == 'h' || *fmt == 'z' || *fmt == 'j'
+             || *fmt == 't')
+        {
+          longs += *fmt++ == 'l';
+        }
+      char digits[48];
       uint32_t len = 0;
       switch (*fmt)
         {
@@ -360,41 +498,53 @@ vsnprintf (char *buf, uint32_t size, const char *fmt, va_list args)
           {
             const char *str = va_arg (args, const char *);
             str = str ? str : "(null)";
-            format_padded (&out, str, strlen (str), width, left, ' ');
+            uint32_t str_len = strlen (str);
+            if (precision >= 0 && (uint32_t)precision < str_len)
+              {
+                str_len = precision;
+              }
+            format_padded (&out, str, str_len, width, left, ' ');
             continue;
           }
         case 'c':
           digits[len++] = (char)va_arg (args, int);
+          pad = ' ';
           break;
         case 'd':
-        case 'u':
-        case 'x':
+        case 'i':
           {
-            uint32_t num = va_arg (args, uint32_t);
-            uint32_t base = *fmt == 'x' ? 16 : 10;
-            int negative = *fmt == 'd' && (int32_t)num < 0;
-            if (negative)
-              {
-                num = -num;
-              }
-            char reversed[11];
-            uint32_t count = 0;
-            do
-              {
-                reversed[count++] = "0123456789abcdef"[num % base];
-                num /= base;
-              }
-            while (num);
-            if (negative)
-              {
-                digits[len++] = '-';
-              }
-            while (count)
-              {
-                digits[len++] = reversed[--count];
-              }
+            int64_t num = longs >= 2 ? va_arg (args, int64_t)
+                                     : va_arg (args, int32_t);
+            uint64_t mag = num < 0 ? -(uint64_t)num : (uint64_t)num;
+            len = format_number (digits, mag, 10, 0, num < 0, plus,
+                                 precision > 0 ? precision : 1);
             break;
           }
+        case 'u':
+        case 'x':
+        case 'X':
+        case 'o':
+        case 'p':
+          {
+            uint64_t num = longs >= 2 ? va_arg (args, uint64_t)
+                                      : va_arg (args, uint32_t);
+            uint32_t base = *fmt == 'u' ? 10 : *fmt == 'o' ? 8 : 16;
+            if (*fmt == 'p')
+              {
+                digits[len++] = '0';
+                digits[len++] = 'x';
+              }
+            len += format_number (digits + len, num, base, *fmt == 'X', 0, 0,
+                                  precision > 0 ? precision : 1);
+            break;
+          }
+        case 'f':
+        case 'F':
+        case 'g':
+        case 'e':
+          len = format_float (digits, va_arg (args, double),
+                              precision >= 0 ? precision : 6, plus);
+          break;
         case '%':
           digits[len++] = '%';
           break;

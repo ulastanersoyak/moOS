@@ -244,9 +244,11 @@ int isprint (int c);
 int tolower (int c);
 int toupper (int c);
 
-// formatted output to stdout: %s %d %u %x %c and %%, with a width like %5d
-// or %-12s (left aligned). snprintf always terminates the string and returns
-// the length it would have had
+// formatted output to stdout: %s %c %d %i %u %x %X %o %p %f and %%, with
+// flags (- + 0), a width and precision (also as *, like %-12s, %05d, %.2f,
+// %.*s) and length modifiers (%ld, %lld for 64 bit). %g and %e print like
+// %f. snprintf always terminates the string and returns the length it would
+// have had
 int printf (const char *fmt, ...);
 int vprintf (const char *fmt, va_list args);
 int snprintf (char *buf, uint32_t size, const char *fmt, ...);
