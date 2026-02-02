@@ -85,6 +85,13 @@ STEPS = [
     ("gfxdemo\n", 1.0),
     ("<ctrl-c>", 0.6),
     ("echo back to text\n", 0.4),
+    # key events: every key down and up, also ones without a char
+    ("keys\n", 0.6),
+    ("a", 0.3),
+    ("<shift-b>", 0.3),
+    ("<up>", 0.3),
+    ("<ctrl>", 0.3),
+    ("<esc>", 0.5),
     ("crash code\n", 0.6),
     ("echo banana > fruit.txt\n", 0.4),
     ("echo apple >> fruit.txt\n", 0.4),
@@ -176,6 +183,8 @@ EXPECTED = [
     "memtest: ok",
     "fputest: ok",                    # tasks keep their own fpu state
     "moos 0:/> gfxdemo\n^C\n[killed]\nmoos 0:/> echo back to text\nback to text",
+    "down a\nup a\ndown shift\ndown b\nup b\nup shift\ndown up\nup up\n"
+    "down ctrl\nup ctrl\ndown esc\nmoos 0:/>",
     "writing to my own code...\nexception: page fault",
     "moos 0:/> cat fruit.txt \nbanana\napple",   # tab completion
     "2 2 13 f.txt",
@@ -189,7 +198,7 @@ EXPECTED = [
     "moos 0:/> cat LONGNO~1.TXT\napple banana",
     "moos 0:/> cat fruit.txt|sort\napple\nbanana\n",
     "1 2 12\n",                    # quotes keep both spaces
-    "23 115 1035\n",               # 23 programs through a 4 stage pipeline
+    "24 120 1080\n",               # 24 programs through a 4 stage pipeline
     "1 2 10\n",                    # 6000 bytes through pipes larger than 4 kb
     "2 2 13\n",
     "nosuch: not found\n0 0 0",
