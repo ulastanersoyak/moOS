@@ -80,6 +80,7 @@ STEPS = [
     ("\n", 0.5),
     ("memtest\n", 3.5),
     ("fputest\n", 4.0),
+    ("libctest\n", 1.0),
     # graphics mode, left normally and by getting killed
     ("gfxdemo\n", 3.6),
     ("gfxdemo\n", 1.0),
@@ -182,6 +183,7 @@ EXPECTED = [
     "nice to meet you, Tan\nnice to meet you, Bob",
     "memtest: ok",
     "fputest: ok",                    # tasks keep their own fpu state
+    "libctest: ok",
     "moos 0:/> gfxdemo\n^C\n[killed]\nmoos 0:/> echo back to text\nback to text",
     "down a\nup a\ndown shift\ndown b\nup b\nup shift\ndown up\nup up\n"
     "down ctrl\nup ctrl\ndown esc\nmoos 0:/>",
@@ -198,7 +200,7 @@ EXPECTED = [
     "moos 0:/> cat LONGNO~1.TXT\napple banana",
     "moos 0:/> cat fruit.txt|sort\napple\nbanana\n",
     "1 2 12\n",                    # quotes keep both spaces
-    "24 120 1080\n",               # 24 programs through a 4 stage pipeline
+    "25 125 1125\n",               # 25 programs through a 4 stage pipeline
     "1 2 10\n",                    # 6000 bytes through pipes larger than 4 kb
     "2 2 13\n",
     "nosuch: not found\n0 0 0",
