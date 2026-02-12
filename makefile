@@ -84,6 +84,12 @@ USER_PROGS := hello count crash spin rtdemo memtest cat wc sort cp echo ls grep 
 USER_LIB_OBJS := build/user/lib/crt0.asm.o build/user/lib/syscall.asm.o \
 	build/user/lib/moos.o build/user/lib/int64.o
 USER_BINS := $(patsubst %,build/user/%.elf,$(USER_PROGS))
+
+# a standard c library on top of the user library for programs written
+# against the c headers (stdio.h, string.h, ...) instead of moos.h
+LIBC_OBJS := $(patsubst src/%.c,build/%.o,$(wildcard src/user/libc/*.c))
+LIBC_INCLUDE := -I./src/user/libc/include
+LIBC_PROGS := libctest
 # keep user objects, make would delete them as intermediate files
 .SECONDARY: $(USER_BINS:.elf=.o) build/user/shline.o
 
@@ -143,6 +149,11 @@ $(LIMINE_DIR)/limine.c:
 build/user/%.elf: build/user/%.o $(USER_LIB_OBJS) ./src/user/linker.ld
 	$(LD) -s -z noexecstack -T ./src/user/linker.ld -o $@ $< $(USER_LIB_OBJS)
 
+build/user/libc/%.o: FLAGS += $(LIBC_INCLUDE)
+$(patsubst %,build/user/%.o,$(LIBC_PROGS)): FLAGS += $(LIBC_INCLUDE)
+$(patsubst %,build/user/%.elf,$(LIBC_PROGS)): build/user/%.elf: build/user/%.o $(LIBC_OBJS) $(USER_LIB_OBJS) ./src/user/linker.ld
+	$(LD) -s -z noexecstack -T ./src/user/linker.ld -o $@ $< $(LIBC_OBJS) $(USER_LIB_OBJS)
+
 # the shell is split into the command interpreter and the line editor
 build/user/sh.elf: build/user/sh.o build/user/shline.o $(USER_LIB_OBJS) ./src/user/linker.ld
 	$(LD) -s -z noexecstack -T ./src/user/linker.ld -o $@ build/user/sh.o build/user/shline.o $(USER_LIB_OBJS)
@@ -179,7 +190,7 @@ build/%.o: src/%.c
 	$(CC) $(FLAGS) -c $< -o $@
 
 -include $(C_OBJS:.o=.d) $(USER_BINS:.elf=.d) build/user/lib/moos.d \
-	build/user/lib/int64.d \
+	build/user/lib/int64.d $(LIBC_OBJS:.o=.d) \
 	build/user/shline.d
 
 clean:
