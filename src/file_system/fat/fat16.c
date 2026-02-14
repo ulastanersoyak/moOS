@@ -165,6 +165,11 @@ struct fat_private
 
   // where the search for a free cluster starts
   uint32_t next_free_cluster;
+
+  // the first fat, kept in memory so following a cluster chain doesnt read
+  // the disk for every cluster. writes go to the disk and here
+  uint16_t *fat;
+  uint32_t fat_entries;
 };
 
 int fat16_resolve (struct disk *disk);
@@ -304,6 +309,7 @@ err_out:
 static void
 fat16_free_private (struct fat_private *private)
 {
+  free (private->fat);
   if (private->root_directory.item)
     {
       free (private->root_directory.item);
@@ -356,6 +362,22 @@ fat16_resolve (struct disk *disk)
       res = -IO_ERROR;
       goto out;
     }
+
+  struct fat_header *header = &fat_private->header.primary_header;
+  uint32_t fat_bytes = header->sectors_per_fat * disk->sector_size;
+  fat_private->fat = calloc (fat_bytes);
+  if (!fat_private->fat)
+    {
+      res = -NO_MEMORY_ERROR;
+      goto out;
+    }
+  stream_seek (stream, header->reserved_sectors * disk->sector_size);
+  if (disk_stream_read (stream, fat_private->fat, fat_bytes) != OK)
+    {
+      res = -IO_ERROR;
+      goto out;
+    }
+  fat_private->fat_entries = fat_bytes / FAT16_FAT_ENTRY_SIZE;
 
 out:
   if (stream)
@@ -550,6 +572,10 @@ fat16_get_fat_entry (struct disk *disk, int cluster)
 {
   int res = -1;
   struct fat_private *private = disk->fs_private_data;
+  if (cluster >= 0 && (uint32_t)cluster < private->fat_entries)
+    {
+      return private->fat[cluster];
+    }
   struct disk_stream *stream = private->fat_read_stream;
   if (!stream)
     {
@@ -1109,6 +1135,10 @@ fat16_set_fat_entry (struct disk *disk, uint32_t cluster, uint16_t value)
 {
   struct fat_private *private = disk->fs_private_data;
   struct fat_header *header = &private->header.primary_header;
+  if (cluster < private->fat_entries)
+    {
+      private->fat[cluster] = value;
+    }
   for (uint32_t copy = 0; copy < header->fat_copies; copy++)
     {
       uint32_t fat_sector
