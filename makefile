@@ -88,7 +88,10 @@ USER_BINS := $(patsubst %,build/user/%.elf,$(USER_PROGS))
 # a standard c library on top of the user library for programs written
 # against the c headers (stdio.h, string.h, ...) instead of moos.h
 LIBC_OBJS := $(patsubst src/%.c,build/%.o,$(wildcard src/user/libc/*.c))
-LIBC_INCLUDE := -I./src/user/libc/include
+# -nostdinc keeps the host's headers out, the compiler's own freestanding
+# ones (stdint.h, stdarg.h, limits.h, ...) stay
+LIBC_INCLUDE := -nostdinc -isystem $(shell $(CC) -print-resource-dir)/include \
+	-I./src/user/libc/include
 LIBC_PROGS := libctest
 # keep user objects, make would delete them as intermediate files
 .SECONDARY: $(USER_BINS:.elf=.o) build/user/shline.o
