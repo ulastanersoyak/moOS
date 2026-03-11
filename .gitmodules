@@ -2,3 +2,6 @@
 	path = external/limine
 	url = https://codeberg.org/Limine/Limine.git
 	branch = v11.x-binary
+[submodule "external/doomgeneric"]
+	path = external/doomgeneric
+	url = https://github.com/ozkl/doomgeneric.git
