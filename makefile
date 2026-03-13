@@ -110,6 +110,11 @@ DOOM_SRCS := dummy am_map doomdef doomstat dstrings d_event d_items d_iwad \
 	tables v_video wi_stuff w_checksum w_file w_main w_wad z_zone \
 	w_file_stdc i_input i_video doomgeneric
 DOOM_OBJS := $(patsubst %,build/doom/%.o,$(DOOM_SRCS))
+# the shareware wad is free to give away but not ours to commit. it comes
+# from debian's doom-wad-shareware package and must be doom1.wad 1.9
+DOOM_WAD := ./build/wad/doom1.wad
+DOOM_WAD_DEB := https://deb.debian.org/debian/pool/non-free/d/doom-wad-shareware/doom-wad-shareware_1.9.fixed-5_all.deb
+DOOM_WAD_SHA1 := 5b2e249b9c5133ec987b3ea77596381dc0d6bc1d
 DOOM_DEFINES := -DCMAP256 -DDOOMGENERIC_RESX=320 -DDOOMGENERIC_RESY=200
 DOOM_FLAGS = -O2 -g -ffreestanding -fno-builtin -fno-pic -fno-pie \
 	-fno-stack-protector -fno-asynchronous-unwind-tables -march=i686 \
@@ -135,9 +140,11 @@ define populate_fs
 	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) ./build/long.txt ::/dir/
 	MTOOLS_SKIP_CHECK=1 mmd -i $(1) ::/bin
 	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) $(USER_BINS) ::/bin/
+	MTOOLS_SKIP_CHECK=1 mmd -i $(1) ::/doom
+	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) $(DOOM_WAD) ::/doom/
 endef
 
-FS_FILES := ./test/fs_test.txt ./build/long.txt $(USER_BINS)
+FS_FILES := ./test/fs_test.txt ./build/long.txt $(USER_BINS) $(DOOM_WAD)
 
 ./bin/os-moos.img: ./bin/bootloader.bin ./bin/kernel.bin $(FS_FILES)
 	rm -f $@
@@ -191,6 +198,14 @@ build/user/doom.elf: build/user/doom.o $(DOOM_OBJS) $(LIBC_OBJS) $(USER_LIB_OBJS
 build/user/sh.elf: build/user/sh.o build/user/shline.o $(USER_LIB_OBJS) ./src/user/linker.ld
 	$(LD) -s -z noexecstack -T ./src/user/linker.ld -o $@ build/user/sh.o build/user/shline.o $(USER_LIB_OBJS)
 
+$(DOOM_WAD):
+	@mkdir -p $(dir $@)deb
+	curl -fsSL -o $(dir $@)deb/shareware.deb $(DOOM_WAD_DEB)
+	cd $(dir $@)deb && ar x shareware.deb && tar -xf data.tar.xz ./usr/share/games/doom/doom1.wad
+	echo "$(DOOM_WAD_SHA1)  $(dir $@)deb/usr/share/games/doom/doom1.wad" | sha1sum -c --quiet
+	mv $(dir $@)deb/usr/share/games/doom/doom1.wad $@
+	rm -rf $(dir $@)deb
+
 # multi cluster test file: 600 lines of "line NNNN\n"
 ./build/long.txt:
 	@mkdir -p $(dir $@)
@@ -226,8 +241,10 @@ build/%.o: src/%.c
 	build/user/lib/int64.d $(LIBC_OBJS:.o=.d) $(DOOM_OBJS:.o=.d) \
 	build/user/shline.d
 
+# keeps the downloaded wad
 clean:
-	rm -rf ./build/* ./bin/*
+	find ./build -mindepth 1 -maxdepth 1 ! -name wad -exec rm -rf {} +
+	rm -rf ./bin/*
 
 # kernel log also goes to the serial port, shown in qemu's serial0 view
 run: all
