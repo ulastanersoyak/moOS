@@ -64,6 +64,7 @@ C_SRCS := src/kernel/kernel.c \
 	src/drivers/rtc/rtc.c \
 	src/drivers/timer/pit.c \
 	src/drivers/keyboard/keyboard.c \
+	src/drivers/mouse/mouse.c \
 	src/kernel/task/task.c \
 	src/kernel/task/sched.c \
 	src/kernel/task/elf.c \

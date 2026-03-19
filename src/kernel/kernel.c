@@ -1,4 +1,5 @@
 #include "../drivers/disk/disk.h"
+#include "../drivers/mouse/mouse.h"
 #include "../drivers/screen/terminal.h"
 #include "../drivers/timer/pit.h"
 #include "../libc/stdio/stdio.h"
@@ -222,6 +223,7 @@ kernel_main (uint32_t boot_magic, uint32_t boot_info)
   task_init (system_page_dir, verbose);
 #endif
   pit_init (verbose);
+  mouse_init (verbose);
   enable_interrupts (verbose);
 #if (IS_RTOS != 1)
   init_main ();

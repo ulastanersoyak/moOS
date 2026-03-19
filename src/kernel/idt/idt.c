@@ -1,5 +1,6 @@
 #include "idt.h"
 #include "../../drivers/keyboard/keyboard.h"
+#include "../../drivers/mouse/mouse.h"
 #include "../../drivers/screen/terminal.h"
 #include "../../drivers/timer/pit.h"
 #include "../../libc/stdio/stdio.h"
@@ -106,6 +107,10 @@ interrupt_handler (struct interrupt_frame *frame)
               task_kill_foreground ();
             }
           task_on_keyboard_input ();
+        }
+      else if (irq == 12)
+        {
+          mouse_handle_interrupt ();
         }
     }
 

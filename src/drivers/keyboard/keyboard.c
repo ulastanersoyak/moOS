@@ -4,6 +4,9 @@
 #include <stddef.h>
 
 #define KEYBOARD_DATA_PORT 0x60
+#define KEYBOARD_STATUS_PORT 0x64
+// status bits: a byte is waiting and it came from the mouse
+#define STATUS_MOUSE_BYTE 0x21
 #define KEYBOARD_BUFFER_SIZE 128
 #define KEYBOARD_EVENTS_SIZE 128
 
@@ -155,6 +158,11 @@ translate (uint8_t scancode)
 void
 keyboard_handle_interrupt (void)
 {
+  // a mouse byte is left for irq12
+  if ((insb (KEYBOARD_STATUS_PORT) & STATUS_MOUSE_BYTE) == STATUS_MOUSE_BYTE)
+    {
+      return;
+    }
   // scancode has to be read or the keyboard controller wont send new ones
   uint8_t scancode = insb (KEYBOARD_DATA_PORT);
   if (scancode == SC_EXTENDED)
