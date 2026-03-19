@@ -149,6 +149,13 @@ STEPS = [
     ("edfdemo &\n", 0.8),
     ("ps\n", 2.0),
     ("sched rr\n", 0.3),
+    # doom: start it, quit through the menu (esc, up to quit game, enter, y)
+    ("doom\n", 12.0),
+    ("<esc>", 1.0),
+    ("<up>", 0.5),
+    ("\n", 1.0),
+    ("y", 4.0),
+    ("echo doom is done\n", 0.4),
     # the shell is a user program, init starts a new one when it dies
     ("kill sh\n", 1.0),
     ("ps\n", 0.5),
@@ -184,6 +191,8 @@ EXPECTED = [
     "memtest: ok",
     "fputest: ok",                    # tasks keep their own fpu state
     "libctest: ok",
+    " adding 0:/doom/doom1.wad",
+    "I_InitGraphics: Auto-scaling factor: 1\nmoos 0:/> echo doom is done\ndoom is done",
     "moos 0:/> gfxdemo\n^C\n[killed]\nmoos 0:/> echo back to text\nback to text",
     "down a\nup a\ndown shift\ndown b\nup b\nup shift\ndown up\nup up\n"
     "down ctrl\nup ctrl\ndown esc\nmoos 0:/>",
@@ -200,7 +209,7 @@ EXPECTED = [
     "moos 0:/> cat LONGNO~1.TXT\napple banana",
     "moos 0:/> cat fruit.txt|sort\napple\nbanana\n",
     "1 2 12\n",                    # quotes keep both spaces
-    "25 125 1125\n",               # 25 programs through a 4 stage pipeline
+    "26 130 1170\n",               # 26 programs through a 4 stage pipeline
     "1 2 10\n",                    # 6000 bytes through pipes larger than 4 kb
     "2 2 13\n",
     "nosuch: not found\n0 0 0",
