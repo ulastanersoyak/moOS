@@ -5,9 +5,11 @@ bootloader or with limine, runs preemptively scheduled ring 3 programs from a
 fat16 disk with long file names and comes with a user space shell that has
 pipes, redirection, job control, history and tab completion. the scheduler
 does round robin, fixed priority real time with priority inheritance and
-earliest deadline first.
+earliest deadline first. and it runs doom.
 
 ![moOS booting into the shell](images/boot.png)
+
+![doom running on moOS](images/doom.png)
 
 ## features
 
@@ -19,8 +21,8 @@ boot
 kernel
 - cpu exception and pic irq handling, faulting user programs are killed
   without taking down the kernel
-- paging with one address space per program, kernel pages are supervisor
-  only and program code is read only
+- paging with a 64 mb address space per program (page tables allocated on
+  first use), kernel pages are supervisor only and program code is read only
 - kernel heap with block allocation, usage stats and invalid free detection
 - preemptive multitasking with three scheduling policies, switchable at
   runtime with `sched rr` / `sched rt` / `sched edf`:
@@ -36,19 +38,25 @@ kernel
 - an init thread that starts the shell and starts a new one when it exits or
   crashes
 - elf loader, `argc`/`argv`, per program heap (`sbrk`)
-- `int 0x80` system calls for files, directories, pipes, processes, time and
-  the terminal. every pointer coming from user space is checked
+- x87 floating point, every task has its own fpu state
+- `int 0x80` system calls for files, directories, pipes, processes, time,
+  the terminal, graphics and key events. every pointer coming from user
+  space is checked
 - pipes, stdin/stdout/stderr and reference counted file descriptors
 
 drivers
 - vga text terminal with scrolling and a hardware cursor
-- keyboard (us layout, shift, caps lock, ctrl, arrow keys)
+- vga mode 13h graphics (320x200, 256 colours) for one program at a time,
+  the text screen with its font and palette comes back when it exits
+- keyboard (us layout, shift, caps lock, ctrl, arrow keys), plus key down
+  and key up events for games
 - pit timer, cmos real time clock, serial port (com1)
 - ata disk reads and writes, mbr partitions
 
 file system
 - fat16: read, create, write, append, truncate, delete, `mkdir`, `rmdir`,
-  directory listing, real file dates. images stay valid for `fsck.fat`
+  directory listing, real file dates. the file allocation table is cached
+  in memory. images stay valid for `fsck.fat`
 - vfat long file names up to 63 chars with 8.3 aliases (`LONGFI~1.TXT`),
   case insensitive lookups and the case of short names kept
 - paths relative to a working directory, `.` and `..`
@@ -67,6 +75,12 @@ shell
   foreground pipeline, ctrl+d ends input typed into a program
 - line editing with the arrow keys, home, end and delete, history with
   up/down, tab completion of commands and paths
+
+user space
+- a small library on top of the system calls (`src/user/lib/moos.h`): heap,
+  strings, printf, 64 bit division
+- a standard c library (`src/user/libc`): stdio, scanf, stdlib, string,
+  ctype, math and a few posix headers, enough to build doom
 
 ## screenshots
 
@@ -98,8 +112,10 @@ requirements:
 - qemu
 - mtools, dosfstools (mkfs.fat) and util-linux (sfdisk)
 - make and a host c compiler (for limine's installer)
+- curl, ar and xz (the doom wad is downloaded on the first build)
 
-limine is a git submodule, clone with `--recursive` or fetch it afterwards:
+limine and doomgeneric are git submodules, clone with `--recursive` or fetch
+them afterwards:
 ```bash
 git submodule update --init
 ```
@@ -174,6 +190,11 @@ type their name in the shell to run them:
 | `cowsay [text]` | a cow says something |
 | `moose [text]` | the moOS moose |
 | `sh` | the shell, started by init at boot |
+| `doom` | doom, see below |
+| `gfxdemo` | animated rings in vga mode 13h for 3 seconds |
+| `keys` | prints key down and up events until esc |
+| `fputest` | two tasks with different fpu settings at once, 64 bit division |
+| `libctest` | checks the c library |
 
 programs that read stdin when they get no file arguments work in pipelines:
 ```
@@ -223,6 +244,35 @@ moos 0:/> edfdemo
 slow: 36 ms every 90 ms, 0 of 20 deadlines missed
 ```
 
+## doom
+
+doom is built from [doomgeneric](https://github.com/ozkl/doomgeneric) (a git
+submodule) against the moOS c library, `src/user/doom.c` connects it to the
+system calls. it renders 320x200 with a 256 colour palette, exactly vga mode
+13h, so drawing a frame is one copy. the shareware `doom1.wad` isnt part of
+the repository: the first build takes it from debian's `doom-wad-shareware`
+package, checks its sha1 and copies it to `0:/doom` on the disk image.
+
+```
+moos 0:/> doom
+```
+
+| key | does |
+|---|---|
+| arrows | move and turn |
+| ctrl | fire |
+| space | open doors, use switches |
+| shift | run |
+| alt + arrows | strafe |
+| 1 - 7 | weapons |
+| tab | map |
+| esc | menu, quit game is at the bottom |
+
+quitting doom (or killing it with ctrl+c) brings back the shell. doomgeneric
+doesnt save its config file, and there is no sound.
+
+![the doom menu on moOS](images/doom-menu.png)
+
 ## project structure
 - `src/bootloader/` - boot sector, kernel entry stub and limine config
 - `src/kernel/` - core os: interrupts, memory, tasks, scheduler, mutexes,
@@ -230,9 +280,10 @@ slow: 36 ms every 90 ms, 0 of 20 deadlines missed
 - `src/drivers/` - screen, keyboard, timer, clock, serial and disk drivers
 - `src/file_system/` - vfs, path parser and fat16 driver
 - `src/libc/` - kernel side c library
-- `src/user/` - user programs including the shell, and their syscall
-  library
+- `src/user/` - user programs including the shell and doom's glue, their
+  syscall library and the c library
 - `external/limine/` - limine bootloader (git submodule)
+- `external/doomgeneric/` - doom (git submodule)
 - `scripts/` - qemu test driver and helpers
 - `docs/` - debugging guide and fat16 reference
 
@@ -240,12 +291,12 @@ slow: 36 ms every 90 ms, 0 of 20 deadlines missed
 
 ### arch linux
 ```bash
-sudo pacman -S git qemu make nasm clang mtools dosfstools util-linux
+sudo pacman -S git qemu make nasm clang mtools dosfstools util-linux curl xz
 ```
 
 ### fedora
 ```bash
-sudo dnf install git qemu-system-x86-core qemu-ui-gtk make nasm clang mtools dosfstools util-linux
+sudo dnf install git qemu-system-x86-core qemu-ui-gtk make nasm clang mtools dosfstools util-linux curl xz
 ```
 
 for an i686-gcc cross-compiler instead of clang, follow [this guide](https://wiki.osdev.org/GCC_Cross-Compiler)
