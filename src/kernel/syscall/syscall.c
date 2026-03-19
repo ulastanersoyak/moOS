@@ -1,5 +1,6 @@
 #include "syscall.h"
 #include "../../drivers/keyboard/keyboard.h"
+#include "../../drivers/mouse/mouse.h"
 #include "../../drivers/rtc/rtc.h"
 #include "../../drivers/screen/terminal.h"
 #include "../../drivers/screen/vga.h"
@@ -514,6 +515,23 @@ sys_gfx_blit (const uint8_t *pixels)
   return OK;
 }
 
+// like key events, only the program in the foreground gets them
+static int32_t
+sys_mouse_event (struct mouse_event *out, uint32_t flush)
+{
+  if (flush)
+    {
+      mouse_flush_events ();
+      return -1;
+    }
+  if (!task_running->foreground
+      || !task_user_range_valid (out, sizeof (*out)))
+    {
+      return -1;
+    }
+  return mouse_get_event (out);
+}
+
 static int32_t
 sys_isatty (int fd)
 {
@@ -700,6 +718,9 @@ syscall_handler (struct interrupt_frame *frame)
         }
       res = task_running->foreground && !frame->ebx ? keyboard_get_event ()
                                                     : -1;
+      break;
+    case SYS_MOUSE_EVENT:
+      res = sys_mouse_event ((struct mouse_event *)frame->ebx, frame->ecx);
       break;
     case SYS_REBOOT:
       // pulse the cpu reset line through the keyboard controller

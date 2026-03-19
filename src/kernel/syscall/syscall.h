@@ -54,6 +54,7 @@ enum
   SYS_GFX_PALETTE = 44,  // int gfx_palette (rgb, int first, int count)
   SYS_GFX_BLIT = 45,     // int gfx_blit (const uint8_t *pixels)
   SYS_KEY_EVENT = 46,    // int key_event (int flush), -1 if there is none
+  SYS_MOUSE_EVENT = 47,  // int mouse_event (struct mouse_event *, flush)
 };
 
 // handles int 0x80 from user tasks

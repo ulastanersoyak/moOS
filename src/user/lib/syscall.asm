@@ -64,3 +64,4 @@ $%1:
 	SYSCALL gfx_palette, 44
 	SYSCALL gfx_blit, 45
 	SYSCALL key_event, 46
+	SYSCALL mouse_event, 47

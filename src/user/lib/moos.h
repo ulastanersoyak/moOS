@@ -226,6 +226,23 @@ int gfx_blit (const uint8_t *pixels);
 #define KEY_RELEASED 0x100
 int key_event (int flush);
 
+// mouse events: the movement since the last event (dy grows down the screen)
+// and the buttons held. returns 0 with an event in out or -1 if no event is
+// queued. like key events, only the foreground program gets them, and
+// mouse_event (0, 1) drops the queued ones. must match struct mouse_event in
+// src/drivers/mouse/mouse.h
+#define MOUSE_LEFT 0x1
+#define MOUSE_RIGHT 0x2
+#define MOUSE_MIDDLE 0x4
+struct mouse_event
+{
+  int16_t dx;
+  int16_t dy;
+  uint8_t buttons;
+  uint8_t reserved[3];
+};
+int mouse_event (struct mouse_event *out, int flush);
+
 // heap
 void *malloc (uint32_t size);
 void *calloc (uint32_t count, uint32_t size);
