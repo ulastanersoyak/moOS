@@ -466,19 +466,20 @@ sys_mutex_open (const char *user_name, uint32_t flags)
   return mutex_open (name, flags);
 }
 
-// one program at a time can switch the screen to the graphics mode, the
+// one program at a time can switch the screen to a graphics mode, the
 // text screen comes back when it switches back or exits
 static int32_t
-sys_gfx_mode (uint32_t on)
+sys_gfx_mode (uint32_t mode)
 {
-  if (vga_gfx_active () && !task_running->owns_screen)
+  if ((vga_gfx_active () && !task_running->owns_screen)
+      || mode > VGA_MODE_MONO)
     {
       return -INVALID_ARG_ERROR;
     }
-  if (on)
+  if (mode)
     {
       task_running->owns_screen = 1;
-      vga_gfx_enter ();
+      vga_gfx_enter (mode);
     }
   else
     {
@@ -491,7 +492,8 @@ sys_gfx_mode (uint32_t on)
 static int32_t
 sys_gfx_palette (const uint8_t *rgb, uint32_t first, uint32_t count)
 {
-  if (!task_running->owns_screen || first > 255 || count > 256 - first
+  if (!task_running->owns_screen || vga_gfx_active () != VGA_MODE_256
+      || first > 255 || count > 256 - first
       || !task_user_range_valid (rgb, count * 3))
     {
       return -INVALID_ARG_ERROR;
@@ -504,7 +506,7 @@ static int32_t
 sys_gfx_blit (const uint8_t *pixels)
 {
   if (!task_running->owns_screen
-      || !task_user_range_valid (pixels, VGA_GFX_WIDTH * VGA_GFX_HEIGHT))
+      || !task_user_range_valid (pixels, vga_gfx_frame_size ()))
     {
       return -INVALID_ARG_ERROR;
     }

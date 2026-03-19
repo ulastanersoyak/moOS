@@ -26,7 +26,7 @@
 // the text mode font lives in plane 2, 32 bytes per char
 #define FONT_SIZE (256 * 32)
 
-// register values of both modes: misc, sequencer, crtc, graphics
+// register values of the modes: misc, sequencer, crtc, graphics
 // controller, attribute controller
 static const uint8_t mode_13h[] = {
   0x63,
@@ -37,6 +37,20 @@ static const uint8_t mode_13h[] = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x05, 0x0F, 0xFF,
   0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,
   0x0C, 0x0D, 0x0E, 0x0F, 0x41, 0x00, 0x0F, 0x00, 0x00,
+};
+
+// 640x480 with 1 bit per pixel. writes go to all four planes, so a pixel is
+// colour 0 or 15, which the attribute controller maps to dac entries 0 and
+// 63
+static const uint8_t mode_11h[] = {
+  0xE3,
+  0x03, 0x01, 0x0F, 0x00, 0x06,
+  0x5F, 0x4F, 0x50, 0x82, 0x54, 0x80, 0x0B, 0x3E, 0x00, 0x40, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0xEA, 0x0C, 0xDF, 0x28, 0x00, 0xE7, 0x04, 0xE3,
+  0xFF,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x0F, 0xFF,
+  0x00, 0x3F, 0x00, 0x3F, 0x00, 0x3F, 0x00, 0x3F, 0x00, 0x3F, 0x00, 0x3F,
+  0x00, 0x3F, 0x00, 0x3F, 0x01, 0x00, 0x0F, 0x00, 0x00,
 };
 
 static const uint8_t mode_text_80x25[] = {
@@ -50,7 +64,7 @@ static const uint8_t mode_text_80x25[] = {
   0x3C, 0x3D, 0x3E, 0x3F, 0x0C, 0x00, 0x0F, 0x08, 0x00,
 };
 
-static uint8_t active = 0;
+static uint8_t active = VGA_MODE_TEXT;
 static uint8_t saved_font[FONT_SIZE];
 static uint8_t saved_palette[256 * 3];
 
@@ -173,31 +187,46 @@ vga_palette_copy (uint8_t *buf, uint8_t save)
 }
 
 void
-vga_gfx_enter (void)
+vga_gfx_enter (uint8_t mode)
 {
-  if (active)
+  if (mode == active)
     {
       return;
     }
-  terminal_hide ();
-  vga_font_copy (saved_font, 1);
-  vga_palette_copy (saved_palette, 1);
-  vga_write_regs (mode_13h);
-  memset (VGA_FRAMEBUFFER, 0, VGA_GFX_WIDTH * VGA_GFX_HEIGHT);
-  active = 1;
+  if (active == VGA_MODE_TEXT)
+    {
+      terminal_hide ();
+      vga_font_copy (saved_font, 1);
+      vga_palette_copy (saved_palette, 1);
+    }
+  active = mode;
+  if (mode == VGA_MODE_MONO)
+    {
+      vga_write_regs (mode_11h);
+      // ink on paper: a clear bit is white, a set bit black
+      static const uint8_t paper[3] = { 255, 255, 255 };
+      static const uint8_t ink[3] = { 0, 0, 0 };
+      vga_gfx_set_palette (paper, 0, 1);
+      vga_gfx_set_palette (ink, 63, 1);
+    }
+  else
+    {
+      vga_write_regs (mode_13h);
+    }
+  memset (VGA_FRAMEBUFFER, 0, vga_gfx_frame_size ());
 }
 
 void
 vga_gfx_leave (void)
 {
-  if (!active)
+  if (active == VGA_MODE_TEXT)
     {
       return;
     }
   vga_write_regs (mode_text_80x25);
   vga_font_copy (saved_font, 0);
   vga_palette_copy (saved_palette, 0);
-  active = 0;
+  active = VGA_MODE_TEXT;
   terminal_show ();
 }
 
@@ -205,6 +234,19 @@ uint8_t
 vga_gfx_active (void)
 {
   return active;
+}
+
+uint32_t
+vga_gfx_frame_size (void)
+{
+  switch (active)
+    {
+    case VGA_MODE_256:
+      return VGA_GFX_WIDTH * VGA_GFX_HEIGHT;
+    case VGA_MODE_MONO:
+      return VGA_MONO_WIDTH / 8 * VGA_MONO_HEIGHT;
+    }
+  return 0;
 }
 
 void
@@ -220,5 +262,5 @@ vga_gfx_set_palette (const uint8_t *rgb, uint32_t first, uint32_t count)
 void
 vga_gfx_blit (const uint8_t *pixels)
 {
-  memcpy (VGA_FRAMEBUFFER, pixels, VGA_GFX_WIDTH * VGA_GFX_HEIGHT);
+  memcpy (VGA_FRAMEBUFFER, pixels, vga_gfx_frame_size ());
 }

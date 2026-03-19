@@ -181,16 +181,26 @@ int mutex_close (int id);
 int period (uint32_t ms); // 0 makes the task ordinary again
 int wait_period (void);
 
-// graphics: vga mode 13h, GFX_WIDTH x GFX_HEIGHT pixels with one byte each,
-// an index into a palette of 256 colours. one program at a time can switch
-// to it, the text screen comes back with gfx_mode (0) or when the program
+// graphics. one program at a time can switch the screen to a graphics mode,
+// the text screen comes back with gfx_mode (GFX_TEXT) or when the program
 // exits. text printed in between shows up then
+#define GFX_TEXT 0
+// vga mode 13h, GFX_WIDTH x GFX_HEIGHT pixels with one byte each, an index
+// into a palette of 256 colours
+#define GFX_256 1
 #define GFX_WIDTH 320
 #define GFX_HEIGHT 200
-int gfx_mode (int on);
-// rgb holds 3 bytes (0-255) for each of count colours from first on
+// vga mode 11h, GFX_MONO_WIDTH x GFX_MONO_HEIGHT pixels in black and white.
+// 8 pixels per byte with the leftmost one in the highest bit, a set bit is
+// black
+#define GFX_MONO 2
+#define GFX_MONO_WIDTH 640
+#define GFX_MONO_HEIGHT 480
+int gfx_mode (int mode);
+// rgb holds 3 bytes (0-255) for each of count colours from first on, only in
+// GFX_256
 int gfx_palette (const uint8_t *rgb, int first, int count);
-// copies a whole frame of GFX_WIDTH * GFX_HEIGHT pixels to the screen
+// copies a whole frame of the current mode to the screen
 int gfx_blit (const uint8_t *pixels);
 
 // key events for games: every key going down and up, also ctrl, shift and
