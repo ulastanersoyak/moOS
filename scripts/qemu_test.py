@@ -156,6 +156,17 @@ STEPS = [
     ("\n", 1.0),
     ("y", 4.0),
     ("echo doom is done\n", 0.4),
+    # the desktop: file menu, new folder in the open root window, ctrl+q.
+    # the mouse starts in the middle of the screen
+    ("desk\n", 3.0),
+    ("!mouse_move -100 -100", 0.05),
+    ("!mouse_move -100 -100", 0.05),
+    ("!mouse_move -88 -30", 0.3),
+    ("!mouse_button 1", 0.3),
+    ("!mouse_move 8 42", 0.3),
+    ("!mouse_button 0", 1.0),
+    ("<ctrl-q>", 0.8),
+    ("ls\n", 0.5),
     # the shell is a user program, init starts a new one when it dies
     ("kill sh\n", 1.0),
     ("ps\n", 0.5),
@@ -209,7 +220,7 @@ EXPECTED = [
     "moos 0:/> cat LONGNO~1.TXT\napple banana",
     "moos 0:/> cat fruit.txt|sort\napple\nbanana\n",
     "1 2 12\n",                    # quotes keep both spaces
-    "26 130 1170\n",               # 26 programs through a 4 stage pipeline
+    "27 135 1215\n",               # 27 programs through a 4 stage pipeline
     "1 2 10\n",                    # 6000 bytes through pipes larger than 4 kb
     "2 2 13\n",
     "nosuch: not found\n0 0 0",
@@ -222,6 +233,8 @@ EXPECTED = [
     "cd: pipes, redirection and & only work with programs",
     "init: sh was killed, starting a new one\n\nwelcome to moOS!",
     "scheduler: earliest deadline first",
+    "ps/2 mouse init [OK]",
+    "New Folder/",                     # made in the desktop
     "every 60 ms, 0 of",               # ps shows periodic tasks
 ]
 
@@ -297,6 +310,12 @@ def main():
     try:
         wait_for_shell()
         for text, wait in STEPS:
+            # a qemu monitor command, e.g. to move the mouse
+            if text.startswith("!"):
+                qemu.stdin.write(text[1:] + "\n")
+                qemu.stdin.flush()
+                time.sleep(wait)
+                continue
             keys = [text[1:-1]] if text.startswith("<") else map(key_name, text)
             for key in keys:
                 qemu.stdin.write(f"sendkey {key}\n")
