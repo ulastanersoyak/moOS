@@ -2275,10 +2275,25 @@ main (void)
       while (!quit && mouse_event (&ev, 0) == 0)
         {
           busy = 1;
-          if (ev.dx || ev.dy)
+          int x = mouse_x;
+          int y2 = mouse_y2;
+          if (ev.absolute)
             {
-              mouse_x = min (max (mouse_x + ev.dx, 0), SCREEN_W - 1);
-              mouse_y2 = min (max (mouse_y2 + ev.dy, 0), SCREEN_H * 2 - 1);
+              // the pointer of the host, so it stays under the real one
+              x = ev.dx * SCREEN_W / (MOUSE_MAX + 1);
+              y2 = ev.dy * SCREEN_H * 2 / (MOUSE_MAX + 1);
+            }
+          else
+            {
+              x += ev.dx;
+              y2 += ev.dy;
+            }
+          x = min (max (x, 0), SCREEN_W - 1);
+          y2 = min (max (y2, 0), SCREEN_H * 2 - 1);
+          if (x != mouse_x || y2 != mouse_y2)
+            {
+              mouse_x = x;
+              mouse_y2 = y2;
               mouse_y = mouse_y2 / 2;
               moved = 1;
               on_move ();

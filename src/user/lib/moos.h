@@ -227,19 +227,23 @@ int gfx_blit (const uint8_t *pixels);
 int key_event (int flush);
 
 // mouse events: the movement since the last event (dy grows down the screen)
-// and the buttons held. returns 0 with an event in out or -1 if no event is
+// and the buttons held. in vmware or qemu the events are absolute: dx and dy
+// are where the host pointer is, from 0 to MOUSE_MAX across the screen. returns 0 with an event in out or -1 if no event is
 // queued. like key events, only the foreground program gets them, and
 // mouse_event (0, 1) drops the queued ones. must match struct mouse_event in
 // src/drivers/mouse/mouse.h
 #define MOUSE_LEFT 0x1
 #define MOUSE_RIGHT 0x2
 #define MOUSE_MIDDLE 0x4
+// the largest position of an absolute event, the right or bottom edge
+#define MOUSE_MAX 0x7FFF
 struct mouse_event
 {
   int16_t dx;
   int16_t dy;
   uint8_t buttons;
-  uint8_t reserved[3];
+  uint8_t absolute; // dx and dy are a position from 0 to MOUSE_MAX
+  uint8_t reserved[2];
 };
 int mouse_event (struct mouse_event *out, int flush);
 

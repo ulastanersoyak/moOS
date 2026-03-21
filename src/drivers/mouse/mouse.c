@@ -36,6 +36,26 @@
 #define PS2_TIMEOUT 100000
 
 #define MOUSE_EVENTS_SIZE 64
+
+// vmmouse: the absolute pointer of vmware, qemu has it too. it is reached
+// through the vmware backdoor, an in on its port with the magic in eax
+#define VMWARE_MAGIC 0x564D5868
+#define VMWARE_PORT 0x5658
+#define VMWARE_GETVERSION 10
+#define VMMOUSE_DATA 39
+#define VMMOUSE_STATUS 40
+#define VMMOUSE_COMMAND 41
+#define VMMOUSE_ENABLE 0x45414552
+#define VMMOUSE_REQUEST_ABSOLUTE 0x53424152
+#define VMMOUSE_VERSION_ID 0x3442554A
+#define VMMOUSE_STATUS_ERROR 0xFFFF0000
+#define VMMOUSE_PACKET_WORDS 4
+#define VMMOUSE_LEFT 0x20
+#define VMMOUSE_RIGHT 0x10
+#define VMMOUSE_MIDDLE 0x08
+
+static uint8_t vmmouse = 0;
+
 static volatile struct mouse_event events[MOUSE_EVENTS_SIZE];
 static volatile uint32_t events_head = 0;
 static volatile uint32_t events_tail = 0;
@@ -90,6 +110,43 @@ mouse_command (uint8_t command)
   return insb (PS2_DATA) == MOUSE_ACK;
 }
 
+struct backdoor
+{
+  uint32_t eax, ebx, ecx, edx;
+};
+
+static struct backdoor
+vmware_call (uint32_t command, uint32_t arg)
+{
+  struct backdoor r;
+  asm volatile ("inl %%dx, %%eax"
+                : "=a"(r.eax), "=b"(r.ebx), "=c"(r.ecx), "=d"(r.edx)
+                : "a"(VMWARE_MAGIC), "b"(arg), "c"(command),
+                  "d"(VMWARE_PORT));
+  return r;
+}
+
+// switches the vmmouse on if there is one. the ps/2 mouse keeps raising
+// irq12 for every event, the position is read from the vmmouse then
+static uint8_t
+vmmouse_init (void)
+{
+  if (vmware_call (VMWARE_GETVERSION, ~VMWARE_MAGIC).ebx != VMWARE_MAGIC)
+    {
+      return 0;
+    }
+  vmware_call (VMMOUSE_COMMAND, VMMOUSE_ENABLE);
+  uint32_t status = vmware_call (VMMOUSE_STATUS, 0).eax;
+  if ((status & VMMOUSE_STATUS_ERROR) == VMMOUSE_STATUS_ERROR
+      || (status & 0xFFFF) == 0
+      || vmware_call (VMMOUSE_DATA, 1).eax != VMMOUSE_VERSION_ID)
+    {
+      return 0;
+    }
+  vmware_call (VMMOUSE_COMMAND, VMMOUSE_REQUEST_ABSOLUTE);
+  return 1;
+}
+
 void
 mouse_init (uint8_t verbose)
 {
@@ -106,10 +163,11 @@ mouse_init (uint8_t verbose)
   ok = ok && ps2_wait_write ();
   outb (PS2_DATA, config);
   ok = ok && mouse_command (MOUSE_DEFAULTS) && mouse_command (MOUSE_ENABLE);
+  vmmouse = ok && vmmouse_init ();
   outb (PIC_SLAVE_DATA, insb (PIC_SLAVE_DATA) & ~IRQ12_MASK);
   if (verbose)
     {
-      printf ("ps/2 mouse init");
+      printf (vmmouse ? "ps/2 mouse init <absolute>" : "ps/2 mouse init");
       if (ok)
         {
           init_OK ();
@@ -122,7 +180,7 @@ mouse_init (uint8_t verbose)
 }
 
 static void
-event_push (int16_t dx, int16_t dy, uint8_t buttons)
+event_push (int16_t dx, int16_t dy, uint8_t buttons, uint8_t absolute)
 {
   uint32_t next = (events_head + 1) % MOUSE_EVENTS_SIZE;
   // a full queue loses its oldest event, nobody is reading them anyway
@@ -133,7 +191,34 @@ event_push (int16_t dx, int16_t dy, uint8_t buttons)
   events[events_head].dx = dx;
   events[events_head].dy = dy;
   events[events_head].buttons = buttons;
+  events[events_head].absolute = absolute;
   events_head = next;
+}
+
+// takes the packets queued in the vmmouse. positions go from 0 to 0xFFFF
+// across the screen
+static void
+vmmouse_read (void)
+{
+  for (;;)
+    {
+      uint32_t status = vmware_call (VMMOUSE_STATUS, 0).eax;
+      if ((status & VMMOUSE_STATUS_ERROR) == VMMOUSE_STATUS_ERROR)
+        {
+          // it lost track, starting it again clears its queue
+          vmmouse_init ();
+          return;
+        }
+      if ((status & 0xFFFF) < VMMOUSE_PACKET_WORDS)
+        {
+          return;
+        }
+      struct backdoor p = vmware_call (VMMOUSE_DATA, VMMOUSE_PACKET_WORDS);
+      uint8_t buttons = ((p.eax & VMMOUSE_LEFT) ? MOUSE_LEFT : 0)
+                        | ((p.eax & VMMOUSE_RIGHT) ? MOUSE_RIGHT : 0)
+                        | ((p.eax & VMMOUSE_MIDDLE) ? MOUSE_MIDDLE : 0);
+      event_push ((p.ebx & 0xFFFF) >> 1, (p.ecx & 0xFFFF) >> 1, buttons, 1);
+    }
 }
 
 void
@@ -153,6 +238,13 @@ mouse_handle_interrupt (void)
       return;
     }
   packet_len = 0;
+  // with the vmmouse on, the packets only raise irq12 and the vmmouse has
+  // the position
+  if (vmmouse)
+    {
+      vmmouse_read ();
+      return;
+    }
   uint8_t flags = packet[0];
   if (flags & PACKET_OVERFLOW)
     {
@@ -162,7 +254,7 @@ mouse_handle_interrupt (void)
   int16_t dx = packet[1] - ((flags & PACKET_X_SIGN) ? 256 : 0);
   int16_t dy = packet[2] - ((flags & PACKET_Y_SIGN) ? 256 : 0);
   // the mouse counts up going away from the user, the screen counts down
-  event_push (dx, -dy, flags & 0x07);
+  event_push (dx, -dy, flags & 0x07, 0);
 }
 
 int32_t
@@ -175,7 +267,8 @@ mouse_get_event (struct mouse_event *out)
   out->dx = events[events_tail].dx;
   out->dy = events[events_tail].dy;
   out->buttons = events[events_tail].buttons;
-  out->reserved[0] = out->reserved[1] = out->reserved[2] = 0;
+  out->absolute = events[events_tail].absolute;
+  out->reserved[0] = out->reserved[1] = 0;
   events_tail = (events_tail + 1) % MOUSE_EVENTS_SIZE;
   return 0;
 }

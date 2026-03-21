@@ -304,6 +304,9 @@ def main():
     qemu = subprocess.Popen(
         ["qemu-system-i386", "-drive", f"file={IMAGE},format=raw",
          "-rtc", "base=localtime",
+         # without the vmmouse the mouse is relative, like the monitor's
+         # mouse_move
+         "-machine", "vmport=off",
          "-display", "none", "-debugcon", f"file:{LOG}", "-monitor", "stdio",
          "-no-reboot"],
         stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, text=True)
