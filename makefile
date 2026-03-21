@@ -81,7 +81,7 @@ FILES := $(ASM_OBJS) $(C_OBJS)
 # user programs, elf executables copied to 0:/bin on the disk image
 USER_PROGS := hello count crash spin rtdemo memtest cat wc sort cp echo ls grep \
 	date time pipetest cowsay moose sh pidemo edfdemo fputest gfxdemo keys \
-	libctest doom
+	libctest doom desk
 USER_LIB_OBJS := build/user/lib/crt0.asm.o build/user/lib/syscall.asm.o \
 	build/user/lib/moos.o build/user/lib/int64.o
 USER_BINS := $(patsubst %,build/user/%.elf,$(USER_PROGS))
@@ -122,7 +122,7 @@ DOOM_FLAGS = -O2 -g -ffreestanding -fno-builtin -fno-pic -fno-pie \
 	-mno-mmx -mno-sse -mno-sse2 -nostdlib -std=gnu99 -w -MMD -MP \
 	$(LIBC_INCLUDE) $(DOOM_DEFINES)
 # keep user objects, make would delete them as intermediate files
-.SECONDARY: $(USER_BINS:.elf=.o) build/user/shline.o
+.SECONDARY: $(USER_BINS:.elf=.o) build/user/shline.o build/user/deskdraw.o
 
 FLAGS = -g -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector \
 	-fno-asynchronous-unwind-tables -fomit-frame-pointer -march=i686 \
@@ -199,6 +199,10 @@ build/user/doom.elf: build/user/doom.o $(DOOM_OBJS) $(LIBC_OBJS) $(USER_LIB_OBJS
 build/user/sh.elf: build/user/sh.o build/user/shline.o $(USER_LIB_OBJS) ./src/user/linker.ld
 	$(LD) -s -z noexecstack -T ./src/user/linker.ld -o $@ build/user/sh.o build/user/shline.o $(USER_LIB_OBJS)
 
+# the desktop is split into windows and menus, and the drawing
+build/user/desk.elf: build/user/desk.o build/user/deskdraw.o $(USER_LIB_OBJS) ./src/user/linker.ld
+	$(LD) -s -z noexecstack -T ./src/user/linker.ld -o $@ build/user/desk.o build/user/deskdraw.o $(USER_LIB_OBJS)
+
 $(DOOM_WAD):
 	@mkdir -p $(dir $@)deb
 	curl -fsSL -o $(dir $@)deb/shareware.deb $(DOOM_WAD_DEB)
@@ -240,7 +244,7 @@ build/%.o: src/%.c
 
 -include $(C_OBJS:.o=.d) $(USER_BINS:.elf=.d) build/user/lib/moos.d \
 	build/user/lib/int64.d $(LIBC_OBJS:.o=.d) $(DOOM_OBJS:.o=.d) \
-	build/user/shline.d
+	build/user/shline.d build/user/deskdraw.d
 
 # keeps the downloaded wad
 clean:
