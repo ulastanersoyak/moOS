@@ -46,10 +46,13 @@ kernel
 
 drivers
 - vga text terminal with scrolling and a hardware cursor
-- vga mode 13h graphics (320x200, 256 colours) for one program at a time,
-  the text screen with its font and palette comes back when it exits
+- vga mode 13h graphics (320x200, 256 colours) and mode 11h (640x480,
+  black and white) for one program at a time, the text screen with its font
+  and palette comes back when it exits
 - keyboard (us layout, shift, caps lock, ctrl, arrow keys), plus key down
   and key up events for games
+- ps/2 mouse, its movement and buttons go to the program in the foreground.
+  under qemu and vmware the vmmouse gives absolute positions instead
 - pit timer, cmos real time clock, serial port (com1)
 - ata disk reads and writes, mbr partitions
 
@@ -191,6 +194,7 @@ type their name in the shell to run them:
 | `moose [text]` | the moOS moose |
 | `sh` | the shell, started by init at boot |
 | `doom` | doom, see below |
+| `desk` | a desktop in the style of apple ii desktop, see below |
 | `gfxdemo` | animated rings in vga mode 13h for 3 seconds |
 | `keys` | prints key down and up events until esc |
 | `fputest` | two tasks with different fpu settings at once, 64 bit division |
@@ -272,6 +276,24 @@ quitting doom (or killing it with ctrl+c) brings back the shell. doomgeneric
 doesnt save its config file, and there is no sound.
 
 ![the doom menu on moOS](images/doom-menu.png)
+
+## desktop
+
+`desk` is a desktop in the style of apple ii desktop (mousedesk): a menu bar,
+the disk and the trash on a grey desktop and windows you can drag, resize,
+scroll and close. it draws a 640x240 black and white canvas and shows every
+row twice in vga mode 11h, so pixels are twice as tall as wide like on the
+apple ii. in qemu (and vmware) the kernel uses the vmmouse, which gives the
+position of the host pointer, so the desktop pointer stays right under it
+and the window doesnt have to grab the mouse.
+
+- double click the disk or a folder to open it, a text file to read it and a
+  program to run it. the desktop comes back when the program exits
+- drag a file or an empty folder to the trash to delete it
+- file: open, new folder, close, close all, get info and quit (ctrl+q)
+- view: icons or a list with sizes and dates
+- the moose menu has a calculator (mouse or keyboard) and a clock, the
+  selector menu starts doom, gfxdemo and moose
 
 ## project structure
 - `src/bootloader/` - boot sector, kernel entry stub and limine config
