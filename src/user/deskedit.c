@@ -86,12 +86,13 @@ char_width (char c)
   return text_width (str);
 }
 
-// the cursor rests on a char, not on the end of a line, unless it is empty
+// in normal mode the cursor rests on a char, not on the end of a line,
+// unless the line is empty. in insert mode it sits between chars
 static void
 clamp_cursor (struct editor *ed)
 {
   ed->cursor = min (max (ed->cursor, 0), ed->len);
-  if (ed->cursor > line_start (ed, ed->cursor)
+  if (ed->mode == EDIT_NORMAL && ed->cursor > line_start (ed, ed->cursor)
       && ed->cursor == line_end (ed, ed->cursor))
     {
       ed->cursor--;
@@ -199,6 +200,37 @@ goto_line (struct editor *ed, int line)
   ed->cursor = first_nonblank (ed, line_pos (ed, line));
   clamp_cursor (ed);
   set_column (ed);
+}
+
+// puts text at pos, returns 0 when the buffer is full
+static int
+insert_text (struct editor *ed, int pos, const char *text, int len)
+{
+  if (ed->len + len > EDIT_MAX)
+    {
+      snprintf (ed->message, sizeof (ed->message), "the file is too big");
+      return 0;
+    }
+  memmove (ed->text + pos + len, ed->text + pos, ed->len - pos);
+  memcpy (ed->text + pos, text, len);
+  ed->len += len;
+  ed->modified = 1;
+  return 1;
+}
+
+static void
+delete_text (struct editor *ed, int from, int to)
+{
+  memmove (ed->text + from, ed->text + to, ed->len - to);
+  ed->len -= to - from;
+  ed->modified = 1;
+}
+
+static void
+start_insert (struct editor *ed, int pos)
+{
+  ed->mode = EDIT_INSERT;
+  ed->cursor = pos;
 }
 
 void
@@ -315,6 +347,97 @@ normal_key (struct editor *ed, int key)
     case 'G':
       goto_line (ed, count ? count - 1 : edit_line_count (ed) - 1);
       break;
+    case 'i':
+      start_insert (ed, ed->cursor);
+      break;
+    case 'a':
+      start_insert (ed, min (ed->cursor + 1, line_end (ed, ed->cursor)));
+      break;
+    case 'I':
+      start_insert (ed, first_nonblank (ed, ed->cursor));
+      break;
+    case 'A':
+      start_insert (ed, line_end (ed, ed->cursor));
+      break;
+    case 'o':
+      {
+        // a new line below, or the first one of an empty file
+        int end = line_end (ed, ed->cursor);
+        if (insert_text (ed, end, "\n", 1))
+          {
+            start_insert (ed, end + 1);
+          }
+        break;
+      }
+    case 'O':
+      {
+        int start = line_start (ed, ed->cursor);
+        if (insert_text (ed, start, "\n", 1))
+          {
+            start_insert (ed, start);
+          }
+        break;
+      }
+    }
+}
+
+// a key in insert mode: chars go into the text until esc
+static void
+insert_key (struct editor *ed, int key)
+{
+  switch (key)
+    {
+    case 27:
+      // like vim the cursor steps back onto the last typed char
+      ed->mode = EDIT_NORMAL;
+      if (ed->cursor > line_start (ed, ed->cursor))
+        {
+          ed->cursor--;
+        }
+      clamp_cursor (ed);
+      set_column (ed);
+      return;
+    case '\b':
+      if (ed->cursor > 0)
+        {
+          delete_text (ed, ed->cursor - 1, ed->cursor);
+          ed->cursor--;
+        }
+      set_column (ed);
+      return;
+    case KEY_DELETE:
+      if (ed->cursor < ed->len)
+        {
+          delete_text (ed, ed->cursor, ed->cursor + 1);
+        }
+      return;
+    case '\t':
+      // the font has no tab, two spaces it is
+      if (insert_text (ed, ed->cursor, "  ", 2))
+        {
+          ed->cursor += 2;
+        }
+      set_column (ed);
+      return;
+    case KEY_LEFT:
+    case KEY_RIGHT:
+    case KEY_UP:
+    case KEY_DOWN:
+    case KEY_HOME:
+    case KEY_END:
+    case KEY_PAGE_UP:
+    case KEY_PAGE_DOWN:
+      normal_key (ed, key);
+      return;
+    }
+  if (key == '\n' || (key >= ' ' && key <= '~'))
+    {
+      char c = key;
+      if (insert_text (ed, ed->cursor, &c, 1))
+        {
+          ed->cursor++;
+        }
+      set_column (ed);
     }
 }
 
@@ -322,7 +445,14 @@ int
 edit_key (struct editor *ed, int key)
 {
   ed->message[0] = 0;
-  normal_key (ed, key);
+  if (ed->mode == EDIT_INSERT)
+    {
+      insert_key (ed, key);
+    }
+  else
+    {
+      normal_key (ed, key);
+    }
   return EDIT_DONE;
 }
 
@@ -372,7 +502,8 @@ edit_draw (const struct editor *ed, struct box view, int scroll, int active)
           draw_text (text.x + TEXT_LEFT, y, buf, INK);
           if (active && line == cursor_line)
             {
-              // a block over the char under the cursor
+              // a block over the char under the cursor, a bar between
+              // chars while inserting
               int x = text.x + TEXT_LEFT;
               for (int i = pos; i < ed->cursor; i++)
                 {
@@ -380,6 +511,10 @@ edit_draw (const struct editor *ed, struct box view, int scroll, int active)
                 }
               int w = ed->cursor < end ? char_width (ed->text[ed->cursor])
                                        : char_width (' ');
+              if (ed->mode == EDIT_INSERT)
+                {
+                  w = 1;
+                }
               invert_box ((struct box){ x - 1, y - 1, w + 1, FONT_HEIGHT });
             }
         }
@@ -394,7 +529,12 @@ edit_draw (const struct editor *ed, struct box view, int scroll, int active)
   int sy = text.y + text.h;
   fill_box ((struct box){ view.x, sy, view.w, EDIT_STATUS_H }, PAPER);
   hline (view.x, sy, view.w, INK);
-  draw_text (view.x + TEXT_LEFT, sy + 2, ed->message, INK);
+  const char *status = ed->message;
+  if (!status[0] && ed->mode == EDIT_INSERT)
+    {
+      status = "-- INSERT --";
+    }
+  draw_text (view.x + TEXT_LEFT, sy + 2, status, INK);
   char where[24];
   snprintf (where, sizeof (where), "%d,%d", cursor_line + 1,
             ed->cursor - line_start (ed, ed->cursor) + 1);

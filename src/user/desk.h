@@ -70,11 +70,20 @@ int box_contains (struct box box, int x, int y);
 #define EDIT_MAX 16384
 #define EDIT_STATUS_H (FONT_HEIGHT + 3) // the status line below the text
 
+// modes of the editor, like vim's
+enum
+{
+  EDIT_NORMAL,
+  EDIT_INSERT,
+};
+
 struct editor
 {
   char text[EDIT_MAX + 1];
   int len;
-  int cursor; // offset of the char under the cursor
+  int mode;
+  int modified; // changed since it was loaded or saved
+  int cursor;   // offset of the char under the cursor
   int column; // where up and down try to put the cursor
   int count;  // typed before a command, like the 5 of 5j
   char pending; // first key of a two key command, like the g of gg
