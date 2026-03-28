@@ -114,11 +114,103 @@ move_lines (struct editor *ed, int delta)
   clamp_cursor (ed);
 }
 
+// 0 for blanks, 1 for letters, digits and _, 2 for other chars. vim's
+// words are runs of the same class
+static int
+char_class (char c)
+{
+  if (c == ' ' || c == '\n')
+    {
+      return 0;
+    }
+  if (isalpha (c) || isdigit (c) || c == '_')
+    {
+      return 1;
+    }
+  return 2;
+}
+
+// w: the start of the next word
+static void
+word_forward (struct editor *ed)
+{
+  int pos = ed->cursor;
+  int c = char_class (ed->text[pos]);
+  while (c && pos < ed->len && char_class (ed->text[pos]) == c)
+    {
+      pos++;
+    }
+  while (pos < ed->len && char_class (ed->text[pos]) == 0)
+    {
+      pos++;
+    }
+  ed->cursor = min (pos, max (ed->len - 1, 0));
+}
+
+// b: the start of this word or the one before
+static void
+word_back (struct editor *ed)
+{
+  int pos = ed->cursor - 1;
+  while (pos > 0 && char_class (ed->text[pos]) == 0)
+    {
+      pos--;
+    }
+  int c = char_class (ed->text[max (pos, 0)]);
+  while (pos > 0 && char_class (ed->text[pos - 1]) == c)
+    {
+      pos--;
+    }
+  ed->cursor = max (pos, 0);
+}
+
+// e: the end of this word or the next one
+static void
+word_end (struct editor *ed)
+{
+  int pos = ed->cursor + 1;
+  while (pos < ed->len && char_class (ed->text[pos]) == 0)
+    {
+      pos++;
+    }
+  int c = char_class (ed->text[min (pos, ed->len - 1)]);
+  while (pos + 1 < ed->len && char_class (ed->text[pos + 1]) == c)
+    {
+      pos++;
+    }
+  ed->cursor = min (pos, max (ed->len - 1, 0));
+}
+
+// the first char of the line that isnt a space
+static int
+first_nonblank (const struct editor *ed, int pos)
+{
+  pos = line_start (ed, pos);
+  while (pos < ed->len && ed->text[pos] == ' ')
+    {
+      pos++;
+    }
+  return pos;
+}
+
+static void
+goto_line (struct editor *ed, int line)
+{
+  ed->cursor = first_nonblank (ed, line_pos (ed, line));
+  clamp_cursor (ed);
+  set_column (ed);
+}
+
 void
 edit_load (struct editor *ed, const char *data, int len)
 {
   memset (ed, 0, sizeof (*ed));
   len = min (max (len, 0), EDIT_MAX);
+  // like vim the last line ends the file, saving puts its '\n' back
+  if (len && data[len - 1] == '\n')
+    {
+      len--;
+    }
   for (int i = 0; i < len; i++)
     {
       char c = data[i];
@@ -127,46 +219,110 @@ edit_load (struct editor *ed, const char *data, int len)
     }
   ed->len = len;
   snprintf (ed->message, sizeof (ed->message), "%d lines, %d bytes",
-            edit_line_count (ed) - (len && data[len - 1] == '\n'), len);
+            len ? edit_line_count (ed) : 0, len + (len > 0));
+}
+
+// a key in normal mode. motions take a count typed before them
+static void
+normal_key (struct editor *ed, int key)
+{
+  if ((key >= '1' && key <= '9') || (key == '0' && ed->count))
+    {
+      ed->count = min (ed->count * 10 + key - '0', 99999);
+      return;
+    }
+  int count = ed->count;
+  int n = max (count, 1);
+  ed->count = 0;
+  if (ed->pending == 'g')
+    {
+      ed->pending = 0;
+      if (key == 'g')
+        {
+          goto_line (ed, count ? count - 1 : 0);
+        }
+      return;
+    }
+  switch (key)
+    {
+    case 'h':
+    case KEY_LEFT:
+      ed->cursor = max (ed->cursor - n, line_start (ed, ed->cursor));
+      set_column (ed);
+      break;
+    case 'l':
+    case KEY_RIGHT:
+      ed->cursor = min (ed->cursor + n, line_end (ed, ed->cursor));
+      clamp_cursor (ed);
+      set_column (ed);
+      break;
+    case 'j':
+    case KEY_DOWN:
+      move_lines (ed, n);
+      break;
+    case 'k':
+    case KEY_UP:
+      move_lines (ed, -n);
+      break;
+    case KEY_PAGE_DOWN:
+      move_lines (ed, 20 * n);
+      break;
+    case KEY_PAGE_UP:
+      move_lines (ed, -20 * n);
+      break;
+    case '0':
+    case KEY_HOME:
+      ed->cursor = line_start (ed, ed->cursor);
+      set_column (ed);
+      break;
+    case '^':
+      ed->cursor = first_nonblank (ed, ed->cursor);
+      clamp_cursor (ed);
+      set_column (ed);
+      break;
+    case '$':
+    case KEY_END:
+      move_lines (ed, n - 1);
+      ed->cursor = line_end (ed, ed->cursor);
+      clamp_cursor (ed);
+      ed->column = EDIT_MAX;
+      break;
+    case 'w':
+    case 'b':
+    case 'e':
+      for (int i = 0; i < n; i++)
+        {
+          if (key == 'w')
+            {
+              word_forward (ed);
+            }
+          else if (key == 'b')
+            {
+              word_back (ed);
+            }
+          else
+            {
+              word_end (ed);
+            }
+        }
+      clamp_cursor (ed);
+      set_column (ed);
+      break;
+    case 'g':
+      ed->pending = 'g';
+      ed->count = count;
+      break;
+    case 'G':
+      goto_line (ed, count ? count - 1 : edit_line_count (ed) - 1);
+      break;
+    }
 }
 
 int
 edit_key (struct editor *ed, int key)
 {
   ed->message[0] = 0;
-  switch (key)
-    {
-    case KEY_LEFT:
-      if (ed->cursor > line_start (ed, ed->cursor))
-        {
-          ed->cursor--;
-        }
-      set_column (ed);
-      break;
-    case KEY_RIGHT:
-      if (ed->cursor < line_end (ed, ed->cursor))
-        {
-          ed->cursor++;
-        }
-      clamp_cursor (ed);
-      set_column (ed);
-      break;
-    case KEY_UP:
-      move_lines (ed, -1);
-      break;
-    case KEY_DOWN:
-      move_lines (ed, 1);
-      break;
-    case KEY_HOME:
-      ed->cursor = line_start (ed, ed->cursor);
-      set_column (ed);
-      break;
-    case KEY_END:
-      ed->cursor = line_end (ed, ed->cursor);
-      clamp_cursor (ed);
-      ed->column = EDIT_MAX;
-      break;
-    }
+  normal_key (ed, key);
   return EDIT_DONE;
 }
 

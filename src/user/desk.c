@@ -2170,17 +2170,23 @@ on_release (void)
 
 // ---------------------------------------------------------------- keys
 
-static char
-shifted (int key)
+// key events carry the unshifted char, this is what shift makes of it on
+// a us keyboard
+static int
+typed (int key)
 {
-  switch (key)
+  static const char plain[] = "`1234567890-=[]\\;',./";
+  static const char shift[] = "~!@#$%^&*()_+{}|:\"<>?";
+  if (!shift_held || key >= 0x80)
     {
-    case '8':
-      return '*';
-    case '=':
-      return '+';
+      return key;
     }
-  return key;
+  if (key >= 'a' && key <= 'z')
+    {
+      return key - 'a' + 'A';
+    }
+  const char *p = strchr (plain, key);
+  return p ? shift[p - plain] : key;
 }
 
 static void
@@ -2238,13 +2244,13 @@ on_key (int key)
     }
   if (front && front->kind == WIN_TEXT)
     {
-      edit_key (front->edit, key);
+      edit_key (front->edit, typed (key));
       reveal_cursor (front);
       return;
     }
   if (front && front->kind == WIN_CALC)
     {
-      char c = shift_held ? shifted (key) : key;
+      char c = typed (key);
       if (c == '\n')
         {
           c = '=';

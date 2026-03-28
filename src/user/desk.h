@@ -76,6 +76,8 @@ struct editor
   int len;
   int cursor; // offset of the char under the cursor
   int column; // where up and down try to put the cursor
+  int count;  // typed before a command, like the 5 of 5j
+  char pending; // first key of a two key command, like the g of gg
   char message[64]; // shown in the status line
 };
 
@@ -84,7 +86,8 @@ struct editor
 
 // takes the file, control chars become spaces
 void edit_load (struct editor *ed, const char *data, int len);
-// handles a key: a char or a KEY_ code
+// handles a key with vim's bindings: a char (shift already applied) or a
+// KEY_ code
 int edit_key (struct editor *ed, int key);
 // puts the cursor on the char at x, y of a view scrolled by scroll pixels
 void edit_click (struct editor *ed, struct box view, int scroll, int x,
