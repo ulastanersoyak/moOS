@@ -6,6 +6,11 @@
 #define TEXT_LEFT 4 // pixels between the window edge and the text
 #define TEXT_TOP 2
 
+// the register that yanks and deletes go into, shared by all windows
+static char reg[EDIT_MAX];
+static int reg_len = 0;
+static int reg_lines = 0; // holds whole lines, put goes below the cursor
+
 static int
 min (int a, int b)
 {
@@ -226,9 +231,114 @@ delete_text (struct editor *ed, int from, int to)
   ed->modified = 1;
 }
 
+// remembers the text before a change, u brings it back
+static void
+save_undo (struct editor *ed)
+{
+  memcpy (ed->undo, ed->text, ed->len);
+  ed->undo_len = ed->len;
+  ed->undo_cursor = ed->cursor;
+  ed->has_undo = 1;
+}
+
+// swaps the text with the one before the last change, so a second u redoes
+static void
+undo (struct editor *ed)
+{
+  if (!ed->has_undo)
+    {
+      snprintf (ed->message, sizeof (ed->message), "already at oldest change");
+      return;
+    }
+  static char swap[EDIT_MAX];
+  int len = ed->len;
+  int cursor = ed->cursor;
+  memcpy (swap, ed->text, len);
+  memcpy (ed->text, ed->undo, ed->undo_len);
+  ed->len = ed->undo_len;
+  ed->cursor = ed->undo_cursor;
+  memcpy (ed->undo, swap, len);
+  ed->undo_len = len;
+  ed->undo_cursor = cursor;
+  ed->modified = 1;
+}
+
+static void
+yank (struct editor *ed, int from, int to, int lines)
+{
+  reg_len = to - from;
+  memcpy (reg, ed->text + from, reg_len);
+  reg_lines = lines;
+}
+
+// the range of n whole lines from the cursor's, without the last '\n'
+static void
+line_range (const struct editor *ed, int n, int *from, int *to)
+{
+  *from = line_start (ed, ed->cursor);
+  *to = line_end (ed, ed->cursor);
+  for (int i = 1; i < n && *to < ed->len; i++)
+    {
+      *to = line_end (ed, *to + 1);
+    }
+}
+
+// dd: deletes the lines with one of the '\n' around them
+static void
+delete_lines (struct editor *ed, int from, int to)
+{
+  if (to < ed->len)
+    {
+      to++;
+    }
+  else if (from > 0)
+    {
+      from--;
+    }
+  delete_text (ed, from, to);
+  ed->cursor = from;
+}
+
+static void
+put (struct editor *ed, int after)
+{
+  if (!reg_len && !reg_lines)
+    {
+      return;
+    }
+  save_undo (ed);
+  if (reg_lines)
+    {
+      // whole lines go below or above the cursor's line
+      int pos = after ? line_end (ed, ed->cursor) : line_start (ed, ed->cursor);
+      int at = after ? pos + 1 : pos;
+      if (!insert_text (ed, pos, "\n", 1) || !insert_text (ed, at, reg, reg_len))
+        {
+          return;
+        }
+      ed->cursor = first_nonblank (ed, at);
+    }
+  else
+    {
+      int pos = ed->cursor;
+      if (after && pos < line_end (ed, pos))
+        {
+          pos++;
+        }
+      if (!insert_text (ed, pos, reg, reg_len))
+        {
+          return;
+        }
+      ed->cursor = pos + reg_len - 1;
+    }
+  clamp_cursor (ed);
+  set_column (ed);
+}
+
 static void
 start_insert (struct editor *ed, int pos)
 {
+  save_undo (ed);
   ed->mode = EDIT_INSERT;
   ed->cursor = pos;
 }
@@ -254,27 +364,10 @@ edit_load (struct editor *ed, const char *data, int len)
             len ? edit_line_count (ed) : 0, len + (len > 0));
 }
 
-// a key in normal mode. motions take a count typed before them
-static void
-normal_key (struct editor *ed, int key)
+// moves the cursor n times by a motion, returns 0 if key isnt one
+static int
+motion (struct editor *ed, int key, int n)
 {
-  if ((key >= '1' && key <= '9') || (key == '0' && ed->count))
-    {
-      ed->count = min (ed->count * 10 + key - '0', 99999);
-      return;
-    }
-  int count = ed->count;
-  int n = max (count, 1);
-  ed->count = 0;
-  if (ed->pending == 'g')
-    {
-      ed->pending = 0;
-      if (key == 'g')
-        {
-          goto_line (ed, count ? count - 1 : 0);
-        }
-      return;
-    }
   switch (key)
     {
     case 'h':
@@ -340,12 +433,179 @@ normal_key (struct editor *ed, int key)
       clamp_cursor (ed);
       set_column (ed);
       break;
+    default:
+      return 0;
+    }
+  return 1;
+}
+
+// d, c or y followed by a motion: the text the motion moves over
+static void
+operator (struct editor *ed, char op, int key, int n)
+{
+  int from, to;
+  // dd, cc and yy take whole lines, so do j and k
+  int lines = key == op || key == 'j' || key == 'k';
+  if (lines)
+    {
+      if (key == 'k')
+        {
+          move_lines (ed, -n);
+        }
+      line_range (ed, key == op ? n : n + 1, &from, &to);
+    }
+  else
+    {
+      int start = ed->cursor;
+      // cw changes to the end of the word, like ce
+      if (op == 'c' && key == 'w')
+        {
+          key = 'e';
+        }
+      if (!motion (ed, key, n))
+        {
+          return;
+        }
+      int end = ed->cursor;
+      // w stops at the end of the line, e and $ take the char they land on
+      if (key == 'w' && end > line_end (ed, start))
+        {
+          end = line_end (ed, start);
+        }
+      else if ((key == 'e' || key == '$') && end < ed->len)
+        {
+          end++;
+        }
+      from = min (start, end);
+      to = max (start, end);
+      ed->cursor = start;
+    }
+  yank (ed, from, to, lines);
+  if (op == 'y')
+    {
+      ed->cursor = lines ? ed->cursor : from;
+      clamp_cursor (ed);
+      return;
+    }
+  save_undo (ed);
+  if (op == 'd' && lines)
+    {
+      delete_lines (ed, from, to);
+      ed->cursor = first_nonblank (ed, ed->cursor);
+      clamp_cursor (ed);
+      set_column (ed);
+      return;
+    }
+  delete_text (ed, from, to);
+  ed->cursor = from;
+  if (op == 'c')
+    {
+      ed->mode = EDIT_INSERT;
+    }
+  clamp_cursor (ed);
+  set_column (ed);
+}
+
+// a key in normal mode. motions and commands take a count typed before them
+static void
+normal_key (struct editor *ed, int key)
+{
+  if ((key >= '1' && key <= '9') || (key == '0' && ed->count))
+    {
+      ed->count = min (ed->count * 10 + key - '0', 99999);
+      return;
+    }
+  int count = ed->count;
+  int n = max (count, 1);
+  ed->count = 0;
+  char pending = ed->pending;
+  ed->pending = 0;
+  if (pending == 'g')
+    {
+      if (key == 'g')
+        {
+          goto_line (ed, count ? count - 1 : 0);
+        }
+      return;
+    }
+  if (pending == 'd' || pending == 'c' || pending == 'y')
+    {
+      operator (ed, pending, key, n);
+      return;
+    }
+  if (motion (ed, key, n))
+    {
+      return;
+    }
+  switch (key)
+    {
     case 'g':
-      ed->pending = 'g';
+    case 'd':
+    case 'c':
+    case 'y':
+      ed->pending = key;
       ed->count = count;
       break;
     case 'G':
       goto_line (ed, count ? count - 1 : edit_line_count (ed) - 1);
+      break;
+    case 'D':
+    case 'C':
+      operator (ed, key == 'D' ? 'd' : 'c', '$', 1);
+      break;
+    case 'x':
+      if (ed->cursor < line_end (ed, ed->cursor))
+        {
+          int to = min (ed->cursor + n, line_end (ed, ed->cursor));
+          yank (ed, ed->cursor, to, 0);
+          save_undo (ed);
+          delete_text (ed, ed->cursor, to);
+          clamp_cursor (ed);
+        }
+      break;
+    case 'X':
+      if (ed->cursor > line_start (ed, ed->cursor))
+        {
+          int from = max (ed->cursor - n, line_start (ed, ed->cursor));
+          yank (ed, from, ed->cursor, 0);
+          save_undo (ed);
+          delete_text (ed, from, ed->cursor);
+          ed->cursor = from;
+          set_column (ed);
+        }
+      break;
+    case 'J':
+      for (int i = 0; i < n; i++)
+        {
+          // the next line moves up behind a space, its indent goes
+          int end = line_end (ed, ed->cursor);
+          if (end == ed->len)
+            {
+              break;
+            }
+          if (i == 0)
+            {
+              save_undo (ed);
+            }
+          int next = end + 1;
+          while (next < ed->len && ed->text[next] == ' ')
+            {
+              next++;
+            }
+          delete_text (ed, end, next);
+          insert_text (ed, end, " ", 1);
+          ed->cursor = end;
+        }
+      set_column (ed);
+      break;
+    case 'p':
+    case 'P':
+      put (ed, key == 'p');
+      break;
+    case 'u':
+      undo (ed);
+      clamp_cursor (ed);
+      set_column (ed);
       break;
     case 'i':
       start_insert (ed, ed->cursor);
@@ -363,18 +623,22 @@ normal_key (struct editor *ed, int key)
       {
         // a new line below, or the first one of an empty file
         int end = line_end (ed, ed->cursor);
+        save_undo (ed);
         if (insert_text (ed, end, "\n", 1))
           {
-            start_insert (ed, end + 1);
+            ed->mode = EDIT_INSERT;
+            ed->cursor = end + 1;
           }
         break;
       }
     case 'O':
       {
         int start = line_start (ed, ed->cursor);
+        save_undo (ed);
         if (insert_text (ed, start, "\n", 1))
           {
-            start_insert (ed, start);
+            ed->mode = EDIT_INSERT;
+            ed->cursor = start;
           }
         break;
       }

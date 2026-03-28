@@ -87,6 +87,11 @@ struct editor
   int column; // where up and down try to put the cursor
   int count;  // typed before a command, like the 5 of 5j
   char pending; // first key of a two key command, like the g of gg
+  // the text before the last change, for u
+  char undo[EDIT_MAX];
+  int undo_len;
+  int undo_cursor;
+  int has_undo;
   char message[64]; // shown in the status line
 };
 
