@@ -199,7 +199,7 @@ static const char *const art_check[] = {
 };
 
 // menus. "-" is a line between groups of items
-#define MENU_ITEMS 9
+#define MENU_ITEMS 10
 struct menu
 {
   const char *title;
@@ -216,11 +216,23 @@ enum
   MENU_COUNT,
 };
 
+// items of the file menu
+enum
+{
+  FILE_OPEN,
+  FILE_NEW_FOLDER,
+  FILE_NEW_FILE,
+  FILE_CLOSE,
+  FILE_CLOSE_ALL,
+  FILE_INFO = 6,
+  FILE_QUIT = 8,
+};
+
 static const struct menu menus[MENU_COUNT] = {
   { 0, { "About moOS DeskTop", "-", "Calculator", "Clock", 0 } },
   { "File",
-    { "Open", "New Folder", "Close", "Close All", "-", "Get Info", "-",
-      "Quit", 0 } },
+    { "Open", "New Folder", "New File", "Close", "Close All", "-", "Get Info",
+      "-", "Quit", 0 } },
   { "View", { "By Icon", "By Name", 0 } },
   { "Special", { "Delete", "-", "Restart", 0 } },
   { "Selector", { "Doom", "Gfx Demo", "Moose", 0 } },
@@ -515,6 +527,23 @@ item_boxes (const struct window *win, int i, struct box *icon,
   *icon = (struct box){ cx + (CELL_W - aw) / 2, cy + (11 - ah) / 2, aw, ah };
   int tw = min (text_width (entry->name), CELL_W - 6) + 4;
   *name = (struct box){ cx + (CELL_W - tw) / 2, cy + 13, tw, FONT_HEIGHT + 1 };
+}
+
+// scrolls a folder window so that item i can be seen
+static void
+reveal_item (struct window *win, int i)
+{
+  struct box view = win_view (win);
+  struct box icon, name;
+  item_boxes (win, i, &icon, &name);
+  if (icon.y < view.y)
+    {
+      scroll_by (win, icon.y - view.y - 2);
+    }
+  else if (name.y + name.h > view.y + view.h)
+    {
+      scroll_by (win, name.y + name.h - view.y - view.h + 2);
+    }
 }
 
 static int
@@ -935,20 +964,30 @@ ask_delete (void)
   show_alert (ALERT_DELETE, line, "This can not be undone.", 0);
 }
 
+// makes an empty folder or file in the front folder window, named like
+// "New Folder", "New Folder 2" or "Untitled.txt", "Untitled 2.txt"
 static void
-new_folder (void)
+new_item (int folder)
 {
   struct window *win = front_window ();
   if (!win || win->kind != WIN_FOLDER)
     {
       return;
     }
+  const char *base = folder ? "New Folder" : "Untitled";
+  const char *ext = folder ? "" : ".txt";
   char name[32];
   char path[PATH_LEN];
   for (int n = 1; n < 100; n++)
     {
-      snprintf (name, sizeof (name), n == 1 ? "New Folder" : "New Folder %d",
-                n);
+      if (n == 1)
+        {
+          snprintf (name, sizeof (name), "%s%s", base, ext);
+        }
+      else
+        {
+          snprintf (name, sizeof (name), "%s %d%s", base, n, ext);
+        }
       int taken = 0;
       for (int i = 0; i < win->count; i++)
         {
@@ -960,12 +999,29 @@ new_folder (void)
         }
     }
   join_path (path, win->path, name);
-  if (mkdir (path) < 0)
+  int fd = folder ? mkdir (path) : open (path, O_WRITE);
+  if (fd < 0)
     {
-      show_alert (ALERT_INFO, "The folder could not be made.", 0, 0);
+      show_alert (ALERT_INFO,
+                  folder ? "The folder could not be made."
+                         : "The file could not be made.",
+                  0, 0);
       return;
     }
+  if (!folder)
+    {
+      close (fd);
+    }
   reload_path (win->path);
+  // the new one is selected, ready to be opened
+  for (int i = 0; i < win->count; i++)
+    {
+      if (strcmp (win->entries[i].name, name) == 0)
+        {
+          selection = (struct target){ win - windows, i };
+          reveal_item (win, i);
+        }
+    }
 }
 
 static void
@@ -1018,15 +1074,16 @@ menu_item_enabled (int m, int i)
     case MENU_FILE:
       switch (i)
         {
-        case 0: // open
+        case FILE_OPEN:
           return selection.index >= 0
                  && !(selection.win < 0 && selection.index == DESK_TRASH);
-        case 1: // new folder
+        case FILE_NEW_FOLDER:
+        case FILE_NEW_FILE:
           return folder_front;
-        case 2: // close
-        case 3: // close all
+        case FILE_CLOSE:
+        case FILE_CLOSE_ALL:
           return front != 0;
-        case 5: // get info
+        case FILE_INFO:
           return selection.index >= 0;
         }
       return 1;
@@ -1075,25 +1132,26 @@ menu_action (int m, int i)
     case MENU_FILE:
       switch (i)
         {
-        case 0:
+        case FILE_OPEN:
           open_target (selection);
           break;
-        case 1:
-          new_folder ();
+        case FILE_NEW_FOLDER:
+        case FILE_NEW_FILE:
+          new_item (i == FILE_NEW_FOLDER);
           break;
-        case 2:
+        case FILE_CLOSE:
           close_window (front_index ());
           break;
-        case 3:
+        case FILE_CLOSE_ALL:
           while (order_len)
             {
               close_window (order[0]);
             }
           break;
-        case 5:
+        case FILE_INFO:
           get_info ();
           break;
-        case 7:
+        case FILE_QUIT:
           quit = 1;
           break;
         }
