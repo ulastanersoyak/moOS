@@ -19,7 +19,6 @@
 #define MAX_WINDOWS 8
 #define MAX_ENTRIES 128
 #define PATH_LEN 192
-#define TEXT_MAX 16384
 #define DOUBLE_CLICK_MS 450
 #define DRAG_START 3 // pixels the mouse moves before an icon gets dragged
 
@@ -42,13 +41,12 @@ struct window
   int scroll;  // pixels the content is scrolled up
   struct dirent *entries;
   int count;
-  char *text; // text windows: the file, lines end with '\n'
-  int lines;
+  struct editor *edit; // text windows
 };
 
 static struct window windows[MAX_WINDOWS];
 static struct dirent entry_store[MAX_WINDOWS][MAX_ENTRIES];
-static char text_store[MAX_WINDOWS][TEXT_MAX + 1];
+static struct editor edit_store[MAX_WINDOWS];
 // window numbers from back to front
 static int order[MAX_WINDOWS];
 static int order_len = 0;
@@ -486,7 +484,7 @@ content_height (const struct window *win)
                  * CELL_H
              + 4;
     case WIN_TEXT:
-      return win->lines * FONT_HEIGHT + 4;
+      return edit_line_count (win->edit) * FONT_HEIGHT + 4 + EDIT_STATUS_H;
     }
   return 0;
 }
@@ -544,6 +542,23 @@ reveal_item (struct window *win, int i)
     {
       scroll_by (win, name.y + name.h - view.y - view.h + 2);
     }
+}
+
+// scrolls a text window so that the line of the cursor can be seen
+static void
+reveal_cursor (struct window *win)
+{
+  int text_h = win_view (win).h - EDIT_STATUS_H;
+  int y = edit_cursor_y (win->edit);
+  if (y < win->scroll)
+    {
+      win->scroll = y - 2;
+    }
+  else if (y + FONT_HEIGHT > win->scroll + text_h)
+    {
+      win->scroll = y + FONT_HEIGHT - text_h;
+    }
+  scroll_by (win, 0);
 }
 
 static int
@@ -640,7 +655,7 @@ new_window (int kind, const char *title, const char *path, int w, int h)
   snprintf (win->title, sizeof (win->title), "%s", title);
   snprintf (win->path, sizeof (win->path), "%s", path);
   win->entries = entry_store[i];
-  win->text = text_store[i];
+  win->edit = &edit_store[i];
   w = min (w, SCREEN_W - 40);
   h = min (h, SCREEN_H - MENU_H - 12);
   win->frame = (struct box){ 24 + order_len * 18, MENU_H + 6 + order_len * 10,
@@ -717,24 +732,10 @@ open_text (const char *path, const char *title)
       close (fd);
       return;
     }
-  struct window *win = &windows[w];
-  int len = read (fd, win->text, TEXT_MAX);
+  static char data[EDIT_MAX];
+  int len = read (fd, data, EDIT_MAX);
   close (fd);
-  len = len < 0 ? 0 : len;
-  win->text[len] = 0;
-  // tabs and other control chars have no glyphs
-  win->lines = 1;
-  for (int i = 0; i < len; i++)
-    {
-      if (win->text[i] == '\n')
-        {
-          win->lines++;
-        }
-      else if ((uint8_t)win->text[i] < ' ' || (uint8_t)win->text[i] > '~')
-        {
-          win->text[i] = ' ';
-        }
-    }
+  edit_load (windows[w].edit, data, len);
 }
 
 static void
@@ -1515,31 +1516,9 @@ draw_folder (const struct window *win)
 }
 
 static void
-draw_text_window (const struct window *win)
+draw_text_window (const struct window *win, int active)
 {
-  struct box view = win_view (win);
-  draw_clip (view);
-  const char *p = win->text;
-  int y = view.y + 2 - win->scroll;
-  while (*p && y < view.y + view.h)
-    {
-      const char *end = p;
-      while (*end && *end != '\n')
-        {
-          end++;
-        }
-      if (y + FONT_HEIGHT > view.y)
-        {
-          char line[160];
-          int len = min (end - p, (int)sizeof (line) - 1);
-          memcpy (line, p, len);
-          line[len] = 0;
-          draw_text (view.x + 4, y, line, INK);
-        }
-      y += FONT_HEIGHT;
-      p = *end ? end + 1 : end;
-    }
-  draw_unclip ();
+  edit_draw (win->edit, win_view (win), win->scroll, active);
 }
 
 static void
@@ -1592,7 +1571,7 @@ draw_window (const struct window *win, int active)
       draw_folder (win);
       break;
     case WIN_TEXT:
-      draw_text_window (win);
+      draw_text_window (win, active);
       break;
     case WIN_CALC:
       draw_calc (win);
@@ -2005,6 +1984,17 @@ on_press (void)
       scroll_by (&windows[hit.win], (hit.what == HIT_PAGE_UP ? -1 : 1)
                                         * (win_view (&windows[hit.win]).h - 10));
       break;
+    case HIT_WINDOW:
+      {
+        struct window *win = &windows[hit.win];
+        if (win->kind == WIN_TEXT)
+          {
+            edit_click (win->edit, win_view (win), win->scroll, mouse_x,
+                        mouse_y);
+            dirty = 1;
+          }
+        break;
+      }
     case HIT_CALC_KEY:
       mode = CALC_KEY;
       track_win = hit.win;
@@ -2244,6 +2234,12 @@ on_key (int key)
           open_target (selection);
           break;
         }
+      return;
+    }
+  if (front && front->kind == WIN_TEXT)
+    {
+      edit_key (front->edit, key);
+      reveal_cursor (front);
       return;
     }
   if (front && front->kind == WIN_CALC)

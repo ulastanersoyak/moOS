@@ -122,7 +122,8 @@ DOOM_FLAGS = -O2 -g -ffreestanding -fno-builtin -fno-pic -fno-pie \
 	-mno-mmx -mno-sse -mno-sse2 -nostdlib -std=gnu99 -w -MMD -MP \
 	$(LIBC_INCLUDE) $(DOOM_DEFINES)
 # keep user objects, make would delete them as intermediate files
-.SECONDARY: $(USER_BINS:.elf=.o) build/user/shline.o build/user/deskdraw.o
+.SECONDARY: $(USER_BINS:.elf=.o) build/user/shline.o build/user/deskdraw.o \
+	build/user/deskedit.o
 
 FLAGS = -g -ffreestanding -fno-builtin -fno-pic -fno-pie -fno-stack-protector \
 	-fno-asynchronous-unwind-tables -fomit-frame-pointer -march=i686 \
@@ -199,9 +200,10 @@ build/user/doom.elf: build/user/doom.o $(DOOM_OBJS) $(LIBC_OBJS) $(USER_LIB_OBJS
 build/user/sh.elf: build/user/sh.o build/user/shline.o $(USER_LIB_OBJS) ./src/user/linker.ld
 	$(LD) -s -z noexecstack -T ./src/user/linker.ld -o $@ build/user/sh.o build/user/shline.o $(USER_LIB_OBJS)
 
-# the desktop is split into windows and menus, and the drawing
-build/user/desk.elf: build/user/desk.o build/user/deskdraw.o $(USER_LIB_OBJS) ./src/user/linker.ld
-	$(LD) -s -z noexecstack -T ./src/user/linker.ld -o $@ build/user/desk.o build/user/deskdraw.o $(USER_LIB_OBJS)
+# the desktop is split into windows and menus, the drawing and the editor
+DESK_OBJS := build/user/desk.o build/user/deskdraw.o build/user/deskedit.o
+build/user/desk.elf: $(DESK_OBJS) $(USER_LIB_OBJS) ./src/user/linker.ld
+	$(LD) -s -z noexecstack -T ./src/user/linker.ld -o $@ $(DESK_OBJS) $(USER_LIB_OBJS)
 
 $(DOOM_WAD):
 	@mkdir -p $(dir $@)deb
@@ -244,7 +246,7 @@ build/%.o: src/%.c
 
 -include $(C_OBJS:.o=.d) $(USER_BINS:.elf=.d) build/user/lib/moos.d \
 	build/user/lib/int64.d $(LIBC_OBJS:.o=.d) $(DOOM_OBJS:.o=.d) \
-	build/user/shline.d build/user/deskdraw.d
+	build/user/shline.d build/user/deskdraw.d build/user/deskedit.d
 
 # keeps the downloaded wad
 clean:

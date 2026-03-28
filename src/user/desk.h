@@ -66,4 +66,35 @@ void frame_from_canvas (void);
 
 int box_contains (struct box box, int x, int y);
 
+// the text editor of text windows (deskedit.c)
+#define EDIT_MAX 16384
+#define EDIT_STATUS_H (FONT_HEIGHT + 3) // the status line below the text
+
+struct editor
+{
+  char text[EDIT_MAX + 1];
+  int len;
+  int cursor; // offset of the char under the cursor
+  int column; // where up and down try to put the cursor
+  char message[64]; // shown in the status line
+};
+
+// what edit_key wants the window to do
+#define EDIT_DONE 0
+
+// takes the file, control chars become spaces
+void edit_load (struct editor *ed, const char *data, int len);
+// handles a key: a char or a KEY_ code
+int edit_key (struct editor *ed, int key);
+// puts the cursor on the char at x, y of a view scrolled by scroll pixels
+void edit_click (struct editor *ed, struct box view, int scroll, int x,
+                 int y);
+// draws the text and the status line into view, the cursor if active
+void edit_draw (const struct editor *ed, struct box view, int scroll,
+                int active);
+int edit_line_count (const struct editor *ed);
+int edit_cursor_line (const struct editor *ed);
+// top of the cursor's line in the unscrolled text
+int edit_cursor_y (const struct editor *ed);
+
 #endif // !DESK_H
