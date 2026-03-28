@@ -285,12 +285,15 @@ static int quit = 0;
 enum
 {
   ALERT_NONE,
-  ALERT_INFO,   // just an ok button
-  ALERT_DELETE, // ok deletes alert_path
+  ALERT_INFO,    // just an ok button
+  ALERT_DELETE,  // ok deletes alert_path
+  ALERT_DISCARD, // ok closes alert_win without saving it
+  ALERT_QUIT,    // ok quits although text windows have changes
 };
 static int alert = ALERT_NONE;
 static char alert_lines[3][80];
 static char alert_path[PATH_LEN];
+static int alert_win;
 static int alert_pressed = -1; // button held down
 
 // the calculator
@@ -777,7 +780,7 @@ static struct box
 alert_button (int i)
 {
   struct box a = alert_box ();
-  int x = alert == ALERT_DELETE ? a.x + a.w - 150 + i * 72 : a.x + a.w - 78;
+  int x = alert != ALERT_INFO ? a.x + a.w - 150 + i * 72 : a.x + a.w - 78;
   return (struct box){ x, a.y + a.h - 18, 60, 12 };
 }
 
@@ -815,16 +818,40 @@ draw_alert (void)
   // the default button has a second border
   struct box ok = alert_button (0);
   frame_box ((struct box){ ok.x - 2, ok.y - 1, ok.w + 4, ok.h + 2 });
-  if (alert == ALERT_DELETE)
+  if (alert != ALERT_INFO)
     {
       draw_button (alert_button (1), "Cancel", alert_pressed == 1);
     }
 }
 
+// the folder a path is in: "0:/bin/sh.elf" is in "0:/bin", "0:/x" in "0:/"
+static void
+parent_path (char *dir, const char *path)
+{
+  snprintf (dir, PATH_LEN, "%s", path);
+  char *slash = dir + strlen (dir);
+  while (slash > dir && *slash != '/')
+    {
+      slash--;
+    }
+  slash[slash > dir && slash[-1] != ':' ? 0 : 1] = 0;
+}
+
 static void
 alert_done (int ok)
 {
-  if (ok && alert == ALERT_DELETE)
+  int kind = alert;
+  alert = ALERT_NONE;
+  dirty = 1;
+  if (ok && kind == ALERT_DISCARD)
+    {
+      close_window (alert_win);
+    }
+  else if (ok && kind == ALERT_QUIT)
+    {
+      quit = 1;
+    }
+  else if (ok && kind == ALERT_DELETE)
     {
       if (remove (alert_path) < 0)
         {
@@ -834,18 +861,75 @@ alert_done (int ok)
         }
       // reload the folder the file was in
       char dir[PATH_LEN];
-      snprintf (dir, sizeof (dir), "%s", alert_path);
-      char *slash = dir + strlen (dir);
-      while (slash > dir && *slash != '/')
-        {
-          slash--;
-        }
-      slash[slash > dir && slash[-1] != ':' ? 0 : 1] = 0;
+      parent_path (dir, alert_path);
       selection = (struct target){ -1, -1 };
       reload_path (dir);
     }
-  alert = ALERT_NONE;
-  dirty = 1;
+}
+
+static int
+unsaved (int w)
+{
+  return windows[w].kind == WIN_TEXT && windows[w].edit->modified;
+}
+
+// closes a window, after asking if it has changes that werent saved.
+// returns 0 if it had to ask
+static int
+request_close (int w)
+{
+  if (!unsaved (w))
+    {
+      close_window (w);
+      return 1;
+    }
+  char line[80];
+  snprintf (line, sizeof (line), "Discard the changes to \"%s\"?",
+            windows[w].title);
+  alert_win = w;
+  show_alert (ALERT_DISCARD, line, "They have not been saved.", 0);
+  return 0;
+}
+
+static void
+request_quit (void)
+{
+  for (int i = 0; i < MAX_WINDOWS; i++)
+    {
+      if (windows[i].used && unsaved (i))
+        {
+          show_alert (ALERT_QUIT, "Quit without saving?",
+                      "Some text windows have changes.", 0);
+          return;
+        }
+    }
+  quit = 1;
+}
+
+// writes a text window to its file, returns 1 if that worked
+static int
+save_text (struct window *win)
+{
+  static char data[EDIT_MAX + 1];
+  int len = edit_save_data (win->edit, data);
+  int fd = open (win->path, O_WRITE);
+  int written = fd < 0 ? fd : write (fd, data, len);
+  if (fd >= 0)
+    {
+      close (fd);
+    }
+  if (written != len)
+    {
+      snprintf (win->edit->message, sizeof (win->edit->message),
+                "\"%s\" could not be written", win->title);
+      return 0;
+    }
+  edit_saved (win->edit, win->title, len);
+  // the folder shows the new size
+  char dir[PATH_LEN];
+  parent_path (dir, win->path);
+  reload_path (dir);
+  return 1;
 }
 
 // ---------------------------------------------------------------- actions
@@ -1141,19 +1225,18 @@ menu_action (int m, int i)
           new_item (i == FILE_NEW_FOLDER);
           break;
         case FILE_CLOSE:
-          close_window (front_index ());
+          request_close (front_index ());
           break;
         case FILE_CLOSE_ALL:
-          while (order_len)
-            {
-              close_window (order[0]);
-            }
+          // stops to ask at the first window with changes
+          while (order_len && request_close (order[order_len - 1]))
+            ;
           break;
         case FILE_INFO:
           get_info ();
           break;
         case FILE_QUIT:
-          quit = 1;
+          request_quit ();
           break;
         }
       break;
@@ -1560,10 +1643,15 @@ draw_window (const struct window *win, int active)
           invert_box (close);
         }
     }
-  int tw = min (text_width (win->title), f.w - 60);
+  // like vim a window with changes says [+]
+  char name[NAME_MAX + 8];
+  snprintf (name, sizeof (name),
+            win->kind == WIN_TEXT && win->edit->modified ? "%s [+]" : "%s",
+            win->title);
+  int tw = min (text_width (name), f.w - 60);
   int tx = title.x + (title.w - tw) / 2;
   fill_box ((struct box){ tx - 5, f.y + 1, tw + 10, TITLE_H - 2 }, PAPER);
-  draw_text_fit (tx, f.y + 1, win->title, tw, INK);
+  draw_text_fit (tx, f.y + 1, name, tw, INK);
   draw_clip ((struct box){ f.x + 1, f.y + 1, f.w - 2, f.h - 2 });
   switch (win->kind)
     {
@@ -1901,7 +1989,7 @@ close_menu (void)
 static void
 alert_press (void)
 {
-  for (int i = 0; i < (alert == ALERT_DELETE ? 2 : 1); i++)
+  for (int i = 0; i < (alert != ALERT_INFO ? 2 : 1); i++)
     {
       if (box_contains (alert_button (i), mouse_x, mouse_y))
         {
@@ -2140,7 +2228,7 @@ on_release (void)
     case CLOSE_BOX:
       if (track_inside)
         {
-          close_window (track_win);
+          request_close (track_win);
         }
       dirty = 1;
       break;
@@ -2228,12 +2316,12 @@ on_key (int key)
       switch (key)
         {
         case 'q':
-          quit = 1;
+          request_quit ();
           break;
         case 'w':
           if (front)
             {
-              close_window (front_index ());
+              request_close (front_index ());
             }
           break;
         case 'o':
@@ -2244,8 +2332,16 @@ on_key (int key)
     }
   if (front && front->kind == WIN_TEXT)
     {
-      edit_key (front->edit, typed (key));
+      int todo = edit_key (front->edit, typed (key));
       reveal_cursor (front);
+      if ((todo & EDIT_WRITE) && !save_text (front))
+        {
+          return;
+        }
+      if (todo & EDIT_QUIT)
+        {
+          close_window (front_index ());
+        }
       return;
     }
   if (front && front->kind == WIN_CALC)

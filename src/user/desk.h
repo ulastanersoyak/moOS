@@ -75,6 +75,7 @@ enum
 {
   EDIT_NORMAL,
   EDIT_INSERT,
+  EDIT_COMMAND, // typing an ex command after ':'
 };
 
 struct editor
@@ -93,10 +94,13 @@ struct editor
   int undo_cursor;
   int has_undo;
   char message[64]; // shown in the status line
+  char command[48]; // the ex command being typed
 };
 
-// what edit_key wants the window to do
+// what edit_key wants the window to do: :w writes, :q closes it
 #define EDIT_DONE 0
+#define EDIT_WRITE 0x1
+#define EDIT_QUIT 0x2
 
 // takes the file, control chars become spaces
 void edit_load (struct editor *ed, const char *data, int len);
@@ -109,6 +113,11 @@ void edit_click (struct editor *ed, struct box view, int scroll, int x,
 // draws the text and the status line into view, the cursor if active
 void edit_draw (const struct editor *ed, struct box view, int scroll,
                 int active);
+// the file to write, with the '\n' of the last line. returns its length,
+// out holds up to EDIT_MAX + 1 bytes
+int edit_save_data (const struct editor *ed, char *out);
+// after the file was written: not modified anymore, says so
+void edit_saved (struct editor *ed, const char *name, int len);
 int edit_line_count (const struct editor *ed);
 int edit_cursor_line (const struct editor *ed);
 // top of the cursor's line in the unscrolled text

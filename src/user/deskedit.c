@@ -602,6 +602,10 @@ normal_key (struct editor *ed, int key)
     case 'P':
       put (ed, key == 'p');
       break;
+    case ':':
+      ed->mode = EDIT_COMMAND;
+      ed->command[0] = 0;
+      break;
     case 'u':
       undo (ed);
       clamp_cursor (ed);
@@ -643,6 +647,73 @@ normal_key (struct editor *ed, int key)
         break;
       }
     }
+}
+
+// runs the command typed after ':', returns what the window has to do
+static int
+run_command (struct editor *ed)
+{
+  const char *cmd = ed->command;
+  if (isdigit (cmd[0]))
+    {
+      goto_line (ed, max (atoi (cmd) - 1, 0));
+      return EDIT_DONE;
+    }
+  if (strcmp (cmd, "w") == 0)
+    {
+      return EDIT_WRITE;
+    }
+  if (strcmp (cmd, "wq") == 0 || strcmp (cmd, "x") == 0)
+    {
+      return EDIT_WRITE | EDIT_QUIT;
+    }
+  if (strcmp (cmd, "q!") == 0)
+    {
+      return EDIT_QUIT;
+    }
+  if (strcmp (cmd, "q") == 0)
+    {
+      if (!ed->modified)
+        {
+          return EDIT_QUIT;
+        }
+      snprintf (ed->message, sizeof (ed->message),
+                "no write since last change (add ! to override)");
+      return EDIT_DONE;
+    }
+  if (cmd[0])
+    {
+      snprintf (ed->message, sizeof (ed->message), "not an editor command: %s",
+                cmd);
+    }
+  return EDIT_DONE;
+}
+
+// a key on the command line after ':'
+static int
+command_key (struct editor *ed, int key)
+{
+  int len = strlen (ed->command);
+  if (key == 27 || (key == '\b' && len == 0))
+    {
+      ed->mode = EDIT_NORMAL;
+      return EDIT_DONE;
+    }
+  if (key == '\n')
+    {
+      ed->mode = EDIT_NORMAL;
+      return run_command (ed);
+    }
+  if (key == '\b')
+    {
+      ed->command[len - 1] = 0;
+    }
+  else if (key >= ' ' && key <= '~' && len < (int)sizeof (ed->command) - 1)
+    {
+      ed->command[len] = key;
+      ed->command[len + 1] = 0;
+    }
+  return EDIT_DONE;
 }
 
 // a key in insert mode: chars go into the text until esc
@@ -709,15 +780,39 @@ int
 edit_key (struct editor *ed, int key)
 {
   ed->message[0] = 0;
-  if (ed->mode == EDIT_INSERT)
+  switch (ed->mode)
     {
+    case EDIT_INSERT:
       insert_key (ed, key);
-    }
-  else
-    {
+      break;
+    case EDIT_COMMAND:
+      return command_key (ed, key);
+    default:
       normal_key (ed, key);
+      break;
     }
   return EDIT_DONE;
+}
+
+int
+edit_save_data (const struct editor *ed, char *out)
+{
+  memcpy (out, ed->text, ed->len);
+  // the last line gets its '\n' back
+  if (ed->len)
+    {
+      out[ed->len] = '\n';
+      return ed->len + 1;
+    }
+  return 0;
+}
+
+void
+edit_saved (struct editor *ed, const char *name, int len)
+{
+  ed->modified = 0;
+  snprintf (ed->message, sizeof (ed->message), "\"%s\" %dL, %dB written",
+            name, ed->len ? edit_line_count (ed) : 0, len);
 }
 
 void
@@ -794,7 +889,13 @@ edit_draw (const struct editor *ed, struct box view, int scroll, int active)
   fill_box ((struct box){ view.x, sy, view.w, EDIT_STATUS_H }, PAPER);
   hline (view.x, sy, view.w, INK);
   const char *status = ed->message;
-  if (!status[0] && ed->mode == EDIT_INSERT)
+  char line[sizeof (ed->command) + 2];
+  if (ed->mode == EDIT_COMMAND)
+    {
+      snprintf (line, sizeof (line), ":%s", ed->command);
+      status = line;
+    }
+  else if (!status[0] && ed->mode == EDIT_INSERT)
     {
       status = "-- INSERT --";
     }
