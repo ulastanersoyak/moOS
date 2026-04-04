@@ -1098,7 +1098,7 @@ new_item (int folder)
       close (fd);
     }
   reload_path (win->path);
-  // the new one is selected, ready to be opened
+  // the new one is selected, a new file opens right away to be written
   for (int i = 0; i < win->count; i++)
     {
       if (strcmp (win->entries[i].name, name) == 0)
@@ -1106,6 +1106,10 @@ new_item (int folder)
           selection = (struct target){ win - windows, i };
           reveal_item (win, i);
         }
+    }
+  if (!folder)
+    {
+      open_text (path, name);
     }
 }
 
