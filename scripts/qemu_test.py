@@ -165,8 +165,18 @@ STEPS = [
     ("!mouse_button 1", 0.3),
     ("!mouse_move 8 42", 0.3),
     ("!mouse_button 0", 1.0),
+    # new file opens the editor: insert a line, copy it with yyp, save with
+    # :wq
+    ("!mouse_move -8 -42", 0.3),
+    ("!mouse_button 1", 0.3),
+    ("!mouse_move 8 62", 0.3),
+    ("!mouse_button 0", 1.0),
+    ("ihello from the editor", 0.3),
+    ("<esc>", 0.3),
+    ("yyp:wq\n", 1.0),
     ("<ctrl-q>", 0.8),
     ("ls\n", 0.5),
+    ("cat Untitled.txt\n", 0.5),
     # the shell is a user program, init starts a new one when it dies
     ("kill sh\n", 1.0),
     ("ps\n", 0.5),
@@ -235,6 +245,7 @@ EXPECTED = [
     "scheduler: earliest deadline first",
     "ps/2 mouse init [OK]",
     "New Folder/",                     # made in the desktop
+    "hello from the editor\nhello from the editor\n",
     "every 60 ms, 0 of",               # ps shows periodic tasks
 ]
 
