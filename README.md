@@ -287,13 +287,33 @@ apple ii. in qemu (and vmware) the kernel uses the vmmouse, which gives the
 position of the host pointer, so the desktop pointer stays right under it
 and the window doesnt have to grab the mouse.
 
-- double click the disk or a folder to open it, a text file to read it and a
+- double click the disk or a folder to open it, a text file to edit it and a
   program to run it. the desktop comes back when the program exits
 - drag a file or an empty folder to the trash to delete it
-- file: open, new folder, close, close all, get info and quit (ctrl+q)
+- file: open, new folder, new file (opens it in the editor), close, close
+  all, get info and quit (ctrl+q)
 - view: icons or a list with sizes and dates
 - the moose menu has a calculator (mouse or keyboard) and a clock, the
   selector menu starts doom, gfxdemo and moose
+
+### the editor
+
+text files open in a small editor with vim's bindings (`src/user/deskedit.c`).
+the title says `[+]` while there are changes that arent saved, closing the
+window or quitting the desktop then asks first.
+
+| keys | does |
+|---|---|
+| `h` `j` `k` `l`, arrows | move, a count before them repeats (`5j`) |
+| `w` `b` `e` | next word, back a word, end of the word |
+| `0` `^` `$` | start of the line, first non blank, end of the line |
+| `gg` `G`, `42G` | first line, last line, line 42 |
+| `i` `a` `I` `A` `o` `O` | insert mode before, after, at the start or end of the line, on a new line below or above. esc goes back |
+| `x` `X` `D` `C` `J` | delete a char, the one before, to the end of the line, change to the end of the line, join lines |
+| `dd` `cc` `yy`, `d` `c` `y` + motion | delete, change or yank lines or what a motion moves over (`dw`, `cw`, `d$`, `y2j`) |
+| `p` `P` | put after or before the cursor, lines go below or above |
+| `u` | undo the last change, again redoes it |
+| `:w` `:q` `:wq` `:x` `:q!` `:42` | write, close, both, close without saving, go to line 42 |
 
 ## project structure
 - `src/bootloader/` - boot sector, kernel entry stub and limine config
