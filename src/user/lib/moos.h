@@ -92,6 +92,9 @@ struct task_info
 };
 int tasks (struct task_info *out, int max); // returns how many
 int kill (int pid); // the task exits the next time it runs
+// ctrl+c stops every program in the foreground but the shell. a program that
+// ignores it keeps running, the programs it starts dont
+int ignore_ctrl_c (int on);
 
 // scheduling policies, sched (SCHED_GET) only returns the current one
 #define SCHED_GET (-1)

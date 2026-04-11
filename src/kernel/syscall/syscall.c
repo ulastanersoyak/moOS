@@ -722,6 +722,10 @@ syscall_handler (struct interrupt_frame *frame)
     case SYS_MOUSE_EVENT:
       res = sys_mouse_event ((struct mouse_event *)frame->ebx, frame->ecx);
       break;
+    case SYS_IGNORE_CTRL_C:
+      // like the shell, ctrl+c only stops what it runs
+      task_running->is_shell = frame->ebx != 0;
+      break;
     case SYS_REBOOT:
       // pulse the cpu reset line through the keyboard controller
       outb (0x64, 0xFE);
