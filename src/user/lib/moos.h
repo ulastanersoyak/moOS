@@ -66,6 +66,9 @@ int mkdir (const char *path);
 // its name, ends with 0) and returns its pid. io[0] and io[1] become its stdin
 // and stdout, 0 passes on our own. wait returns the exit code of a child
 int pipe (int fds[2]); // fds[0] reads what is written to fds[1]
+// bytes the read end of a pipe holds, a read of that many doesnt wait. -1
+// when it is empty and every write end is closed
+int pending (int fd);
 int spawn (const char *program, char **argv, const int io[2]);
 int wait (int pid);
 int isatty (int fd); // 1 if fd is the terminal

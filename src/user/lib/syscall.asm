@@ -66,3 +66,4 @@ $%1:
 	SYSCALL key_event, 46
 	SYSCALL mouse_event, 47
 	SYSCALL ignore_ctrl_c, 48
+	SYSCALL pending, 49

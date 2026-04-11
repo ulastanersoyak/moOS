@@ -195,6 +195,17 @@ handle_write (struct handle *handle, const void *buf, uint32_t len)
 }
 
 int32_t
+handle_pending (struct handle *handle)
+{
+  if (handle->type != HANDLE_PIPE_READ)
+    {
+      return -INVALID_ARG_ERROR;
+    }
+  struct pipe *pipe = handle->pipe;
+  return pipe->count == 0 && pipe->writers == 0 ? -1 : (int32_t)pipe->count;
+}
+
+int32_t
 handle_getchar (struct handle *handle)
 {
   if (handle->type == HANDLE_TERMINAL)

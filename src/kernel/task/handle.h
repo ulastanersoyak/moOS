@@ -45,6 +45,10 @@ int32_t handle_read (struct handle *handle, void *buf, uint32_t len);
 
 int32_t handle_write (struct handle *handle, const void *buf, uint32_t len);
 
+// bytes a read takes without waiting: what a pipe holds, -1 once it is
+// empty and nobody can write to it anymore. only for the read end of pipes
+int32_t handle_pending (struct handle *handle);
+
 // one byte without line editing: the raw key for the terminal. returns -1 at
 // the end of the stream
 int32_t handle_getchar (struct handle *handle);

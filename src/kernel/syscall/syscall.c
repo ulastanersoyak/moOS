@@ -722,6 +722,12 @@ syscall_handler (struct interrupt_frame *frame)
     case SYS_MOUSE_EVENT:
       res = sys_mouse_event ((struct mouse_event *)frame->ebx, frame->ecx);
       break;
+    case SYS_PENDING:
+      {
+        struct handle *handle = task_fd_get (frame->ebx);
+        res = handle ? handle_pending (handle) : -INVALID_ARG_ERROR;
+      }
+      break;
     case SYS_IGNORE_CTRL_C:
       // like the shell, ctrl+c only stops what it runs
       task_running->is_shell = frame->ebx != 0;

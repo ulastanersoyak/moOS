@@ -56,6 +56,7 @@ enum
   SYS_KEY_EVENT = 46,    // int key_event (int flush), -1 if there is none
   SYS_MOUSE_EVENT = 47,  // int mouse_event (struct mouse_event *, flush)
   SYS_IGNORE_CTRL_C = 48, // int ignore_ctrl_c (int on)
+  SYS_PENDING = 49,       // int pending (int fd), bytes a read wont wait for
 };
 
 // handles int 0x80 from user tasks
