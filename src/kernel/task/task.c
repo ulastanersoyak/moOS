@@ -785,6 +785,7 @@ task_list (struct task_info *out, int max)
       info->period_ms = task->period_ticks * (1000 / PIT_FREQUENCY_HZ);
       info->jobs = task->jobs;
       info->deadline_misses = task->deadline_misses;
+      info->parent = task->parent ? task->parent->pid : 0;
     }
   irq_restore (flags);
   return count;

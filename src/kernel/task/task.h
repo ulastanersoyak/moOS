@@ -184,6 +184,7 @@ struct task_info
   uint32_t period_ms; // 0 if the task isnt periodic
   uint32_t jobs;
   uint32_t deadline_misses;
+  int32_t parent; // pid of the task that started it, 0 for none
 };
 
 // fills out with up to max tasks, returns how many
