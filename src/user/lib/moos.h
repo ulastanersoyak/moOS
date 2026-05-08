@@ -111,15 +111,16 @@ int sched (int policy);
 #define PRIO_DEFAULT 10
 int setprio (int pid, int priority);
 
-// spawn with more control: stdin and stdout are fds of the caller (-1 passes
-// on our own), background programs dont get keyboard input and nobody waits
-// for them, the kernel prints when they are done
+// spawn with more control: stdin, stdout and stderr are fds of the caller
+// (-1 passes on our own), background programs dont get keyboard input and
+// nobody waits for them, the kernel prints when they are done
 struct run_opts
 {
   int32_t stdin;
   int32_t stdout;
   int32_t priority;
   int32_t background;
+  int32_t stderr;
 };
 int run (const char *program, char **argv, const struct run_opts *opts);
 

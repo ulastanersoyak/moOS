@@ -221,13 +221,15 @@ struct run_opts
   int32_t stdout;
   int32_t priority;
   int32_t background;
+  int32_t stderr;
 };
 
-// starts a program with arguments copied out of user memory. stdin and
-// stdout of the child are handles of the caller, 0 inherits them
+// starts a program with arguments copied out of user memory. stdin, stdout
+// and stderr of the child are handles of the caller, 0 inherits them
 static int32_t
 sys_start (const char *user_name, char **user_argv, struct handle *stdin,
-           struct handle *stdout, uint8_t priority, uint8_t background)
+           struct handle *stdout, struct handle *stderr, uint8_t priority,
+           uint8_t background)
 {
   char name[MAX_PATH_LEN + 1];
   char path[MAX_PATH_LEN + 1];
@@ -270,7 +272,8 @@ sys_start (const char *user_name, char **user_argv, struct handle *stdin,
       used += len + 1;
     }
   return task_spawn (path, argc, argv, priority,
-                     background ? TASK_SPAWN_BACKGROUND : 0, stdin, stdout);
+                     background ? TASK_SPAWN_BACKGROUND : 0, stdin, stdout,
+                     stderr);
 }
 
 // io holds the fds that become stdin and stdout of the child, 0 inherits
@@ -293,7 +296,7 @@ sys_spawn (const char *user_name, char **user_argv, const int *io)
           return -INVALID_ARG_ERROR;
         }
     }
-  return sys_start (user_name, user_argv, stdin, stdout,
+  return sys_start (user_name, user_argv, stdin, stdout, 0,
                     task_running->priority, 0);
 }
 
@@ -313,12 +316,14 @@ sys_run (const char *user_name, char **user_argv,
     }
   struct handle *stdin = opts.stdin < 0 ? 0 : task_fd_get (opts.stdin);
   struct handle *stdout = opts.stdout < 0 ? 0 : task_fd_get (opts.stdout);
-  if ((opts.stdin >= 0 && !stdin) || (opts.stdout >= 0 && !stdout))
+  struct handle *stderr = opts.stderr < 0 ? 0 : task_fd_get (opts.stderr);
+  if ((opts.stdin >= 0 && !stdin) || (opts.stdout >= 0 && !stdout)
+      || (opts.stderr >= 0 && !stderr))
     {
       return -INVALID_ARG_ERROR;
     }
-  return sys_start (user_name, user_argv, stdin, stdout, opts.priority,
-                    opts.background != 0);
+  return sys_start (user_name, user_argv, stdin, stdout, stderr,
+                    opts.priority, opts.background != 0);
 }
 
 // changes the working directory, which must be an existing directory

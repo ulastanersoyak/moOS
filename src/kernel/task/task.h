@@ -96,14 +96,14 @@ void task_init (struct page_dir *kernel_dir, uint8_t verbose);
 struct page_dir *task_kernel_dir (void);
 
 // loads the elf executable at path and makes it ready to run in ring 3 with
-// argc/argv as arguments of main. stdin and stdout become fd 0 and 1 of the
-// task (0 inherits the fd of the running task), the task takes its own
-// reference. flags are TASK_SPAWN_*. returns its pid or a negative error.
+// argc/argv as arguments of main. stdin, stdout and stderr become fd 0, 1
+// and 2 of the task (0 inherits the fd of the running task), the task takes
+// its own reference. flags are TASK_SPAWN_*. returns its pid or a negative error.
 // tasks that dont run in the background receive keyboard input if their
 // parent does
 int32_t task_spawn (const char *path, int argc, char **argv, uint8_t priority,
                     uint32_t flags, struct handle *stdin,
-                    struct handle *stdout);
+                    struct handle *stdout, struct handle *stderr);
 
 // finds the program for a command: "hello" becomes 0:/bin/hello.elf, names
 // with a / or : are paths. returns 0 if there is no such file

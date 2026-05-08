@@ -42,7 +42,8 @@ start (const char *role, int priority, char *loops)
 {
   char *argv[] = { "pidemo", (char *)role, loops, 0 };
   struct run_opts opts
-      = { .stdin = -1, .stdout = -1, .priority = priority, .background = 0 };
+      = { .stdin = -1, .stdout = -1, .priority = priority, .background = 0,
+          .stderr = -1 };
   int pid = run ("pidemo", argv, &opts);
   if (pid < 0)
     {

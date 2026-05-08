@@ -137,7 +137,7 @@ init_main (void)
   while (1)
     {
       int32_t pid = task_spawn (TASK_SHELL_PATH, 1, argv, TASK_PRIORITY_SHELL,
-                                TASK_SPAWN_SHELL, 0, 0);
+                                TASK_SPAWN_SHELL, 0, 0, 0);
       if (pid < 0)
         {
           printf ("init: cant start %s (error %d)\n", TASK_SHELL_PATH, pid);

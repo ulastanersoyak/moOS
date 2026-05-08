@@ -83,7 +83,8 @@ main (int argc, char **argv)
       struct run_opts opts = { .stdin = -1,
                                .stdout = -1,
                                .priority = tasks_set[i].priority,
-                               .background = 0 };
+                               .background = 0,
+                               .stderr = -1 };
       pids[i] = run ("edfdemo", child_argv, &opts);
       if (pids[i] < 0)
         {

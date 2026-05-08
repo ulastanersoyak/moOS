@@ -374,7 +374,8 @@ sh_run_pipeline (struct sh_pipeline *pipeline, int priority)
       struct run_opts opts = { .stdin = next_input,
                                .stdout = output,
                                .priority = priority,
-                               .background = pipeline->background };
+                               .background = pipeline->background,
+                               .stderr = -1 };
       int pipe_fds[2];
       next_input = -1;
       // a failed pipe leaves the stage writing to the terminal

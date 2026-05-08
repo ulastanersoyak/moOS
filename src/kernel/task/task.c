@@ -357,7 +357,8 @@ task_name_from_path (const char *path, char *out)
 
 int32_t
 task_spawn (const char *path, int argc, char **argv, uint8_t priority,
-            uint32_t flags, struct handle *stdin, struct handle *stdout)
+            uint32_t flags, struct handle *stdin, struct handle *stdout,
+            struct handle *stderr)
 {
   uint8_t background = (flags & TASK_SPAWN_BACKGROUND) != 0;
   char name[TASK_NAME_LEN];
@@ -401,7 +402,7 @@ task_spawn (const char *path, int argc, char **argv, uint8_t priority,
   strcpy (task->cwd, task_running->cwd);
   task->fds[0] = handle_ref (stdin ? stdin : task_inherit_fd (0));
   task->fds[1] = handle_ref (stdout ? stdout : task_inherit_fd (1));
-  task->fds[2] = handle_ref (task_inherit_fd (2));
+  task->fds[2] = handle_ref (stderr ? stderr : task_inherit_fd (2));
 
   uint32_t eflags = irq_save ();
   if (task->foreground)
