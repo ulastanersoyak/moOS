@@ -17,6 +17,10 @@ struct editor
   // where the editor left the cursor, anything else means another program
   // printed in the meantime
   struct cursor last;
+  // stdin isnt the terminal but e.g. a window of the desktop that only
+  // takes a stream of chars. the cursor cant be moved there, so editing
+  // happens at the end of the line and '\b' erases
+  int dumb;
 };
 
 static void
@@ -30,6 +34,10 @@ editor_start_here (struct editor *e)
 static void
 editor_move (struct editor *e, uint32_t idx)
 {
+  if (e->dumb)
+    {
+      return;
+    }
   struct cursor now;
   getcursor (&now);
   uint32_t linear = e->start.column + idx;
@@ -107,6 +115,19 @@ editor_set_line (struct editor *e, const char *text)
     }
   memcpy (e->buf, text, e->len);
   e->cursor = e->len;
+  if (e->dumb)
+    {
+      // erase the old line and type the new one
+      for (uint32_t i = 0; i < old_len; i++)
+        {
+          putchar ('\b');
+        }
+      for (uint32_t i = 0; i < e->len; i++)
+        {
+          putchar (e->buf[i]);
+        }
+      return;
+    }
   editor_redraw (e, 0, old_len);
 }
 
@@ -193,6 +214,7 @@ void
 sh_readline (char *line, uint32_t max)
 {
   struct editor e = { .buf = line, .max = max, .len = 0, .cursor = 0 };
+  e.dumb = !isatty (STDIN);
   editor_start_here (&e);
   // history position, history_count is the line being typed
   uint32_t history_pos = history_count;
@@ -204,12 +226,18 @@ sh_readline (char *line, uint32_t max)
   while (1)
     {
       int key = getchar ();
+      if (key < 0)
+        {
+          // the input ended, e.g. the window of the desktop got closed
+          exit (0);
+        }
       // a background program printed over the line, start it again below
       // the output instead of editing the line where it used to be
       struct cursor now;
       getcursor (&now);
-      if (now.row != e.last.row || now.column != e.last.column
-          || now.scrolls != e.last.scrolls)
+      if (!e.dumb
+          && (now.row != e.last.row || now.column != e.last.column
+              || now.scrolls != e.last.scrolls))
         {
           if (now.column != 0)
             {
@@ -239,26 +267,29 @@ sh_readline (char *line, uint32_t max)
             }
           break;
         case KEY_DELETE:
-          if (e.cursor < e.len)
+          if (e.cursor < e.len && !e.dumb)
             {
               editor_remove (&e, e.cursor);
             }
           break;
         case KEY_LEFT:
-          if (e.cursor > 0)
+          if (e.cursor > 0 && !e.dumb)
             {
               editor_move (&e, --e.cursor);
             }
           break;
         case KEY_RIGHT:
-          if (e.cursor < e.len)
+          if (e.cursor < e.len && !e.dumb)
             {
               editor_move (&e, ++e.cursor);
             }
           break;
         case KEY_HOME:
-          e.cursor = 0;
-          editor_move (&e, 0);
+          if (!e.dumb)
+            {
+              e.cursor = 0;
+              editor_move (&e, 0);
+            }
           break;
         case KEY_END:
           e.cursor = e.len;
