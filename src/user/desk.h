@@ -123,4 +123,28 @@ int edit_cursor_line (const struct editor *ed);
 // top of the cursor's line in the unscrolled text
 int edit_cursor_y (const struct editor *ed);
 
+// the terminal of shell windows (deskterm.c)
+#define TERM_COLUMNS 80
+#define TERM_LINES 300 // lines kept, the oldest scroll away
+#define TERM_CELL_W 6
+#define TERM_ROW_H FONT_HEIGHT
+
+struct terminal
+{
+  char cells[TERM_LINES][TERM_COLUMNS];
+  int row; // the cursor
+  int column;
+};
+
+void term_clear (struct terminal *t);
+// shows what a program printed: chars, '\n', '\r', '\b' erases the one
+// before, '\t' and '\f' clears
+void term_write (struct terminal *t, const char *data, int len);
+// pixels of the lines written so far, the width of a line
+int term_height (const struct terminal *t);
+int term_width (void);
+// draws the lines into view scrolled by scroll pixels, the cursor if active
+void term_draw (const struct terminal *t, struct box view, int scroll,
+                int active);
+
 #endif // !DESK_H
