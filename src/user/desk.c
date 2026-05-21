@@ -28,6 +28,7 @@ enum
   WIN_TEXT,
   WIN_CALC,
   WIN_CLOCK,
+  WIN_TERM, // a shell in a terminal
 };
 
 struct window
@@ -42,11 +43,17 @@ struct window
   struct dirent *entries;
   int count;
   struct editor *edit; // text windows
+  struct terminal *term; // shell windows: the screen of the shell
+  int shell_pid;
+  int to_shell; // pipe of what is typed
+  int from_shell; // pipe of what it prints
 };
 
 static struct window windows[MAX_WINDOWS];
 static struct dirent entry_store[MAX_WINDOWS][MAX_ENTRIES];
 static struct editor edit_store[MAX_WINDOWS];
+static struct terminal term_store[MAX_WINDOWS];
+static int shells_started = 0;
 // window numbers from back to front
 static int order[MAX_WINDOWS];
 static int order_len = 0;
@@ -227,7 +234,7 @@ enum
 };
 
 static const struct menu menus[MENU_COUNT] = {
-  { 0, { "About moOS DeskTop", "-", "Calculator", "Clock", 0 } },
+  { 0, { "About moOS DeskTop", "-", "Calculator", "Clock", "Shell", 0 } },
   { "File",
     { "Open", "New Folder", "New File", "Close", "Close All", "-", "Get Info",
       "-", "Quit", 0 } },
@@ -420,7 +427,8 @@ bring_to_front (int w)
 static int
 scrollable (const struct window *win)
 {
-  return win->kind == WIN_FOLDER || win->kind == WIN_TEXT;
+  return win->kind == WIN_FOLDER || win->kind == WIN_TEXT
+         || win->kind == WIN_TERM;
 }
 
 static int
@@ -488,6 +496,8 @@ content_height (const struct window *win)
              + 4;
     case WIN_TEXT:
       return edit_line_count (win->edit) * FONT_HEIGHT + 4 + EDIT_STATUS_H;
+    case WIN_TERM:
+      return term_height (win->term);
     }
   return 0;
 }
@@ -659,6 +669,7 @@ new_window (int kind, const char *title, const char *path, int w, int h)
   snprintf (win->path, sizeof (win->path), "%s", path);
   win->entries = entry_store[i];
   win->edit = &edit_store[i];
+  win->term = &term_store[i];
   w = min (w, SCREEN_W - 40);
   h = min (h, SCREEN_H - MENU_H - 12);
   win->frame = (struct box){ 24 + order_len * 18, MENU_H + 6 + order_len * 10,
@@ -676,9 +687,57 @@ new_window (int kind, const char *title, const char *path, int w, int h)
   return i;
 }
 
+// the shell of a window and every program it started, children first
+static void
+kill_jobs (int shell_pid, int with_shell)
+{
+  struct task_info list[64];
+  int n = tasks (list, 64);
+  // pids whose parent is the shell or one of its children, found until
+  // nothing new turns up
+  int found[64];
+  int count = 0;
+  for (int added = 1; added;)
+    {
+      added = 0;
+      for (int i = 0; i < n; i++)
+        {
+          int known = list[i].parent == shell_pid;
+          for (int j = 0; j < count && !known; j++)
+            {
+              known = list[i].parent == found[j];
+            }
+          for (int j = 0; j < count && known; j++)
+            {
+              known = found[j] != list[i].pid;
+            }
+          if (known && count < 64 && strcmp (list[i].state, "zombie") != 0)
+            {
+              found[count++] = list[i].pid;
+              added = 1;
+            }
+        }
+    }
+  for (int i = count - 1; i >= 0; i--)
+    {
+      kill (found[i]);
+    }
+  if (with_shell)
+    {
+      kill (shell_pid);
+    }
+}
+
 static void
 close_window (int w)
 {
+  if (windows[w].kind == WIN_TERM)
+    {
+      // the shell ends with its input, what it runs gets killed
+      kill_jobs (windows[w].shell_pid, 1);
+      close (windows[w].to_shell);
+      close (windows[w].from_shell);
+    }
   int i = 0;
   while (i < order_len && order[i] != w)
     {
@@ -739,6 +798,98 @@ open_text (const char *path, const char *title)
   int len = read (fd, data, EDIT_MAX);
   close (fd);
   edit_load (windows[w].edit, data, len);
+}
+
+static void show_alert (int kind, const char *a, const char *b,
+                        const char *c);
+
+// a window with a shell in it. the shell runs in the background, so it and
+// its programs dont see the keys and mouse of the desktop: what is typed
+// into the window goes through a pipe, what it prints comes back through
+// another
+static void
+open_shell (void)
+{
+  char name[16];
+  snprintf (name, sizeof (name), "shell %d", ++shells_started);
+  int to[2], from[2];
+  if (pipe (to) < 0)
+    {
+      return;
+    }
+  if (pipe (from) < 0)
+    {
+      close (to[0]);
+      close (to[1]);
+      return;
+    }
+  char *argv[] = { "sh", 0 };
+  struct run_opts opts = { .stdin = to[0],
+                           .stdout = from[1],
+                           .priority = PRIO_DEFAULT,
+                           .background = 1,
+                           .stderr = from[1] };
+  int pid = run ("0:/bin/sh.elf", argv, &opts);
+  // the shell has its own ends now, ours would keep the pipes open
+  close (to[0]);
+  close (from[1]);
+  int w = pid < 0 ? -1
+                  : new_window (WIN_TERM, "Shell", name,
+                                term_width () + SB_W + 1, 200);
+  if (w < 0)
+    {
+      if (pid >= 0)
+        {
+          kill (pid);
+        }
+      close (to[1]);
+      close (from[0]);
+      show_alert (ALERT_INFO, "The shell could not be started.", 0, 0);
+      return;
+    }
+  struct window *win = &windows[w];
+  term_clear (win->term);
+  win->shell_pid = pid;
+  win->to_shell = to[1];
+  win->from_shell = from[0];
+}
+
+// shows what the shells printed, returns 1 if there was anything
+static int
+poll_shells (void)
+{
+  int busy = 0;
+  for (int i = 0; i < MAX_WINDOWS; i++)
+    {
+      struct window *win = &windows[i];
+      if (!win->used || win->kind != WIN_TERM)
+        {
+          continue;
+        }
+      int n = pending (win->from_shell);
+      if (n < 0)
+        {
+          // the shell exited and nothing can print anymore
+          close_window (i);
+          busy = 1;
+          continue;
+        }
+      if (n == 0)
+        {
+          continue;
+        }
+      static char buf[512];
+      n = read (win->from_shell, buf, min (n, (int)sizeof (buf)));
+      if (n > 0)
+        {
+          term_write (win->term, buf, n);
+          // follow the output
+          win->scroll = max_scroll (win);
+          dirty = 1;
+          busy = 1;
+        }
+    }
+  return busy;
 }
 
 static void
@@ -1025,6 +1176,11 @@ open_target (struct target t)
     {
       open_folder (path, entry->name);
     }
+  else if (strcmp (entry->name, "sh.elf") == 0)
+    {
+      // the shell gets a window instead of the text screen
+      open_shell ();
+    }
   else if (ends_with (entry->name, ".elf"))
     {
       run_program (path);
@@ -1216,6 +1372,10 @@ menu_action (int m, int i)
       else if (i == 3)
         {
           open_clock ();
+        }
+      else if (i == 4)
+        {
+          open_shell ();
         }
       break;
     case MENU_FILE:
@@ -1670,6 +1830,9 @@ draw_window (const struct window *win, int active)
       break;
     case WIN_CLOCK:
       draw_clock (win);
+      break;
+    case WIN_TERM:
+      term_draw (win->term, win_view (win), win->scroll, active);
       break;
     }
   draw_clip ((struct box){ f.x + 1, f.y + 1, f.w - 2, f.h - 2 });
@@ -2334,6 +2497,16 @@ on_key (int key)
         }
       return;
     }
+  if (front && front->kind == WIN_TERM)
+    {
+      // keys go to the shell as the bytes the text screen would give it,
+      // the KEY_ codes for arrows included
+      char c = typed (key);
+      write (front->to_shell, &c, 1);
+      front->scroll = max_scroll (front);
+      dirty = 1;
+      return;
+    }
   if (front && front->kind == WIN_TEXT)
     {
       int todo = edit_key (front->edit, typed (key));
@@ -2470,6 +2643,7 @@ main (void)
               on_release ();
             }
         }
+      busy |= poll_shells ();
       // the clock ticks once a second
       uint32_t second = uptime () / 1000;
       if (second != last_second && clock_open ())
@@ -2495,6 +2669,11 @@ main (void)
         {
           sleep (10);
         }
+    }
+  // shells end with their windows
+  while (order_len)
+    {
+      close_window (order[0]);
     }
   gfx_mode (GFX_TEXT);
   return 0;
