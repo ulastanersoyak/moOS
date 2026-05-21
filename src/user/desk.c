@@ -687,8 +687,9 @@ new_window (int kind, const char *title, const char *path, int w, int h)
   return i;
 }
 
-// the shell of a window and every program it started, children first
-static void
+// kills every program the shell of a window started, children first, and
+// the shell too if with_shell. returns how many programs it found
+static int
 kill_jobs (int shell_pid, int with_shell)
 {
   struct task_info list[64];
@@ -726,6 +727,7 @@ kill_jobs (int shell_pid, int with_shell)
     {
       kill (shell_pid);
     }
+  return count;
 }
 
 static void
@@ -2494,6 +2496,21 @@ on_key (int key)
         case 'o':
           open_target (selection);
           break;
+        case 'c':
+          // stops what the shell runs, like on the text screen. at the
+          // prompt the shell gets it and drops the line
+          if (front && front->kind == WIN_TERM
+              && !kill_jobs (front->shell_pid, 0))
+            {
+              char c = 0x03; // the char ctrl+c gives on the text screen
+              write (front->to_shell, &c, 1);
+            }
+          else if (front && front->kind == WIN_TERM)
+            {
+              term_write (front->term, "^C\n", 3);
+              dirty = 1;
+            }
+          break;
         }
       return;
     }
@@ -2592,6 +2609,9 @@ main (void)
     }
   key_event (1);
   mouse_event (0, 1);
+  // ctrl+c belongs to the shell windows, the desktop keeps running. ctrl+q
+  // quits it
+  ignore_ctrl_c (1);
   open_folder ("0:/", "MOOS");
   uint32_t last_second = 0;
   int moved = 1;
