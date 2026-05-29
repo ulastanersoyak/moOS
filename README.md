@@ -11,6 +11,8 @@ earliest deadline first. and it runs doom.
 
 ![doom running on moOS](images/doom.png)
 
+![the moOS desktop](images/desk.png)
+
 ## features
 
 boot
@@ -296,6 +298,8 @@ and the window doesnt have to grab the mouse.
 - view: icons or a list with sizes and dates
 - the moose menu has a calculator (mouse or keyboard), a clock and shell
   windows, the selector menu starts doom, gfxdemo and moose
+
+![folders, the calculator and the clock on the desktop](images/desk.png)
 
 ### shell windows
 
