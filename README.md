@@ -288,13 +288,26 @@ position of the host pointer, so the desktop pointer stays right under it
 and the window doesnt have to grab the mouse.
 
 - double click the disk or a folder to open it, a text file to edit it and a
-  program to run it. the desktop comes back when the program exits
+  program to run it. the desktop comes back when the program exits.
+  `sh.elf` opens a shell window instead
 - drag a file or an empty folder to the trash to delete it
 - file: open, new folder, new file (opens it in the editor), close, close
   all, get info and quit (ctrl+q)
 - view: icons or a list with sizes and dates
-- the moose menu has a calculator (mouse or keyboard) and a clock, the
-  selector menu starts doom, gfxdemo and moose
+- the moose menu has a calculator (mouse or keyboard), a clock and shell
+  windows, the selector menu starts doom, gfxdemo and moose
+
+### shell windows
+
+a shell window runs `sh` with its stdin and stdout on pipes, the desktop
+reads what it prints (`pending` says how much a pipe holds, so it never
+waits) and draws it on a terminal of 80 columns that keeps 300 lines. typing
+sends the keys down the other pipe. on a stream like that the shell edits
+the line at its end: history and tab completion work, the cursor keys dont
+move inside the line. ctrl+c stops the programs it runs, or drops the line
+at the prompt. `exit` closes the window, closing the window ends the shell
+and what it runs. programs that draw graphics or read key events need the
+screen and the keyboard to themselves, run those by double clicking them
 
 ### the editor
 
