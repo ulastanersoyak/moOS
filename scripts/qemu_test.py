@@ -174,9 +174,16 @@ STEPS = [
     ("ihello from the editor", 0.3),
     ("<esc>", 0.3),
     ("yyp:wq\n", 1.0),
+    # a shell window from the moose menu writes a file
+    ("!mouse_move -34 -62", 0.3),
+    ("!mouse_button 1", 0.3),
+    ("!mouse_move 14 102", 0.3),
+    ("!mouse_button 0", 1.5),
+    ("echo made in a window > win.txt\n", 1.0),
     ("<ctrl-q>", 0.8),
     ("ls\n", 0.5),
     ("cat Untitled.txt\n", 0.5),
+    ("cat win.txt\n", 0.5),
     # the shell is a user program, init starts a new one when it dies
     ("kill sh\n", 1.0),
     ("ps\n", 0.5),
@@ -246,6 +253,7 @@ EXPECTED = [
     "ps/2 mouse init [OK]",
     "New Folder/",                     # made in the desktop
     "hello from the editor\nhello from the editor\n",
+    "moos 0:/> cat win.txt\nmade in a window\n",   # the shell window
     "every 60 ms, 0 of",               # ps shows periodic tasks
 ]
 
