@@ -17,6 +17,23 @@ $%1:
 	ret
 %endmacro
 
+	;    names that mean something else in standard c are weak, the c library
+	;    in src/user/libc replaces them. moos_<name> always is the system call
+%macro WEAK_SYSCALL 2
+global $%1:weak
+global moos_%1
+$%1:
+moos_%1:
+	push ebx
+	mov  eax, %2
+	mov  ebx, [esp+8]
+	mov  ecx, [esp+12]
+	mov  edx, [esp+16]
+	int  0x80
+	pop  ebx
+	ret
+%endmacro
+
 	SYSCALL exit, 0
 	SYSCALL print, 1
 	SYSCALL putchar, 2
@@ -26,7 +43,7 @@ $%1:
 	SYSCALL sleep_until, 6
 	SYSCALL yield, 7
 	SYSCALL getpid, 8
-	SYSCALL open, 9
+	WEAK_SYSCALL open, 9
 	SYSCALL read, 10
 	SYSCALL write, 11
 	SYSCALL close, 12
@@ -40,9 +57,9 @@ $%1:
 	SYSCALL spawn, 20
 	SYSCALL wait, 21
 	SYSCALL isatty, 22
-	SYSCALL time, 23
+	WEAK_SYSCALL time, 23
 	SYSCALL chdir, 24
-	SYSCALL getcwd, 25
+	WEAK_SYSCALL getcwd, 25
 	SYSCALL tasks, 26
 	SYSCALL kill, 27
 	SYSCALL sched, 28

@@ -3,8 +3,9 @@
 
 #include <sys/types.h>
 
-// only O_RDONLY and O_WRONLY | O_CREAT | O_TRUNC match what the moos open
-// system call does (modes 0 and 1), use fopen for anything else
+// moos opens a file for reading, for writing from the start (the file is
+// created or made empty, with or without O_CREAT and O_TRUNC) or with
+// O_APPEND for writing at the end. O_RDWR isnt supported
 #define O_RDONLY 0
 #define O_WRONLY 1
 #define O_RDWR 2

@@ -21,5 +21,9 @@ int unlink (const char *path);
 int rmdir (const char *path);
 int isatty (int fd);
 int usleep (unsigned int usec);
+char *getcwd (char *buf, size_t len);
+// moos cant replace a program with another one: the program runs as a
+// child and this one exits with its exit code once it is done
+int execvp (const char *file, char *const argv[]);
 
 #endif

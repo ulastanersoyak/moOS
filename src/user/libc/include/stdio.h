@@ -22,6 +22,8 @@ extern FILE *stderr;
 
 // modes "r", "w" and "a", with an optional b. "+" opens like without it
 FILE *fopen (const char *path, const char *mode);
+// a FILE for an fd that is already open
+FILE *fdopen (int fd, const char *mode);
 int fclose (FILE *file);
 size_t fread (void *buf, size_t size, size_t count, FILE *file);
 size_t fwrite (const void *buf, size_t size, size_t count, FILE *file);

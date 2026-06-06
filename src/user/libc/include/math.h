@@ -25,6 +25,8 @@ double log (double x);
 double log2 (double x);
 double log10 (double x);
 double pow (double base, double exp);
+double ldexp (double x, int exp);
+long double ldexpl (long double x, int exp);
 float fabsf (float x);
 float sqrtf (float x);
 

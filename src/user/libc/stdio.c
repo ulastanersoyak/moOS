@@ -43,7 +43,7 @@ fopen (const char *path, const char *mode)
       errno = EINVAL;
       return 0;
     }
-  int fd = open (path, moos_mode);
+  int fd = moos_open (path, moos_mode);
   if (fd < 0)
     {
       errno = ENOENT;
@@ -59,6 +59,25 @@ fopen (const char *path, const char *mode)
   file->fd = fd;
   file->unget = -1;
   if (moos_mode == MOOS_APPEND)
+    {
+      int size = filesize (fd);
+      file->pos = size > 0 ? size : 0;
+    }
+  return file;
+}
+
+FILE *
+fdopen (int fd, const char *mode)
+{
+  FILE *file = calloc (1, sizeof (FILE));
+  if (!file)
+    {
+      errno = ENOMEM;
+      return 0;
+    }
+  file->fd = fd;
+  file->unget = -1;
+  if (mode[0] == 'a')
     {
       int size = filesize (fd);
       file->pos = size > 0 ? size : 0;

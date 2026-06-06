@@ -1,6 +1,7 @@
 #include "sys.h"
 #include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -115,6 +116,14 @@ strtoll (const char *str, char **end, int base)
   return negative ? -(long long)value : (long long)value;
 }
 
+unsigned long long
+strtoull (const char *str, char **end, int base)
+{
+  int negative;
+  uint64_t value = parse_integer (str, end, base, &negative);
+  return negative ? -(unsigned long long)value : (unsigned long long)value;
+}
+
 // decimal numbers with an optional fraction and exponent
 double
 strtod (const char *str, char **end)
@@ -169,6 +178,18 @@ strtod (const char *str, char **end)
       *end = (char *)(digits ? str : start);
     }
   return sign * value;
+}
+
+float
+strtof (const char *str, char **end)
+{
+  return strtod (str, end);
+}
+
+long double
+strtold (const char *str, char **end)
+{
+  return strtod (str, end);
 }
 
 int
@@ -281,7 +302,7 @@ stat (const char *path, struct stat *out)
       out->st_size = 0;
       return 0;
     }
-  int fd = open (path, MOOS_READ);
+  int fd = moos_open (path, MOOS_READ);
   if (fd >= 0)
     {
       out->st_mode = S_IFREG;
@@ -342,4 +363,145 @@ gettimeofday (struct timeval *tv, void *tz)
   tv->tv_sec = ms / 1000;
   tv->tv_usec = (ms % 1000) * 1000;
   return 0;
+}
+
+int
+open (const char *path, int flags, ...)
+{
+  int mode;
+  if ((flags & 3) == O_RDONLY)
+    {
+      mode = MOOS_READ;
+    }
+  else if ((flags & 3) == O_WRONLY)
+    {
+      mode = flags & O_APPEND ? MOOS_APPEND : MOOS_WRITE;
+    }
+  else
+    {
+      errno = EINVAL;
+      return -1;
+    }
+  int fd = moos_open (path, mode);
+  if (fd < 0)
+    {
+      errno = ENOENT;
+      return -1;
+    }
+  return fd;
+}
+
+char *
+getcwd (char *buf, size_t len)
+{
+  if (moos_getcwd (buf, len) < 0)
+    {
+      errno = ERANGE;
+      return 0;
+    }
+  return buf;
+}
+
+char *
+realpath (const char *path, char *out)
+{
+  struct stat st;
+  if (stat (path, &st) < 0)
+    {
+      return 0;
+    }
+  // the working directory always starts with the drive, "0:/"
+  char joined[2 * FILENAME_MAX + 2];
+  if (isdigit ((unsigned char)path[0]) && path[1] == ':')
+    {
+      joined[0] = 0;
+    }
+  else if (!getcwd (joined, FILENAME_MAX + 1))
+    {
+      return 0;
+    }
+  else if (path[0] == '/')
+    {
+      joined[2] = 0; // keep the drive
+    }
+  else
+    {
+      strcat (joined, "/");
+    }
+  if (strlen (joined) + strlen (path) > 2 * FILENAME_MAX)
+    {
+      errno = ERANGE;
+      return 0;
+    }
+  strcat (joined, path);
+
+  char *res = out ? out : malloc (FILENAME_MAX + 1);
+  if (!res)
+    {
+      errno = ENOMEM;
+      return 0;
+    }
+  // like the kernel does it: the drive, then every part that isnt empty or
+  // ".", ".." removes the part before it
+  int len = 2;
+  memcpy (res, joined, 2);
+  const char *part = joined + 2;
+  while (*part)
+    {
+      while (*part == '/')
+        {
+          part++;
+        }
+      const char *part_end = part;
+      while (*part_end && *part_end != '/')
+        {
+          part_end++;
+        }
+      int part_len = part_end - part;
+      if (part_len == 2 && part[0] == '.' && part[1] == '.')
+        {
+          while (len > 2 && res[len - 1] != '/')
+            {
+              len--;
+            }
+          if (len > 2)
+            {
+              len--;
+            }
+        }
+      else if (part_len > 0 && !(part_len == 1 && part[0] == '.'))
+        {
+          if (len + 1 + part_len > FILENAME_MAX)
+            {
+              if (!out)
+                {
+                  free (res);
+                }
+              errno = ERANGE;
+              return 0;
+            }
+          res[len++] = '/';
+          memcpy (res + len, part, part_len);
+          len += part_len;
+        }
+      part = part_end;
+    }
+  if (len == 2)
+    {
+      res[len++] = '/';
+    }
+  res[len] = 0;
+  return res;
+}
+
+int
+execvp (const char *file, char *const argv[])
+{
+  int pid = spawn (file, (char **)argv, 0);
+  if (pid < 0)
+    {
+      errno = ENOENT;
+      return -1;
+    }
+  exit (wait (pid));
 }

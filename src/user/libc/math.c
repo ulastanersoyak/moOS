@@ -182,3 +182,18 @@ pow (double base, double exp_)
     }
   return exp (exp_ * log (base));
 }
+
+long double
+ldexpl (long double x, int exp)
+{
+  // fscale multiplies st0 by 2 to the power of st1
+  long double res;
+  __asm__ ("fscale" : "=t"(res) : "0"(x), "u"((long double)exp));
+  return res;
+}
+
+double
+ldexp (double x, int exp)
+{
+  return ldexpl (x, exp);
+}
