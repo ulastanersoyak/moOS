@@ -3,6 +3,7 @@
 CC := clang --target=i686-elf
 LD := ld -m elf_i386
 OBJCOPY := objcopy
+AR := ar
 HOST_CC := cc
 QEMU := qemu-system-i386
 
@@ -81,7 +82,7 @@ FILES := $(ASM_OBJS) $(C_OBJS)
 # user programs, elf executables copied to 0:/bin on the disk image
 USER_PROGS := hello count crash spin rtdemo memtest cat wc sort cp echo ls grep \
 	date time pipetest cowsay moose sh pidemo edfdemo fputest gfxdemo keys \
-	libctest doom desk
+	libctest doom desk tcc
 USER_LIB_OBJS := build/user/lib/crt0.asm.o build/user/lib/syscall.asm.o \
 	build/user/lib/moos.o build/user/lib/int64.o
 USER_BINS := $(patsubst %,build/user/%.elf,$(USER_PROGS))
@@ -121,6 +122,26 @@ DOOM_FLAGS = -O2 -g -ffreestanding -fno-builtin -fno-pic -fno-pie \
 	-fno-stack-protector -fno-asynchronous-unwind-tables -march=i686 \
 	-mno-mmx -mno-sse -mno-sse2 -nostdlib -std=gnu99 -w -MMD -MP \
 	$(LIBC_INCLUDE) $(DOOM_DEFINES)
+# tcc, the tiny c compiler from the tinycc submodule. it runs on moos and
+# builds static programs against the c library, which goes onto the disk as
+# /lib/libc.a with its headers in /include. tcc's own headers and runtime
+# (libtcc1.a) go to /lib/tcc. the same compiler built for the host,
+# i386-moos-tcc, builds that runtime and can build moos programs too
+TCC_DIR := ./external/tinycc
+TCC_FLAGS = -O2 -g -ffreestanding -fno-builtin -fno-pic -fno-pie \
+	-fno-stack-protector -fno-asynchronous-unwind-tables -march=i686 \
+	-mno-mmx -mno-sse -mno-sse2 -nostdlib -std=gnu99 -w -MMD -MP \
+	$(LIBC_INCLUDE) -I./src/user/tcc -I./build/tcc -I$(TCC_DIR)
+TCC_HOST := ./build/tcc/i386-moos-tcc
+SYSROOT := ./build/sysroot
+TCC_HEADERS := $(filter-out %/tccdefs.h,$(wildcard $(TCC_DIR)/include/*.h)) \
+	$(wildcard src/user/tcc/include/*.h)
+LIBC_HEADERS := $(shell find src/user/libc/include -name '*.h') src/user/lib/moos.h
+LIBTCC1_SRCS := libtcc1.c alloca.S alloca-bt.S builtin.c stdatomic.c atomic.S
+LIBTCC1_OBJS := $(patsubst %,build/tcc/lib/%.o,$(LIBTCC1_SRCS))
+# 64 bit division comes from libtcc1.a, int64.o would define it twice
+SYSROOT_LIBC_OBJS := $(LIBC_OBJS) build/user/lib/moos.o build/user/lib/syscall.asm.o
+
 # keep user objects, make would delete them as intermediate files
 .SECONDARY: $(USER_BINS:.elf=.o) build/user/shline.o build/user/deskdraw.o \
 	build/user/deskedit.o build/user/deskterm.o
@@ -144,9 +165,11 @@ define populate_fs
 	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) $(USER_BINS) ::/bin/
 	MTOOLS_SKIP_CHECK=1 mmd -i $(1) ::/doom
 	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) $(DOOM_WAD) ::/doom/
+	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) -s $(SYSROOT)/lib $(SYSROOT)/include ::/
 endef
 
-FS_FILES := ./test/fs_test.txt ./build/long.txt $(USER_BINS) $(DOOM_WAD)
+FS_FILES := ./test/fs_test.txt ./build/long.txt $(USER_BINS) $(DOOM_WAD) \
+	./build/sysroot.stamp
 
 ./bin/os-moos.img: ./bin/bootloader.bin ./bin/kernel.bin $(FS_FILES)
 	rm -f $@
@@ -195,6 +218,47 @@ build/doom/%.o: $(DOOM_DIR)/%.c
 build/user/doom.o: FLAGS += $(LIBC_INCLUDE) -I$(DOOM_DIR) $(DOOM_DEFINES)
 build/user/doom.elf: build/user/doom.o $(DOOM_OBJS) $(LIBC_OBJS) $(USER_LIB_OBJS) ./src/user/linker.ld
 	$(LD) -s -z noexecstack -T ./src/user/linker.ld -o $@ $< $(DOOM_OBJS) $(LIBC_OBJS) $(USER_LIB_OBJS)
+
+# tccdefs.h holds tcc's predefined macros, it is built into tcc as strings
+./build/tcc/tccdefs_.h: $(TCC_DIR)/include/tccdefs.h $(TCC_DIR)/conftest.c
+	@mkdir -p $(dir $@)
+	$(HOST_CC) -DC2STR $(TCC_DIR)/conftest.c -o ./build/tcc/c2str
+	./build/tcc/c2str $< $@
+
+$(TCC_DIR)/tcc.c:
+	@echo "tinycc submodule missing, run: git submodule update --init" && exit 1
+
+build/user/tcc.o: src/user/tcc/onesource.c ./build/tcc/tccdefs_.h $(TCC_DIR)/tcc.c
+	@mkdir -p $(dir $@)
+	$(CC) $(TCC_FLAGS) -c $< -o $@
+
+build/user/tcc.elf: build/user/tcc.o $(LIBC_OBJS) $(USER_LIB_OBJS) ./src/user/linker.ld
+	$(LD) -s -z noexecstack -T ./src/user/linker.ld -o $@ $< $(LIBC_OBJS) $(USER_LIB_OBJS)
+
+# the cross compiler looks for headers and libraries in build/sysroot
+$(TCC_HOST): src/user/tcc/onesource.c src/user/tcc/config.h ./build/tcc/tccdefs_.h $(TCC_DIR)/tcc.c
+	$(HOST_CC) -O2 -g -w -DCONFIG_SYSROOT=\"$(abspath $(SYSROOT))\" \
+		-I./src/user/tcc -I./build/tcc -I$(TCC_DIR) $< -o $@ -lm
+
+build/tcc/lib/%.o: $(TCC_DIR)/lib/% $(TCC_HOST)
+	@mkdir -p $(dir $@)
+	$(TCC_HOST) -c -I$(TCC_DIR) $< -o $@
+
+# what tcc needs on the disk. crti.o and crtn.o are empty, moos has no
+# constructors
+./build/sysroot.stamp: $(TCC_HEADERS) $(LIBC_HEADERS) $(SYSROOT_LIBC_OBJS) \
+		build/user/lib/crt0.asm.o $(LIBTCC1_OBJS)
+	rm -rf $(SYSROOT)
+	mkdir -p $(SYSROOT)/lib/tcc/include $(SYSROOT)/include
+	cp $(TCC_HEADERS) $(SYSROOT)/lib/tcc/include/
+	cp -r src/user/libc/include/. $(SYSROOT)/include/
+	cp src/user/lib/moos.h $(SYSROOT)/include/
+	$(AR) rcs $(SYSROOT)/lib/libc.a $(SYSROOT_LIBC_OBJS)
+	cp build/user/lib/crt0.asm.o $(SYSROOT)/lib/crt1.o
+	$(CC) -c -x c /dev/null -o $(SYSROOT)/lib/crti.o
+	cp $(SYSROOT)/lib/crti.o $(SYSROOT)/lib/crtn.o
+	$(TCC_HOST) -ar rcs $(SYSROOT)/lib/tcc/libtcc1.a $(LIBTCC1_OBJS)
+	touch $@
 
 # the shell is split into the command interpreter and the line editor
 build/user/sh.elf: build/user/sh.o build/user/shline.o $(USER_LIB_OBJS) ./src/user/linker.ld

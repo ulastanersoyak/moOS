@@ -5,3 +5,6 @@
 [submodule "external/doomgeneric"]
 	path = external/doomgeneric
 	url = https://github.com/ozkl/doomgeneric.git
+[submodule "external/tinycc"]
+	path = external/tinycc
+	url = https://repo.or.cz/tinycc.git
