@@ -653,51 +653,47 @@ fat16_get_cluster_for_offset (struct disk *disk, int starting_cluster,
 out:
   return res;
 }
+// a loop over the clusters, not a recursion: one call per cluster runs over
+// the 16 kb kernel stack for files of a few hundred kb
 static int
 fat16_read_internal_from_stream (struct disk *disk, struct disk_stream *stream,
                                  int cluster, int offset, int total, void *out)
 {
-  int res = 0;
   struct fat_private *private = disk->fs_private_data;
   int size_of_cluster_bytes
       = private->header.primary_header.sectors_per_cluster * disk->sector_size;
-  int cluster_to_use = fat16_get_cluster_for_offset (disk, cluster, offset);
-  if (cluster_to_use < 0)
+  while (total > 0)
     {
-      res = cluster_to_use;
-      goto out;
-    }
+      int cluster_to_use = fat16_get_cluster_for_offset (disk, cluster, offset);
+      if (cluster_to_use < 0)
+        {
+          return cluster_to_use;
+        }
 
-  int offset_from_cluster = offset % size_of_cluster_bytes;
+      int offset_from_cluster = offset % size_of_cluster_bytes;
 
-  int starting_sector = fat16_cluster_to_sector (private, cluster_to_use);
-  int starting_pos
-      = (starting_sector * disk->sector_size) + offset_from_cluster;
-  // clusters of a file arent necessarily adjacent so never read past the
-  // end of the current cluster
-  int total_to_read = size_of_cluster_bytes - offset_from_cluster;
-  if (total_to_read > total)
-    {
-      total_to_read = total;
-    }
-  stream_seek (stream, starting_pos);
-  res = disk_stream_read (stream, out, total_to_read);
-  if (res != OK)
-    {
-      goto out;
-    }
+      int starting_sector = fat16_cluster_to_sector (private, cluster_to_use);
+      int starting_pos
+          = (starting_sector * disk->sector_size) + offset_from_cluster;
+      // clusters of a file arent necessarily adjacent so never read past the
+      // end of the current cluster
+      int total_to_read = size_of_cluster_bytes - offset_from_cluster;
+      if (total_to_read > total)
+        {
+          total_to_read = total;
+        }
+      stream_seek (stream, starting_pos);
+      int res = disk_stream_read (stream, out, total_to_read);
+      if (res != OK)
+        {
+          return res;
+        }
 
-  total -= total_to_read;
-  if (total > 0)
-    {
-      // We still have more to read
-      res = fat16_read_internal_from_stream (disk, stream, cluster,
-                                             offset + total_to_read, total,
-                                             out + total_to_read);
+      total -= total_to_read;
+      offset += total_to_read;
+      out += total_to_read;
     }
-
-out:
-  return res;
+  return OK;
 }
 
 static int
