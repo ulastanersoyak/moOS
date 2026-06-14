@@ -166,10 +166,12 @@ define populate_fs
 	MTOOLS_SKIP_CHECK=1 mmd -i $(1) ::/doom
 	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) $(DOOM_WAD) ::/doom/
 	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) -s $(SYSROOT)/lib $(SYSROOT)/include ::/
+	MTOOLS_SKIP_CHECK=1 mmd -i $(1) ::/src
+	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) ./test/hello.c ./src/user/cowsay.c ::/src/
 endef
 
 FS_FILES := ./test/fs_test.txt ./build/long.txt $(USER_BINS) $(DOOM_WAD) \
-	./build/sysroot.stamp
+	./build/sysroot.stamp ./test/hello.c ./src/user/cowsay.c
 
 ./bin/os-moos.img: ./bin/bootloader.bin ./bin/kernel.bin $(FS_FILES)
 	rm -f $@
@@ -245,14 +247,15 @@ build/tcc/lib/%.o: $(TCC_DIR)/lib/% $(TCC_HOST)
 	$(TCC_HOST) -c -I$(TCC_DIR) $< -o $@
 
 # what tcc needs on the disk. crti.o and crtn.o are empty, moos has no
-# constructors
+# constructors. moos.h goes to /include/lib, programs include "lib/moos.h"
+# like in src/user
 ./build/sysroot.stamp: $(TCC_HEADERS) $(LIBC_HEADERS) $(SYSROOT_LIBC_OBJS) \
 		build/user/lib/crt0.asm.o $(LIBTCC1_OBJS)
 	rm -rf $(SYSROOT)
-	mkdir -p $(SYSROOT)/lib/tcc/include $(SYSROOT)/include
+	mkdir -p $(SYSROOT)/lib/tcc/include $(SYSROOT)/include/lib
 	cp $(TCC_HEADERS) $(SYSROOT)/lib/tcc/include/
 	cp -r src/user/libc/include/. $(SYSROOT)/include/
-	cp src/user/lib/moos.h $(SYSROOT)/include/
+	cp src/user/lib/moos.h $(SYSROOT)/include/lib/
 	$(AR) rcs $(SYSROOT)/lib/libc.a $(SYSROOT_LIBC_OBJS)
 	cp build/user/lib/crt0.asm.o $(SYSROOT)/lib/crt1.o
 	$(CC) -c -x c /dev/null -o $(SYSROOT)/lib/crti.o

@@ -137,6 +137,13 @@ STEPS = [
     ("<ctrl-d>", 0.5),
     ("cd | sort\n", 0.3),
     ("date\n", 0.4),
+    # tcc builds a program on moos, and a moos program from its own source
+    ("tcc /src/hello.c -o hello.elf\n", 1.5),
+    ("./hello.elf 7\n", 0.6),
+    ("cd /src\n", 0.3),
+    ("tcc cowsay.c -o 0:/cowsay.elf\n", 1.5),
+    ("cd ..\n", 0.3),
+    ("./cowsay.elf built here\n", 0.6),
     # priority inheritance, and periodic tasks under rate monotonic
     # priorities and earliest deadline first
     ("pidemo\n", 1.5),
@@ -237,7 +244,7 @@ EXPECTED = [
     "moos 0:/> cat LONGNO~1.TXT\napple banana",
     "moos 0:/> cat fruit.txt|sort\napple\nbanana\n",
     "1 2 12\n",                    # quotes keep both spaces
-    "27 135 1215\n",               # 27 programs through a 4 stage pipeline
+    "28 140 1260\n",               # 28 programs through a 4 stage pipeline
     "1 2 10\n",                    # 6000 bytes through pipes larger than 4 kb
     "2 2 13\n",
     "nosuch: not found\n0 0 0",
@@ -255,6 +262,9 @@ EXPECTED = [
     "hello from the editor\nhello from the editor\n",
     "moos 0:/> cat win.txt\nmade in a window\n",   # the shell window
     "every 60 ms, 0 of",               # ps shows periodic tasks
+    "hello from tcc, 2 args\n1234567890123 / 7 = 176366841446, 6.50\n"
+    "[exit code 7]",
+    "< built here >",                  # cowsay built by tcc
 ]
 
 FORBIDDEN = ["kernel panic", "still alive", "[ER]", "kfree: invalid"]
