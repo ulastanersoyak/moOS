@@ -29,4 +29,7 @@ int sh_complete (const char *prefix, uint32_t prefix_len, uint8_t is_command,
 // completion with tab. ctrl+c drops the line
 void sh_readline (char *line, uint32_t max);
 
+// text the next sh_readline starts with, as if it was typed
+void sh_type_ahead (const char *text);
+
 #endif // !SH_H

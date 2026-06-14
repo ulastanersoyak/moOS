@@ -131,6 +131,16 @@ editor_set_line (struct editor *e, const char *text)
   editor_redraw (e, 0, old_len);
 }
 
+// typed before the shell read anything, e.g. the key that took the desktop
+// to the text screen
+static const char *typed_ahead = 0;
+
+void
+sh_type_ahead (const char *text)
+{
+  typed_ahead = text;
+}
+
 static void
 history_add (const char *line)
 {
@@ -222,6 +232,15 @@ sh_readline (char *line, uint32_t max)
       = history_count > HISTORY_SIZE ? history_count - HISTORY_SIZE : 0;
   char draft[SH_LINE_MAX];
   draft[0] = '\0';
+  if (typed_ahead)
+    {
+      while (*typed_ahead)
+        {
+          editor_insert (&e, *typed_ahead++);
+        }
+      typed_ahead = 0;
+      getcursor (&e.last);
+    }
 
   while (1)
     {

@@ -762,6 +762,11 @@ main (int argc, char **argv)
   // ctrl+c stops the programs it runs, not the shell. init starts the first
   // one like that, a window of the desktop starts its own
   ignore_ctrl_c (1);
+  // sh -t text: the first line starts with text
+  if (argc > 2 && strcmp (argv[1], "-t") == 0)
+    {
+      sh_type_ahead (argv[2]);
+    }
   printf ("\nwelcome to moOS! type help for commands\n");
   while (1)
     {
