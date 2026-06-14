@@ -34,6 +34,15 @@ def key_name(c):
     return c
 
 
+# moOS boots into the desktop. a key typed there runs the shell on the text
+# screen with that key on its line, exit goes back to the desktop and ctrl+q
+# quits it, then init starts the shell the steps below type into
+BOOT_STEPS = [
+    ("echo typed on the desk\n", 1.0),
+    ("exit\n", 1.5),
+    ("<ctrl-q>", 0.5),
+]
+
 # (text to type or special key, seconds to wait afterwards)
 STEPS = [
     ("mem\n", 0.5),
@@ -199,6 +208,9 @@ STEPS = [
 
 EXPECTED = [
     "system paging [OK]",
+    "type exit to go back to the desktop\n\nwelcome to moOS! type help for "
+    "commands\nmoos 0:/> echo typed on the desk\ntyped on the desk\n"
+    "moos 0:/> exit\ninit: desk exited, starting sh",
     "pit timer init <100 hz> [OK]",
     "welcome to moOS!",
     "cd [dir]",                       # help
@@ -312,17 +324,33 @@ def check_disk():
 
 
 # boot time depends on the bootloader (limine shows its menu for a second)
-def wait_for_shell(timeout=30):
+def wait_for(text, timeout=30):
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
-            if "welcome to moOS" in open(LOG, encoding="latin-1").read():
+            if text in open(LOG, encoding="latin-1").read():
                 time.sleep(0.3)
                 return
         except FileNotFoundError:
             pass
         time.sleep(0.2)
-    raise RuntimeError("moOS did not reach the shell")
+    raise RuntimeError(f"moOS did not get to: {text}")
+
+
+# types text (or a <special key>, or runs a !monitor command such as
+# mouse_move) and waits wait seconds
+def send(qemu, text, wait):
+    if text.startswith("!"):
+        qemu.stdin.write(text[1:] + "\n")
+        qemu.stdin.flush()
+        time.sleep(wait)
+        return
+    keys = [text[1:-1]] if text.startswith("<") else map(key_name, text)
+    for key in keys:
+        qemu.stdin.write(f"sendkey {key}\n")
+        qemu.stdin.flush()
+        time.sleep(0.05)
+    time.sleep(wait)
 
 
 def main():
@@ -340,20 +368,14 @@ def main():
          "-no-reboot"],
         stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, text=True)
     try:
-        wait_for_shell()
+        wait_for("enable interrupts [OK]")
+        # init loading the desktop, it drops keys typed before it runs
+        time.sleep(2.0)
+        for text, wait in BOOT_STEPS:
+            send(qemu, text, wait)
+        wait_for("init: desk exited, starting sh")
         for text, wait in STEPS:
-            # a qemu monitor command, e.g. to move the mouse
-            if text.startswith("!"):
-                qemu.stdin.write(text[1:] + "\n")
-                qemu.stdin.flush()
-                time.sleep(wait)
-                continue
-            keys = [text[1:-1]] if text.startswith("<") else map(key_name, text)
-            for key in keys:
-                qemu.stdin.write(f"sendkey {key}\n")
-                qemu.stdin.flush()
-                time.sleep(0.05)
-            time.sleep(wait)
+            send(qemu, text, wait)
         qemu.stdin.write("quit\n")
         qemu.stdin.flush()
         qemu.wait(timeout=5)

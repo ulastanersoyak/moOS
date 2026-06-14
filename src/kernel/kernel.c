@@ -128,11 +128,22 @@ read_boot_info (uint32_t boot_magic, uint32_t boot_info)
 }
 
 #if (IS_RTOS != 1)
-// the boot context ends up as the init thread. it starts the shell, a user
-// program, and starts a new one whenever it exits or crashes
+// the boot context ends up as the init thread. it starts the desktop, then
+// the shell once the desktop quits (or cant start, e.g. without a disk
+// image that has it). both are user programs, a new shell is started
+// whenever it exits or crashes
 static void
 init_main (void)
 {
+  char *desk_argv[] = { "desk", 0 };
+  int32_t desk = task_spawn (TASK_DESK_PATH, 1, desk_argv, TASK_PRIORITY_SHELL,
+                             TASK_SPAWN_SHELL, 0, 0, 0);
+  if (desk >= 0)
+    {
+      int32_t exit_code = task_wait (desk);
+      printf ("init: desk %s, starting sh\n",
+              exit_code == TASK_KILLED ? "was killed" : "exited");
+    }
   char *argv[] = { "sh", 0 };
   while (1)
     {

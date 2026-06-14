@@ -1098,6 +1098,20 @@ selected_entry (void)
   return selection.index < win->count ? &win->entries[selection.index] : 0;
 }
 
+// the desktop takes the screen, keyboard and mouse back from a program that
+// ran on the text screen
+static void
+back_to_desktop (void)
+{
+  gfx_mode (GFX_MONO);
+  key_event (1);
+  mouse_event (0, 1);
+  buttons = 0;
+  shift_held = ctrl_held = 0;
+  mode = IDLE;
+  dirty = 1;
+}
+
 static void
 run_program (const char *path)
 {
@@ -1142,13 +1156,32 @@ run_program (const char *path)
         }
       sleep (20);
     }
-  gfx_mode (GFX_MONO);
-  key_event (1);
-  mouse_event (0, 1);
-  buttons = 0;
-  shift_held = ctrl_held = 0;
-  mode = IDLE;
-  dirty = 1;
+  back_to_desktop ();
+}
+
+// a key typed on the desktop starts a command: the shell takes the whole
+// text screen with the key already on its line, exit comes back here
+static void
+open_terminal (char key)
+{
+  gfx_mode (GFX_TEXT);
+  clear ();
+  setcolor (LIGHT_GREY);
+  print ("type exit to go back to the desktop\n");
+  setcolor (WHITE);
+  char typed[2] = { key, 0 };
+  char *argv[] = { "sh", "-t", typed, 0 };
+  int pid = spawn ("0:/bin/sh.elf", argv, 0);
+  if (pid < 0)
+    {
+      print_error ("sh", pid);
+      sleep (2000);
+    }
+  else
+    {
+      wait (pid);
+    }
+  back_to_desktop ();
 }
 
 static void
@@ -2581,6 +2614,12 @@ on_key (int key)
   if (key == '\n')
     {
       open_target (selection);
+      return;
+    }
+  int c = typed (key);
+  if (c > ' ' && c < 0x7f)
+    {
+      open_terminal (c);
     }
 }
 
