@@ -5,9 +5,12 @@ bootloader or with limine, runs preemptively scheduled ring 3 programs from a
 fat16 disk with long file names and comes with a user space shell that has
 pipes, redirection, job control, history and tab completion. the scheduler
 does round robin, fixed priority real time with priority inheritance and
-earliest deadline first. and it runs doom.
+earliest deadline first. it boots into a desktop in the style of apple ii
+desktop, compiles c programs on itself with tcc and it runs doom.
 
-![moOS booting into the shell](images/boot.png)
+![tcc compiling a program on moOS, edited in the desktop](images/tcc.png)
+
+![the shell on the text screen](images/boot.png)
 
 ![doom running on moOS](images/doom.png)
 
@@ -37,8 +40,8 @@ kernel
 - periodic tasks (`period`, `wait_period`) that count their missed deadlines
 - named mutexes shared between programs, with optional priority inheritance
   against priority inversion
-- an init thread that starts the shell and starts a new one when it exits or
-  crashes
+- an init thread that starts the desktop at boot, then the shell once the
+  desktop quits, and a new shell whenever it exits or crashes
 - elf loader, `argc`/`argv`, per program heap (`sbrk`)
 - x87 floating point, every task has its own fpu state
 - `int 0x80` system calls for files, directories, pipes, processes, time,
@@ -85,7 +88,10 @@ user space
 - a small library on top of the system calls (`src/user/lib/moos.h`): heap,
   strings, printf, 64 bit division
 - a standard c library (`src/user/libc`): stdio, scanf, stdlib, string,
-  ctype, math and a few posix headers, enough to build doom
+  ctype, math, time, setjmp and a few posix headers, enough to build doom
+  and tcc
+- tcc, the tiny c compiler, runs on moOS and builds programs against that c
+  library, see below
 
 ## screenshots
 
@@ -119,8 +125,8 @@ requirements:
 - make and a host c compiler (for limine's installer)
 - curl, ar and xz (the doom wad is downloaded on the first build)
 
-limine and doomgeneric are git submodules, clone with `--recursive` or fetch
-them afterwards:
+limine, doomgeneric and tinycc are git submodules, clone with `--recursive`
+or fetch them afterwards:
 ```bash
 git submodule update --init
 ```
@@ -194,9 +200,10 @@ type their name in the shell to run them:
 | `edfdemo` | two periodic tasks that only edf can schedule |
 | `cowsay [text]` | a cow says something |
 | `moose [text]` | the moOS moose |
-| `sh` | the shell, started by init at boot |
+| `sh` | the shell, started by init once the desktop quits |
 | `doom` | doom, see below |
-| `desk` | a desktop in the style of apple ii desktop, see below |
+| `desk` | a desktop in the style of apple ii desktop, started at boot, see below |
+| `tcc` | the tiny c compiler, see below |
 | `gfxdemo` | animated rings in vga mode 13h for 3 seconds |
 | `keys` | prints key down and up events until esc |
 | `fputest` | two tasks with different fpu settings at once, 64 bit division |
@@ -281,13 +288,13 @@ doesnt save its config file, and there is no sound.
 
 ## desktop
 
-`desk` is a desktop in the style of apple ii desktop (mousedesk): a menu bar,
-the disk and the trash on a grey desktop and windows you can drag, resize,
-scroll and close. it draws a 640x240 black and white canvas and shows every
-row twice in vga mode 11h, so pixels are twice as tall as wide like on the
-apple ii. in qemu (and vmware) the kernel uses the vmmouse, which gives the
-position of the host pointer, so the desktop pointer stays right under it
-and the window doesnt have to grab the mouse.
+moOS boots into `desk`, a desktop in the style of apple ii desktop
+(mousedesk): a menu bar, the disk and the trash on a grey desktop and
+windows you can drag, resize, scroll and close. it draws a 640x240 black and
+white canvas and shows every row twice in vga mode 11h, so pixels are twice
+as tall as wide like on the apple ii. in qemu (and vmware) the kernel uses
+the vmmouse, which gives the position of the host pointer, so the desktop
+pointer stays right under it and the window doesnt have to grab the mouse.
 
 - double click the disk or a folder to open it, a text file to edit it and a
   program to run it. the desktop comes back when the program exits.
@@ -298,6 +305,10 @@ and the window doesnt have to grab the mouse.
 - view: icons or a list with sizes and dates
 - the moose menu has a calculator (mouse or keyboard), a clock and shell
   windows, the selector menu starts doom, gfxdemo and moose
+- typing a command on the desktop (when no editor, shell window or
+  calculator takes the keys) switches to the shell on the text screen with
+  what you typed on its line. `exit` goes back to the desktop, its windows
+  are as you left them. ctrl+q quits the desktop and init starts the shell
 
 ![folders, the calculator and the clock on the desktop](images/desk.png)
 
@@ -332,6 +343,35 @@ window or quitting the desktop then asks first.
 | `u` | undo the last change, again redoes it |
 | `:w` `:q` `:wq` `:x` `:q!` `:42` | write, close, both, close without saving, go to line 42 |
 
+## c compiler
+
+[tcc](https://bellard.org/tcc/), the tiny c compiler, comes from tinycc's
+`mob` branch (a git submodule, through its github mirror) and is built as
+one source file against the moOS c library, `src/user/tcc/` has its
+configuration and glue. it runs on moOS and makes static i386 elf programs
+that moOS loads at `0x40000000`, a hello world compiles and links in about
+200 ms:
+
+```
+moos 0:/> tcc /src/hello.c -o hello.elf
+moos 0:/> ./hello.elf
+hello from tcc, 1 args
+1234567890123 / 7 = 176366841446, 6.50
+```
+
+the disk image has what it needs: the c library as `/lib/libc.a` with
+`crt1.o`, its headers in `/include` (and `/include/lib/moos.h` for the
+system calls, included as `"lib/moos.h"` like in `src/user`), tcc's own
+headers and runtime (`libtcc1.a`) in `/lib/tcc`, and two examples in `/src`.
+programs from `src/user` build on moOS unchanged, `tcc cowsay.c -o cowsay`.
+together with the editor and a shell window on the desktop that is enough to
+write, compile and run c without leaving moOS.
+
+the same compiler is also built for the host as `build/tcc/i386-moos-tcc`,
+it finds the disk's files in `build/sysroot` and builds `libtcc1.a`. tcc
+cant `-run` programs (that needs `mmap`), and there are no shared
+libraries.
+
 ## project structure
 - `src/bootloader/` - boot sector, kernel entry stub and limine config
 - `src/kernel/` - core os: interrupts, memory, tasks, scheduler, mutexes,
@@ -343,6 +383,7 @@ window or quitting the desktop then asks first.
   syscall library and the c library
 - `external/limine/` - limine bootloader (git submodule)
 - `external/doomgeneric/` - doom (git submodule)
+- `external/tinycc/` - the tiny c compiler (git submodule)
 - `scripts/` - qemu test driver and helpers
 - `docs/` - debugging guide and fat16 reference
 
