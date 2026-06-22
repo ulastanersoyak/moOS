@@ -14,8 +14,6 @@ const uint8_t pattern_stripes[8] = { 0xFF, 0x00, 0xFF, 0x00,
 
 static uint8_t canvas[STRIDE * SCREEN_H];
 static uint8_t frame[STRIDE * SCREEN_H];
-// the screen, every frame row twice
-static uint8_t screen[GFX_MONO_WIDTH / 8 * GFX_MONO_HEIGHT];
 static uint8_t *target = canvas;
 
 static struct box clip = { 0, 0, SCREEN_W, SCREEN_H };
@@ -431,10 +429,5 @@ frame_from_canvas (void)
 void
 show_frame (void)
 {
-  for (int y = 0; y < SCREEN_H; y++)
-    {
-      memcpy (screen + (y * 2) * STRIDE, frame + y * STRIDE, STRIDE);
-      memcpy (screen + (y * 2 + 1) * STRIDE, frame + y * STRIDE, STRIDE);
-    }
-  gfx_blit (screen);
+  gfx_blit (frame);
 }

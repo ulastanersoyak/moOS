@@ -3,11 +3,10 @@
 
 #include "lib/moos.h"
 
-// the desktop draws on a 640x240 canvas in black and white. every row is
-// shown twice on the 640x480 screen, so pixels are twice as tall as wide,
-// like on the apple ii
+// the desktop draws on a 640x480 canvas in black and white, the whole
+// screen of vga mode 11h
 #define SCREEN_W GFX_MONO_WIDTH
-#define SCREEN_H (GFX_MONO_HEIGHT / 2)
+#define SCREEN_H GFX_MONO_HEIGHT
 
 // pixel colours, a set bit is black
 #define PAPER 0
@@ -58,7 +57,7 @@ int text_width (const char *text);
 // draws as much of text as fits into max_w pixels, cut off with "..."
 void draw_text_fit (int x, int y, const char *text, int max_w, int colour);
 
-// shows the frame on the screen, every row twice
+// shows the frame on the screen
 void show_frame (void);
 
 // copies the canvas into the frame

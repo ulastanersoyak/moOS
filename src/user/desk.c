@@ -265,7 +265,6 @@ enum
 static int mode = IDLE;
 static int mouse_x = SCREEN_W / 2;
 static int mouse_y = SCREEN_H / 2;
-static int mouse_y2 = SCREEN_H; // twice mouse_y, vertical moves count half
 static uint8_t buttons = 0;
 
 static int open_menu = -1;
@@ -2668,25 +2667,24 @@ main (void)
         {
           busy = 1;
           int x = mouse_x;
-          int y2 = mouse_y2;
+          int y = mouse_y;
           if (ev.absolute)
             {
               // the pointer of the host, so it stays under the real one
               x = ev.dx * SCREEN_W / (MOUSE_MAX + 1);
-              y2 = ev.dy * SCREEN_H * 2 / (MOUSE_MAX + 1);
+              y = ev.dy * SCREEN_H / (MOUSE_MAX + 1);
             }
           else
             {
               x += ev.dx;
-              y2 += ev.dy;
+              y += ev.dy;
             }
           x = min (max (x, 0), SCREEN_W - 1);
-          y2 = min (max (y2, 0), SCREEN_H * 2 - 1);
-          if (x != mouse_x || y2 != mouse_y2)
+          y = min (max (y, 0), SCREEN_H - 1);
+          if (x != mouse_x || y != mouse_y)
             {
               mouse_x = x;
-              mouse_y2 = y2;
-              mouse_y = mouse_y2 / 2;
+              mouse_y = y;
               moved = 1;
               on_move ();
             }
