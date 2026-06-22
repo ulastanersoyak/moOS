@@ -290,11 +290,11 @@ doesnt save its config file, and there is no sound.
 
 moOS boots into `desk`, a desktop in the style of apple ii desktop
 (mousedesk): a menu bar, the disk and the trash on a grey desktop and
-windows you can drag, resize, scroll and close. it draws a 640x240 black and
-white canvas and shows every row twice in vga mode 11h, so pixels are twice
-as tall as wide like on the apple ii. in qemu (and vmware) the kernel uses
-the vmmouse, which gives the position of the host pointer, so the desktop
-pointer stays right under it and the window doesnt have to grab the mouse.
+windows you can drag, resize, scroll and close. it draws on the whole
+640x480 black and white screen of vga mode 11h. in qemu (and vmware) the
+kernel uses the vmmouse, which gives the position of the host pointer, so the
+desktop pointer stays right under it and the window doesnt have to grab the
+mouse.
 
 - double click the disk or a folder to open it, a text file to edit it and a
   program to run it. the desktop comes back when the program exits.
