@@ -296,6 +296,10 @@ kernel uses the vmmouse, which gives the position of the host pointer, so the
 desktop pointer stays right under it and the window doesnt have to grab the
 mouse.
 
+i used ai to implement the desktop environment: the desktop, its drawing,
+the editor and the shell windows (`src/user/desk.c`, `deskdraw.c`,
+`deskedit.c` and `deskterm.c`).
+
 - double click the disk or a folder to open it, a text file to edit it and a
   program to run it. the desktop comes back when the program exits.
   `sh.elf` opens a shell window instead
