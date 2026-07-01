@@ -9,3 +9,6 @@
 	path = external/tinycc
 	url = https://github.com/TinyCC/tinycc.git
 	branch = mob
+[submodule "external/xgalaga-sdl"]
+	path = external/xgalaga-sdl
+	url = https://github.com/frank-zago/xgalaga-sdl
