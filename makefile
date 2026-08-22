@@ -82,7 +82,7 @@ FILES := $(ASM_OBJS) $(C_OBJS)
 # user programs, elf executables copied to 0:/bin on the disk image
 USER_PROGS := hello count crash spin rtdemo memtest cat wc sort cp echo ls grep \
 	date time pipetest cowsay moose sh pidemo edfdemo fputest gfxdemo keys \
-	libctest doom desk tcc
+	libctest doom desk tcc galaga
 USER_LIB_OBJS := build/user/lib/crt0.asm.o build/user/lib/syscall.asm.o \
 	build/user/lib/moos.o build/user/lib/int64.o
 USER_BINS := $(patsubst %,build/user/%.elf,$(USER_PROGS))
@@ -122,6 +122,21 @@ DOOM_FLAGS = -O2 -g -ffreestanding -fno-builtin -fno-pic -fno-pie \
 	-fno-stack-protector -fno-asynchronous-unwind-tables -march=i686 \
 	-mno-mmx -mno-sse -mno-sse2 -nostdlib -std=gnu99 -w -MMD -MP \
 	$(LIBC_INCLUDE) $(DOOM_DEFINES)
+# galaga, the xgalaga-sdl submodule (a galaga clone) built against the c
+# library. src/user/galaga.c has the part of sdl 1.2 it uses and
+# src/user/galaga/ the sdl headers, a png loader and its config.h. its
+# images and levels go to 0:/galaga
+GALAGA_DIR := ./external/xgalaga-sdl
+GALAGA_SRCS := SFont TFont data explosions frate highscore images joystick \
+	main pathfile paths prize score sdl sound title
+GALAGA_OBJS := $(patsubst %,build/galaga/%.o,$(GALAGA_SRCS)) build/galaga/png.o
+GALAGA_INCLUDE := $(LIBC_INCLUDE) -I./src/user/galaga
+GALAGA_FLAGS = -O2 -g -ffreestanding -fno-builtin -fno-pic -fno-pie \
+	-fno-stack-protector -fno-asynchronous-unwind-tables -march=i686 \
+	-mno-mmx -mno-sse -mno-sse2 -nostdlib -std=gnu99 -w -MMD -MP \
+	$(GALAGA_INCLUDE) -include ./src/user/galaga/config.h
+GALAGA_DATA := $(wildcard $(GALAGA_DIR)/images/*.png) \
+	$(wildcard $(GALAGA_DIR)/levels/*.xgl) $(GALAGA_DIR)/CREDITS
 # tcc, the tiny c compiler from the tinycc submodule. it runs on moos and
 # builds static programs against the c library, which goes onto the disk as
 # /lib/libc.a with its headers in /include. tcc's own headers and runtime
@@ -165,12 +180,17 @@ define populate_fs
 	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) $(USER_BINS) ::/bin/
 	MTOOLS_SKIP_CHECK=1 mmd -i $(1) ::/doom
 	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) $(DOOM_WAD) ::/doom/
+	MTOOLS_SKIP_CHECK=1 mmd -i $(1) ::/galaga ::/galaga/images ::/galaga/levels
+	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) $(GALAGA_DIR)/images/*.png ::/galaga/images/
+	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) $(GALAGA_DIR)/levels/*.xgl ::/galaga/levels/
+	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) $(GALAGA_DIR)/CREDITS ::/galaga/
 	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) -s $(SYSROOT)/lib $(SYSROOT)/include ::/
 	MTOOLS_SKIP_CHECK=1 mmd -i $(1) ::/src
 	MTOOLS_SKIP_CHECK=1 mcopy -i $(1) ./test/hello.c ./src/user/cowsay.c ::/src/
 endef
 
 FS_FILES := ./test/fs_test.txt ./build/long.txt $(USER_BINS) $(DOOM_WAD) \
+	$(GALAGA_DATA) \
 	./build/sysroot.stamp ./test/hello.c ./src/user/cowsay.c
 
 ./bin/os-moos.img: ./bin/bootloader.bin ./bin/kernel.bin $(FS_FILES)
@@ -220,6 +240,22 @@ build/doom/%.o: $(DOOM_DIR)/%.c
 build/user/doom.o: FLAGS += $(LIBC_INCLUDE) -I$(DOOM_DIR) $(DOOM_DEFINES)
 build/user/doom.elf: build/user/doom.o $(DOOM_OBJS) $(LIBC_OBJS) $(USER_LIB_OBJS) ./src/user/linker.ld
 	$(LD) -s -z noexecstack -T ./src/user/linker.ld -o $@ $< $(DOOM_OBJS) $(LIBC_OBJS) $(USER_LIB_OBJS)
+
+build/galaga/%.o: $(GALAGA_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(GALAGA_FLAGS) -c $< -o $@
+
+build/galaga/png.o: src/user/galaga/png.c
+	@mkdir -p $(dir $@)
+	$(CC) $(FLAGS) $(GALAGA_INCLUDE) -c $< -o $@
+
+$(GALAGA_DIR)/src/main.c:
+	@echo "xgalaga-sdl submodule missing, run: git submodule update --init" && exit 1
+
+# SDL_Flip shrinks every frame, worth optimizing
+build/user/galaga.o: FLAGS += $(GALAGA_INCLUDE) -O2
+build/user/galaga.elf: build/user/galaga.o $(GALAGA_OBJS) $(LIBC_OBJS) $(USER_LIB_OBJS) ./src/user/linker.ld
+	$(LD) -s -z noexecstack -T ./src/user/linker.ld -o $@ $< $(GALAGA_OBJS) $(LIBC_OBJS) $(USER_LIB_OBJS)
 
 # tccdefs.h holds tcc's predefined macros, it is built into tcc as strings
 ./build/tcc/tccdefs_.h: $(TCC_DIR)/include/tccdefs.h $(TCC_DIR)/conftest.c
@@ -315,6 +351,7 @@ build/%.o: src/%.c
 
 -include $(C_OBJS:.o=.d) $(USER_BINS:.elf=.d) build/user/lib/moos.d \
 	build/user/lib/int64.d $(LIBC_OBJS:.o=.d) $(DOOM_OBJS:.o=.d) \
+	$(GALAGA_OBJS:.o=.d) \
 	build/user/shline.d build/user/deskdraw.d build/user/deskedit.d \
 	build/user/deskterm.d
 

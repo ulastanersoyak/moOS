@@ -256,7 +256,7 @@ EXPECTED = [
     "moos 0:/> cat LONGNO~1.TXT\napple banana",
     "moos 0:/> cat fruit.txt|sort\napple\nbanana\n",
     "1 2 12\n",                    # quotes keep both spaces
-    "28 140 1260\n",               # 28 programs through a 4 stage pipeline
+    "29 145 1305\n",               # 29 programs through a 4 stage pipeline
     "1 2 10\n",                    # 6000 bytes through pipes larger than 4 kb
     "2 2 13\n",
     "nosuch: not found\n0 0 0",
