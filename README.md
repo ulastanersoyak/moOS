@@ -125,7 +125,7 @@ requirements:
 - make and a host c compiler (for limine's installer)
 - curl, ar and xz (the doom wad is downloaded on the first build)
 
-limine, doomgeneric and tinycc are git submodules, clone with `--recursive`
+limine, doomgeneric, tinycc and xgalaga-sdl are git submodules, clone with `--recursive`
 or fetch them afterwards:
 ```bash
 git submodule update --init
@@ -202,6 +202,7 @@ type their name in the shell to run them:
 | `moose [text]` | the moOS moose |
 | `sh` | the shell, started by init once the desktop quits |
 | `doom` | doom, see below |
+| `galaga` | xgalaga, a galaga clone, see below |
 | `desk` | a desktop in the style of apple ii desktop, started at boot, see below |
 | `tcc` | the tiny c compiler, see below |
 | `gfxdemo` | animated rings in vga mode 13h for 3 seconds |
@@ -285,6 +286,34 @@ quitting doom (or killing it with ctrl+c) brings back the shell. doomgeneric
 doesnt save its config file, and there is no sound.
 
 ![the doom menu on moOS](images/doom-menu.png)
+
+## galaga
+
+galaga is [xgalaga-sdl](https://github.com/frank-zago/xgalaga-sdl), a
+galaga clone (a git submodule), built against the moOS c library without
+changes. moOS has no sdl, so `src/user/galaga.c` implements the part of sdl
+1.2 it uses on top of the graphics, key event and timer system calls and
+`src/user/galaga/` has the sdl headers, a png loader for its images and the
+`config.h` that configure would make. the images, levels and credits go to
+`0:/galaga` on the disk image.
+
+```
+moos 0:/> galaga
+```
+
+| key | does |
+|---|---|
+| left, right | move |
+| space | fire, start a game on the title screen |
+| p | pause |
+| q | quit, esc too on the title screen |
+
+the game draws a 468x596 screen, as tall as the arcade one. moOS only has
+320x200 in colour, so every frame is shrunk into the middle of vga mode 13h
+with the shape kept for a 4:3 monitor, each pixel taking the brightest
+colour of the ones it covers so stars and shots dont fade away. the ships
+and aliens are fine, the small text is hard to read. there is no sound and
+no environment, so high scores arent saved.
 
 ## desktop
 
@@ -383,11 +412,12 @@ libraries.
 - `src/drivers/` - screen, keyboard, timer, clock, serial and disk drivers
 - `src/file_system/` - vfs, path parser and fat16 driver
 - `src/libc/` - kernel side c library
-- `src/user/` - user programs including the shell and doom's glue, their
-  syscall library and the c library
+- `src/user/` - user programs including the shell and the glue for doom and
+  galaga, their syscall library and the c library
 - `external/limine/` - limine bootloader (git submodule)
 - `external/doomgeneric/` - doom (git submodule)
 - `external/tinycc/` - the tiny c compiler (git submodule)
+- `external/xgalaga-sdl/` - galaga clone (git submodule)
 - `scripts/` - qemu test driver and helpers
 - `docs/` - debugging guide and fat16 reference
 
