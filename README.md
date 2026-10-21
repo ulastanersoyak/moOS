@@ -315,6 +315,8 @@ colour of the ones it covers so stars and shots dont fade away. the ships
 and aliens are fine, the small text is hard to read. there is no sound and
 no environment, so high scores arent saved.
 
+![galaga on moOS](images/galaga.png)
+
 ## desktop
 
 moOS boots into `desk`, a desktop in the style of apple ii desktop
